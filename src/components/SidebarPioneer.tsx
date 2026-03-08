@@ -1,0 +1,39 @@
+import { NavLink, Link } from "react-router"
+import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files, type LucideIcon } from 'lucide-react'
+
+const menu = [
+    { icon: <HomeIcon size={20} />, title: 'หน้าหลัก', path: '/' },
+    { icon: <SearchIcon size={20} />, title: 'สำรวจโปรเจกต์', path: '/search' },
+    { icon: <LayoutDashboard size={20} />, title: 'แดชบอร์ด', path: '/pioneer/dashboard' },
+    { icon: <Files size={20} />, title: 'โปรเจกต์ของฉัน', path: '/pioneer/dashboard/projects' },
+    { icon: <UserRound size={20} />, title: 'โปรไฟล์', path: '/pioneer/dashboard/profile' },
+]
+
+const SidebarPioneer = () => {
+    return (
+        <aside className="bg-sidebar w-[230px] min-w-[230px] h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent">
+            <div className="w-full flex flex-col items-center gap-[10px] pb-4">
+                <img src="/flyup-logo.png" alt="FlyUp" className="h-[48px] w-[48px] rounded-full border border-background" />
+                <span className="text-sidebar-primary text-[14px] px-[8px] py-[2px] rounded-[20px] bg-sidebar-primary/20 font-medium">Pioneer</span>
+            </div>
+
+            <ul className="w-full flex flex-col gap-[4px] p-[10px] flex-1 overflow-y-auto font-kanit">
+                {menu.map((item, idx) => (
+                    <li key={idx}>
+                        <NavLink to={item.path} end={item.path === '/pioneer/dashboard'} className={({ isActive }) => `flex p-[10px] gap-[10px] text-[14px] items-center transition-all duration-200 ${isActive ? "text-sidebar-primary bg-sidebar-accent rounded-[12px]" : "hover:text-sidebar-primary hover:bg-sidebar-accent hover:rounded-[12px]"}`}>
+                            {item.icon} {item.title}
+                        </NavLink>
+                    </li>
+                ))}
+            </ul>
+
+            <div className="w-full p-[10px] border-t border-sidebar-accent">
+                <Link to='/' className="flex p-[10px] gap-[12px] text-[14px] items-center hover:text-error hover:bg-sidebar-accent hover:rounded-[12px] transition-all duration-200">
+                    <LogOut size={20} /> ออกจากระบบ
+                </Link>
+            </div>
+        </aside>
+    )
+}
+
+export default SidebarPioneer

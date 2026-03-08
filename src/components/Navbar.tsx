@@ -4,8 +4,6 @@ import { Link } from 'react-router';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
-
-    // ฟังก์ชันช่วยปิดเมนูเวลาคลิกลิงก์
     const toggleMenu = () => setIsOpen(!isOpen);
     const closeMenu = () => setIsOpen(false);
 
