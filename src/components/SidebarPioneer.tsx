@@ -1,5 +1,5 @@
 import { NavLink, Link } from "react-router"
-import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files, type LucideIcon } from 'lucide-react'
+import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files } from 'lucide-react'
 
 const menu = [
     { icon: <HomeIcon size={20} />, title: 'หน้าหลัก', path: '/' },

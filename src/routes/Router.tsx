@@ -13,8 +13,8 @@ import Login from '../pages/public/Login';
 import CreateProject from '../pages/pioneer/CreateProject';
 import ProjectOverview from '../pages/pioneer/ProjectOverview';
 import Dashboard from '../pages/pioneer/Dashboard';
-import Projects from '../pages/pioneer/Projects';
 import PioneerLayout from '../layouts/PioneerLayout';
+import MyProjects from '../pages/pioneer/MyProjects';
 
 const Router = () => {
   return (
@@ -30,7 +30,7 @@ const Router = () => {
                 <Route>
                     <Route element={<PioneerLayout />}>
                         <Route path='/pioneer/dashboard' element={<Dashboard />} />
-                        <Route path='/pioneer/dashboard/projects' element={<Projects />} />
+                        <Route path='/pioneer/dashboard/projects' element={<MyProjects />} />
                     </Route>
                     <Route element={<MainLayout />}>
                         <Route path='/project/overview/:projectId' element={<ProjectOverview />} />
