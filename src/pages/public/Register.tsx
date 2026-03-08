@@ -170,7 +170,7 @@ const Register = () => {
                         </div>
                         <div className="flex gap-[8px] items-center">
                             <input name="accept_terms" onChange={handleCheckboxChange} checked={formData.accept_terms} type="checkbox" className="w-[18px] h-[18px] accent-primary cursor-pointer" />
-                            <label className="text-muted-foreground text-[13px]">ฉันยอมรับ <Link to='/condition' className="underline text-foreground">ข้อกำหนดและเงื่อนไข</Link> ของ FlyUp</label>
+                            <label className="text-muted-foreground text-[14px]">ฉันยอมรับ <Link to='/condition' className="underline text-foreground">ข้อกำหนดและเงื่อนไข</Link> ของ FlyUp</label>
                         </div>
                     </div>
                     <button type="submit" className="bg-primary text-white text-[14px] w-full flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300">สร้างบัญชี</button>
