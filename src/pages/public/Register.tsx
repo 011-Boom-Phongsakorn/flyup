@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { Users } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { useAuthStore } from "../../store/useAuthStore"
 
 type UserRole = 'booster' | 'pioneer' | ''
 
@@ -16,6 +17,7 @@ interface RegisterFormData {
 }
 
 const Register = () => {
+    const { register } = useAuthStore()
     const navigate = useNavigate()
     const [role, setRole] = useState<UserRole>('')
     const [confirmPassword, setConfirmPassword] = useState<string>('')
@@ -102,7 +104,7 @@ const Register = () => {
         e.preventDefault()
         console.log(formData)
         if (validateForm()) {
-            toast.success('สร้างบัญชีสำเร็จ กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
+            register(formData)
             navigate('/login')
         }
     }
@@ -142,28 +144,28 @@ const Register = () => {
                     <div className="flex flex-col gap-[16px]">
                         <div className="flex justify-between">
                             <div className="flex flex-col gap-[4px]">
-                                <label className="font-[14px] text-foreground">ชื่อ</label>
+                                <label className="font-[14px] text-foreground">ชื่อ *</label>
                                 <input name="first_name" onChange={handleChange} value={formData.first_name} type="text" className={inputStyle('first_name')} />
                             </div>
                             <div className="flex flex-col gap-[4px]">
-                                <label className="font-[14px] text-foreground">นามสกุล</label>
+                                <label className="font-[14px] text-foreground">นามสกุล *</label>
                                 <input name="last_name" onChange={handleChange} value={formData.last_name} type="text" className={inputStyle('last_name')} />
                             </div>
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="font-[14px] text-foreground">อีเมล์</label>
+                            <label className="font-[14px] text-foreground">อีเมล์ *</label>
                             <input name="email" onChange={handleChange} value={formData.email} type="text" className={inputStyle('email')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="font-[14px] text-foreground">เบอร์โทรศัพท์</label>
+                            <label className="font-[14px] text-foreground">เบอร์โทรศัพท์ *</label>
                             <input name="phone" onChange={handleChange} value={formData.phone} type="text" className={inputStyle('phone')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="font-[14px] text-foreground">รหัสผ่าน</label>
+                            <label className="font-[14px] text-foreground">รหัสผ่าน *</label>
                             <input name="password" onChange={handleChange} value={formData.password} type="password" className={inputStyle('password')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="font-[14px] text-foreground">ยืนยันรหัสผ่าน</label>
+                            <label className="font-[14px] text-foreground">ยืนยันรหัสผ่าน *</label>
                             <input name="confirmPassword" onChange={handleConfirmPasswordChange} value={confirmPassword} type="password" className={inputStyle('confirmPassword')} />
                         </div>
                         <div className="flex gap-[8px] items-center">
