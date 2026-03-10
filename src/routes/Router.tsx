@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 // Public Pages
 import Home from '../pages/public/Home';
 import MainLayout from '../layouts/MainLayout';
+import Projects from '../pages/public/Projects';
 import Register from '../pages/public/Register';
 import Login from '../pages/public/Login';
 
