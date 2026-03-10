@@ -36,6 +36,7 @@ const Router = () => {
                         <Route path='/' element={<Home />} />
                         <Route path='/register' element={!authUser ? <Register /> : <Navigate to='/' />} />
                         <Route path='/login' element={!authUser ? <Login /> : <Navigate to='/' />} />
+                        <Route path='/projects' element={<Projects />} />
                     </Route>
                 </Routes>
                 <Toaster position='top-right' />
