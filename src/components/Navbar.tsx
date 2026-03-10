@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Search, Menu, X } from 'lucide-react';
+import { Search, Menu, X, LayoutDashboard, ChevronDown } from 'lucide-react'; 
 import { Link } from 'react-router';
+import { useAuthStore } from '../store/useAuthStore'; 
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
-
-    // ฟังก์ชันช่วยปิดเมนูเวลาคลิกลิงก์
+    
+    const { authUser } = useAuthStore(); 
     const toggleMenu = () => setIsOpen(!isOpen);
     const closeMenu = () => setIsOpen(false);
 
@@ -31,13 +32,34 @@ const Navbar = () => {
                         />
                     </div>
 
-                    <div className="hidden md:flex items-center gap-3">
-                        <Link to='/login' className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-xl text-[14px] font-medium transition-all shadow-sm active:scale-95">
-                            เริ่มต้น
-                        </Link>
-                        <Link to='/register' className="bg-background border border-border px-6 py-2 rounded-xl text-[14px] font-medium text-foreground hover:bg-muted transition-all active:scale-95">
-                            สมัคร
-                        </Link>
+                    <div className="hidden md:flex items-center gap-4">
+                        {authUser ? (
+                            <>
+                                <Link to={`/${authUser?.role}/dashboard`} className="flex items-center justify-center w-11 h-11 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white rounded-full transition-all shadow-sm active:scale-95">
+                                    <LayoutDashboard size={22} />
+                                </Link>
+
+                                <button className="relative flex items-center justify-center focus:outline-none hover:opacity-90 transition-opacity">
+                                    <img
+                                        src={authUser.profile_url || "https://ui-avatars.com/api/?name=" + (authUser.email)}
+                                        alt="Profile"
+                                        className="w-11 h-11 rounded-full object-cover border-2 border-transparent shadow-sm"
+                                    />
+                                    <div className="absolute -bottom-1 -right-1 bg-[#8B5CF6] text-white rounded-full p-[2px] border-2 border-white">
+                                        <ChevronDown size={12} strokeWidth={3} />
+                                    </div>
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <Link to='/login' className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-xl text-[14px] font-medium transition-all shadow-sm active:scale-95">
+                                    เริ่มต้น
+                                </Link>
+                                <Link to='/register' className="bg-background border border-border px-6 py-2 rounded-xl text-[14px] font-medium text-foreground hover:bg-muted transition-all active:scale-95">
+                                    สมัคร
+                                </Link>
+                            </>
+                        )}
                     </div>
 
                     <button
@@ -60,21 +82,41 @@ const Navbar = () => {
                             />
                         </div>
 
-                        <Link
-                            to="/login"
-                            className="flex items-center justify-center bg-primary text-white h-[48px] rounded-[12px] font-medium active:scale-95 transition-all"
-                            onClick={closeMenu}
-                        >
-                            เริ่มต้น
-                        </Link>
-
-                        <Link
-                            to="/register"
-                            className="flex items-center justify-center bg-background border border-border text-foreground h-[48px] rounded-[12px] font-medium active:scale-95 transition-all"
-                            onClick={closeMenu}
-                        >
-                            สมัคร
-                        </Link>
+                        {authUser ? (
+                            <div className="flex flex-col gap-3">
+                                <Link to={`/${authUser?.role}/dashboard`} onClick={closeMenu} className="flex items-center gap-3 p-3 bg-muted/50 hover:bg-muted rounded-xl transition-all">
+                                    <div className="bg-[#8B5CF6] p-2 rounded-lg text-white">
+                                        <LayoutDashboard size={20} />
+                                    </div>
+                                    <span className="font-medium text-foreground">แดชบอร์ด</span>
+                                </Link>
+                                <Link to="/profile" onClick={closeMenu} className="flex items-center gap-3 p-3 bg-muted/50 hover:bg-muted rounded-xl transition-all">
+                                    <img 
+                                        src={authUser.profile_url || "https://ui-avatars.com/api/?name=" + (authUser.name || 'User')} 
+                                        alt="Profile" 
+                                        className="w-10 h-10 rounded-full object-cover" 
+                                    />
+                                    <span className="font-medium text-foreground">โปรไฟล์ของฉัน</span>
+                                </Link>
+                            </div>
+                        ) : (
+                            <>
+                                <Link
+                                    to="/login"
+                                    className="flex items-center justify-center bg-primary text-white h-[48px] rounded-[12px] font-medium active:scale-95 transition-all"
+                                    onClick={closeMenu}
+                                >
+                                    เริ่มต้น
+                                </Link>
+                                <Link
+                                    to="/register"
+                                    className="flex items-center justify-center bg-background border border-border text-foreground h-[48px] rounded-[12px] font-medium active:scale-95 transition-all"
+                                    onClick={closeMenu}
+                                >
+                                    สมัคร
+                                </Link>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
