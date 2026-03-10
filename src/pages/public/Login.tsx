@@ -12,7 +12,7 @@ interface LoginFromData {
 }
 
 const Login = () => {
-    const { login, isLoggingIn } = useAuthStore()
+    const { login, isLoggingIn, checkAuth } = useAuthStore()
     const [errors, setErrors] = useState<{ [key: string]: boolean }>({})
     const [formData, setFormData] = useState<LoginFromData>({
         email: '',
@@ -56,8 +56,8 @@ const Login = () => {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (validateForm()) {
-            login(formData)
-            console.log(formData)
+            await checkAuth()
+            await login(formData)
         }
     }
 
