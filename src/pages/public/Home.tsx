@@ -10,7 +10,6 @@ import {
   ListChecks
 } from 'lucide-react';
 
-// --- Mock Data สำหรับหน้า Home ---
 const recommendedMain = {
   id: 1,
   title: 'UniTrack',
@@ -40,7 +39,6 @@ const newProjects = [
   { id: 10, title: 'UniTrack', description: 'แอปนำทางในมหาวิทยาลัยอัจฉริยะสำหรับนักศึกษา', image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800', category: 'แอปมือถือ', progress: 10, raised: 1000, daysLeft: 55, isNew: true },
 ];
 
-// --- Component ย่อยสำหรับการ์ดโปรเจกต์ทั่วไป ---
 const ProjectCard = ({ project }: { project: any }) => (
   <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group flex flex-col">
     <div className="relative h-48 w-full overflow-hidden bg-gray-100">
@@ -59,7 +57,6 @@ const ProjectCard = ({ project }: { project: any }) => (
       </div>
     </div>
     <div className="p-4 flex flex-col flex-1">
-      {/* ส่วนที่แก้: ย้าย Category มาไว้ข้างชื่อโปรเจกต์ */}
       <div className="flex justify-between items-start gap-2 mb-1">
         <h3 className="text-lg font-bold line-clamp-1 flex-1">{project.title}</h3>
         <span className="text-[10px] font-medium px-2.5 py-0.5 bg-white border border-gray-200 rounded-full text-gray-400 whitespace-nowrap">
@@ -81,15 +78,10 @@ const ProjectCard = ({ project }: { project: any }) => (
   </div>
 );
 
-// --- Component หลักของหน้า Home ---
 const Home = () => {
   return (
     <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900 pb-20">
-      
-      {/* 1. Hero Section (แบนเนอร์ด้านบนสุด) */}
       <section className="relative pt-24 pb-32 lg:pt-32 lg:pb-40 overflow-hidden">
-        
-        {/* ส่วนพื้นหลังที่ทำ Fade ด้านล่างให้เนียนไปกับ bg-background */}
         <div
           className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat z-0"
           style={{
@@ -102,7 +94,6 @@ const Home = () => {
         <div className="container mx-auto px-4 md:px-8 max-w-7xl relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
             
-            {/* ฝั่งซ้าย: ข้อความและปุ่ม */}
             <div className="max-w-xl">
               <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium text-purple-600 mb-6 border border-white/50 shadow-sm">
                 <Sparkles size={16} /> ผลงานพัฒนาระบบซอฟต์แวร์ของนักศึกษา
@@ -119,7 +110,6 @@ const Home = () => {
               </p>
 
               <div className="flex flex-wrap gap-4 items-center">
-                {/* แก้ไขปุ่ม: ใส่ Gradient ตามภาพ Figma */}
                 <button className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:opacity-90 text-white px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-purple-200 flex items-center gap-2">
                   สร้างโปรเจกต์ <ChevronRight size={18} />
                 </button>
@@ -128,8 +118,6 @@ const Home = () => {
                 </Link>
               </div>
             </div>
-
-            {/* ฝั่งขวา: โซนรูปภาพ (ใส่ logo-flyup.png) */}
             <div className="relative hidden md:block">
               <div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] opacity-50 z-0"
