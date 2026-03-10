@@ -4,8 +4,10 @@ import { Toaster } from 'react-hot-toast';
 // Public Pages
 import Home from '../pages/public/Home';
 import MainLayout from '../layouts/MainLayout';
+import Projects from '../pages/public/Projects';
 import Register from '../pages/public/Register';
 import Login from '../pages/public/Login';
+
 
 const Router = () => {
   return (
@@ -14,6 +16,7 @@ const Router = () => {
             <Routes>
                 <Route element={<MainLayout />}>
                     <Route path='/' element={<Home />} />
+                    <Route path="/projects" element={<Projects />} />
                     <Route path='/register' element={<Register />} />
                     <Route path='/login' element={<Login />} />
                 </Route>
