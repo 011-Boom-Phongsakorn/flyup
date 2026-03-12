@@ -1,15 +1,9 @@
-import { useEffect } from "react";
 import { Link } from "react-router";
 import { useProjectStore } from "../../store/useProjectStore";
 import { Loader2, Plus } from "lucide-react";
 
 const MyProjects = () => {
-  const { projects, getProjects, isLoading } = useProjectStore();
-
-  // ดึงข้อมูลเมื่อเข้าหน้าจอ
-  useEffect(() => {
-    getProjects();
-  }, [getProjects]);
+  const { projects, isLoading } = useProjectStore();
 
   return (
     <div className="max-w-6xl mx-auto p-6 font-kanit">

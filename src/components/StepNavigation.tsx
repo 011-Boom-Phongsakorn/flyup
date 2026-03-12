@@ -1,0 +1,60 @@
+import { Link, useParams, useLocation } from "react-router";
+import { ChevronLeft, ChevronRight, Send } from 'lucide-react';
+
+const StepNavigation = () => {
+  const { projectId } = useParams();
+  const location = useLocation();
+  
+  // 1. ดึงหมายเลข Step ปัจจุบันจาก URL (ถ้าดึงไม่ได้ให้เป็น 1)
+  const currentStep = Number(location.pathname.split('/').pop()) || 1;
+  const totalSteps = 4; // กำหนดจำนวน Step ทั้งหมดที่มี
+
+  // 2. เงื่อนไขสำหรับปุ่ม "ย้อนกลับ"
+  // ถ้าอยู่ Step 1 ให้กลับไปหน้า Overview, ถ้าอยู่ Step อื่นให้ลบ 1
+  const backUrl = currentStep === 1 
+    ? `/project/overview/${projectId}` 
+    : `/project/overview/${projectId}/step/${currentStep - 1}`;
+
+  // 3. เงื่อนไขสำหรับปุ่ม "ถัดไป" (บวก 1)
+  const nextUrl = `/project/overview/${projectId}/step/${currentStep + 1}`;
+
+  // เช็คว่าอยู่หน้าสุดท้ายหรือยัง
+  const isLastStep = currentStep === totalSteps;
+
+  return (
+    <div className="flex items-center gap-[10px] mt-[20px] justify-between">
+      
+      {/* --- ปุ่มย้อนกลับ --- */}
+      <Link 
+        to={backUrl} 
+        className="w-[129px] h-[38px] bg-white-foreground text-foreground border border-muted flex items-center justify-center gap-[4px] rounded-[12px] hover:bg-muted/50 transition-all duration-200"
+      >
+        <ChevronLeft size={16} />
+        <span className="text-[14px]">ย้อนกลับ</span>
+      </Link>
+
+      {/* --- ปุ่มถัดไป หรือ ปุ่มบันทึก (หน้าสุดท้าย) --- */}
+      {!isLastStep ? (
+        <Link 
+          to={nextUrl} 
+          className="w-[129px] h-[38px] bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-[4px] rounded-[12px] transition-all duration-200"
+        >
+          <span className="text-[14px]">ถัดไป</span>
+          <ChevronRight size={16} />
+        </Link>
+      ) : (
+        // ถ้าเป็น Step สุดท้าย เปลี่ยนเป็นปุ่ม Button แทน Link เพื่อเอาไว้ Submit ฟอร์ม
+        <button 
+          onClick={() => console.log("ส่งคำขอแล้ว!")}
+          className="px-[20px] h-[38px] bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-[6px] rounded-[12px] transition-all duration-200"
+        >
+          <Send size={14} />
+          <span className="text-[14px]">ส่งคำขอสร้างโปรเจกต์</span>
+        </button>
+      )}
+
+    </div>
+  );
+};
+
+export default StepNavigation;

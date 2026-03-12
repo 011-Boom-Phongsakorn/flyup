@@ -7,7 +7,7 @@ const MainLayout = () => {
     <div className="flex flex-col min-h-screen bg-background">
         <Navbar />
 
-        <main className="flex-1 py-[100px]"> 
+        <main className="flex-1"> 
             <Outlet />
         </main>
         <Footer />
