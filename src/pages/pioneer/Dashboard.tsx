@@ -4,7 +4,7 @@ import { useProjectStore } from "../../store/useProjectStore"
 
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { createProject, isCreating, currentProject } = useProjectStore();
+  const { createProject, isCreating } = useProjectStore();
 
   const handleCreateProject = async () => {
     const newProjectId = await createProject()
