@@ -13,7 +13,7 @@ interface ProjectState {
     createProject: () => Promise<number | null>;
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
+export const useProjectStore = create<ProjectState>((set) => ({
     projects: [],
     isLoading: false,
     isCreating: false,
