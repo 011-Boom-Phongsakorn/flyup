@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:20-alpine'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     environment {
         SONAR_TOKEN = credentials('SonarQubeTokens')
@@ -7,9 +12,6 @@ pipeline {
 
     stages {
         stage('Check Node') {
-            agent {
-                docker { image 'node:20-alpine' }
-            }
             steps {
                 sh 'node --version'
                 sh 'npm --version'
@@ -17,38 +19,24 @@ pipeline {
         }
 
         stage('Install') {
-            agent {
-                docker { image 'node:20-alpine' }
-            }
             steps {
                 sh 'npm ci'
             }
         }
 
         stage('Lint') {
-            agent {
-                docker { image 'node:20-alpine' }
-            }
             steps {
-                sh 'npm ci'
                 sh 'npm run lint'
             }
         }
 
         stage('Build') {
-            agent {
-                docker { image 'node:20-alpine' }
-            }
             steps {
-                sh 'npm ci'
                 sh 'npm run build'
             }
         }
 
         stage('Sonar Scan') {
-            agent {
-                docker { image 'node:20-alpine' }
-            }
             steps {
                 withSonarQubeEnv('sonarcloud') {
                     sh '''
@@ -73,14 +61,18 @@ pipeline {
         stage('Build & Deploy') {
             when {
                 expression {
-                      return env.GIT_BRANCH == 'origin/develop' || env.GIT_BRANCH == 'develop'
-                            }
-                      }
+                    return env.GIT_BRANCH == 'origin/develop' || env.GIT_BRANCH == 'develop'
+                }
+            }
             steps {
+                // เพิ่มคำสั่ง cd เข้าไปในโฟลเดอร์ที่เก็บไฟล์ docker-compose.yml ของคุณ
                 sh '''
-                        docker compose down
-                        docker compose up -d --build
-                        '''
+                    apk add --no-cache docker-cli docker-compose-plugin
+                    
+                    # ตรวจสอบว่า path นี้ตรงกับโฟลเดอร์โปรเจกต์ใน Jenkins Workspace
+                    docker compose down
+                    docker compose up -d --build
+                '''
             }
         }
     }
