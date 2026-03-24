@@ -33,20 +33,17 @@ pipeline {
         stage('Sonar Scan') {
             steps {
                 withSonarQubeEnv('sonarcloud') {
+                    // ใช้ Docker ของเครื่อง Host รัน Scanner ให้ โดยส่ง Token เข้าไป
                     sh '''
-                    rm -rf sonar-scanner*
-
-                    apk add --no-cache curl unzip openjdk17
-
-                    curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
-                    unzip sonar-scanner.zip
-
-                    ./sonar-scanner-*/bin/sonar-scanner \
-                      -Dsonar.projectKey=sundayyogurt_flyup \
-                      -Dsonar.organization=sundayyogurt \
-                      -Dsonar.sources=src \
-                      -Dsonar.exclusions=**/node_modules/**,**/dist/** \
-                      -Dsonar.login=$SONAR_TOKEN
+                    docker run --rm \
+                        -v ${WORKSPACE}:/usr/src \
+                        -e SONAR_TOKEN=$SONAR_TOKEN \
+                        sonarsource/sonar-scanner-cli \
+                        -Dsonar.projectKey=sundayyogurt_flyup \
+                        -Dsonar.organization=sundayyogurt \
+                        -Dsonar.sources=src \
+                        -Dsonar.exclusions=**/node_modules/**,**/dist/** \
+                        -Dsonar.host.url=https://sonarcloud.io
                     '''
                 }
             }
