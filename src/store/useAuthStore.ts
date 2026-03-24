@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import api from '../services/api'
 import toast from 'react-hot-toast'
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from 'jwt-decode'
 import { AxiosError } from 'axios'
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface DecodedUser extends Record<string, unknown> {}
+interface DecodedUser extends Record<string, unknown> { }
 
 interface RegisterData {
     first_name: string;
@@ -38,49 +38,49 @@ export const useAuthStore = create<AuthStore>((set) => ({
     isRegistering: false,
     isLoggingIn: false,
     checkAuth: async () => {
-        try{
+        try {
             const response = await api.get('/user/me')
             console.log(response?.data)
-            set({ authUser: response?.data?.data})
-        }catch(_error: unknown) {
-            set({ authUser: null})
-        }finally {
+            set({ authUser: response?.data?.data })
+        } catch {
+            set({ authUser: null })
+        } finally {
             set({ isCheckingAuth: false })
         }
     },
     register: async (data) => {
         set({ isRegistering: true })
-        try{
+        try {
             await api.post('/signup', data)
             console.log(data)
             toast.success('สร้างบัญชีสำเร็จ กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
             return true
-        }catch(error: unknown) {
+        } catch (error: unknown) {
             const err = error instanceof AxiosError ? error : null;
             const data = err?.response?.data;
             const message = data?.message;
             if (data === 'this email is already registered') {
                 toast.error('อีเมล์นี้ถูกใช้แล้ว')
-            }else if (message === `sorry!, the domain doesn't exist`) {
+            } else if (message === `sorry!, the domain doesn't exist`) {
                 toast.error('ไม่รองรับมหาลัยนี้')
-            }else if (message === 'password must contain at least one uppercase letter' || message === 'password must contain at least one special character' || message === `Validation failed: Key: 'UserSignup.Password' Error:Field validation for 'Password' failed on the 'min' tag` || message === `password must contain at least one lowercase letter` || message === `password must contain at least one number`) {
+            } else if (message === 'password must contain at least one uppercase letter' || message === 'password must contain at least one special character' || message === `Validation failed: Key: 'UserSignup.Password' Error:Field validation for 'Password' failed on the 'min' tag` || message === `password must contain at least one lowercase letter` || message === `password must contain at least one number`) {
                 toast.error('ต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว, พิมพ์เล็ก 1 ตัว, ตัวเลข 1 ตัว, อักษรพิเศษ 1 ตัว และ ไม่ต่ำกว่า 8 ตัว')
-            }else {
+            } else {
                 toast.error(data?.error || 'เกิดข้อผิดพลาดบางอย่าง');
             }
             return false
-        }finally {
+        } finally {
             set({ isRegistering: false })
         }
     },
     login: async (data) => {
         set({ isLoggingIn: true })
-        try{
+        try {
             const response = await api.post('/signin', data)
             const token = response.data.token;
-            const decodeUser = jwtDecode(token)
+            const decodeUser = jwtDecode(token) as DecodedUser
             set({ authUser: decodeUser })
-        }catch(error: unknown){
+        } catch (error: unknown) {
             console.log(error)
             const err = error instanceof AxiosError ? error : null;
             const errorMessage = err?.response?.data?.error;
@@ -90,7 +90,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
             } else {
                 toast.error('อีเมล์หรือรหัสผ่านไม่ถูกต้อง')
             }
-        }finally {
+        } finally {
             set({ isLoggingIn: false })
         }
     }
