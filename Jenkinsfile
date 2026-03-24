@@ -52,7 +52,7 @@ pipeline {
                 sh '''
                 docker run --rm \
                     -v /root/apps/my-project/flyup:/deploy \
-                    alpine find /deploy -mindepth 1 -delete
+                    alpine find /deploy -mindepth 1 ! -name .env -delete
                 '''
 
                 // 2. Copy source code จาก Jenkins workspace ไป Host
@@ -63,10 +63,22 @@ pipeline {
                     alpine cp -a ${WORKSPACE}/. /deploy/
                 '''
 
-                // 2. Build & Run จาก Host path (Docker daemon เห็น path นี้ได้)
+                // 3. Stop old container
                 sh '''
-                docker compose -f /root/apps/my-project/flyup/docker-compose.yml down || true
-                docker compose -f /root/apps/my-project/flyup/docker-compose.yml up -d --build
+                docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v /root/apps/my-project/flyup:/app \
+                    -w /app \
+                    docker:cli docker compose down || true
+                '''
+
+                // 4. Build & Run new container จาก Host path
+                sh '''
+                docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v /root/apps/my-project/flyup:/app \
+                    -w /app \
+                    docker:cli docker compose up -d --build
                 '''
             }
         }
