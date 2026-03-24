@@ -8,10 +8,9 @@ pipeline {
     stages {
         stage('Build & Test') {
             steps {
-                // ใช้ docker run เพื่อดึง Node เข้ามาทำงานเฉพาะตอน Build
                 sh '''
                 docker run --rm -v ${WORKSPACE}:/app -w /app node:20-alpine sh -c "
-                    npm ci && 
+                    npm install && 
                     npm run lint && 
                     npm run build
                 "
