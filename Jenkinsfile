@@ -7,6 +7,9 @@ pipeline {
 
     stages {
         stage('Check Node') {
+            agent {
+                docker { image 'node:20-alpine' }
+            }
             steps {
                 sh 'node --version'
                 sh 'npm --version'
@@ -14,24 +17,38 @@ pipeline {
         }
 
         stage('Install') {
+            agent {
+                docker { image 'node:20-alpine' }
+            }
             steps {
                 sh 'npm ci'
             }
         }
 
         stage('Lint') {
+            agent {
+                docker { image 'node:20-alpine' }
+            }
             steps {
+                sh 'npm ci'
                 sh 'npm run lint'
             }
         }
 
         stage('Build') {
+            agent {
+                docker { image 'node:20-alpine' }
+            }
             steps {
+                sh 'npm ci'
                 sh 'npm run build'
             }
         }
 
         stage('Sonar Scan') {
+            agent {
+                docker { image 'node:20-alpine' }
+            }
             steps {
                 withSonarQubeEnv('sonarcloud') {
                     sh '''
@@ -61,8 +78,6 @@ pipeline {
                       }
             steps {
                 sh '''
-                        apk add --no-cache docker docker-compose
-
                         docker compose down
                         docker compose up -d --build
                         '''
