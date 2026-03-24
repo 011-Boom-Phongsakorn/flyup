@@ -82,11 +82,11 @@ const Login = () => {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-[27px]">
                     <div className="flex flex-col gap-[16px]">
                         <div className="flex flex-col gap-[4px]">
-                            <label className="text-[14px] text-foreground">อีมล์ *</label>
+                            <label className="text-[14px] text-foreground">อีมล์ <span className="text-error">*</span></label>
                             <input name="email" onChange={handleChange} value={formData.email} type="text" className={inputStyle('email')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="text-[14px] text-foreground">รหัสผ่าน *</label>
+                            <label className="text-[14px] text-foreground">รหัสผ่าน <span className="text-error">*</span></label>
                             <input name="password" onChange={handleChange} value={formData.password} type="password" className={inputStyle('password')} />
                         </div>
                         <Link to='/forgot/password' className="self-start text-[14px] text-foreground hover:text-primary transition-all duration-200">ลืมรหัสผ่าน</Link>
@@ -97,7 +97,7 @@ const Login = () => {
                                 <Loader className="h-5 w-5 animate-spin" />
                                 <span>กำลังเข้าสู่ระบบ...</span>
                             </>
-                        ): <p>เข้าสู่ระบบ</p>}
+                        ) : <p>เข้าสู่ระบบ</p>}
                     </button>
                 </form>
                 <div className="text-center text-[14px] text-foreground">
