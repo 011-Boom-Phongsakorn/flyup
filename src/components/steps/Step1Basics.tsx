@@ -9,7 +9,7 @@ const categories = [
 ];
 
 const Step1Basics = () => {
-  const { currentProject, updateProjectInfo, isSaving } = useProjectStore()
+  const { currentProject, updateProjectInfo } = useProjectStore()
 
   const [isOpen, setIsOpen] = useState(false)
   const [showSavedTick, setShowSavedTick] = useState(false)

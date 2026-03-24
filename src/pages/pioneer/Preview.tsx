@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useProjectStore } from "../../store/useProjectStore";
-import { CheckCircle2, ChevronLeft, MapPin, Users, Clock, Flag, Shield, Send } from "lucide-react";
+import { CheckCircle2, Users, Clock, Flag, Shield } from "lucide-react";
 import PreviewStory from "../../components/preview/PreviewStory";
 import PreviewMilestone from "../../components/preview/PreviewMilestone";
 import { PreviewUpdate, PreviewQuestion, PreviewComment } from "../../components/preview/PreviewMisc";
