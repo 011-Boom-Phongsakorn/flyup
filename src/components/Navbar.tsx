@@ -5,10 +5,23 @@ import { useAuthStore } from '../store/useAuthStore';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState(''); 
     
     const { authUser } = useAuthStore(); 
     const toggleMenu = () => setIsOpen(!isOpen);
     const closeMenu = () => setIsOpen(false);
+
+    const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+            if (searchQuery.trim()) {
+                window.location.href = `/projects?q=${encodeURIComponent(searchQuery.trim())}`;
+            } else {
+                window.location.href = '/projects'; 
+            }
+            closeMenu();
+        }
+    };
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 w-full py-4 bg-transparent px-4">
@@ -29,6 +42,9 @@ const Navbar = () => {
                             type="text"
                             placeholder="ค้นหา โปรเจกต์ , หมวดหมู่ที่ต้องการ"
                             className="bg-transparent outline-none w-full text-[14px] text-foreground placeholder:text-muted-foreground"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={handleSearch}
                         />
                     </div>
 
@@ -73,12 +89,16 @@ const Navbar = () => {
                 {isOpen && (
                     <div className="absolute top-[80px] left-0 right-0 bg-card/95 backdrop-blur-lg border border-border rounded-[24px] p-6 shadow-xl md:hidden flex flex-col gap-5 animate-in fade-in zoom-in duration-200">
 
+                        {/* ช่องค้นหา - Mobile */}
                         <div className="flex items-center gap-3 bg-background border border-border h-[48px] rounded-[12px] px-4">
                             <Search size={20} className="text-muted-foreground" />
                             <input
                                 type="text"
                                 placeholder="ค้นหา โปรเจกต์ , หมวดหมู่ที่ต้องการ"
                                 className="bg-transparent outline-none w-full text-[16px]"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={handleSearch}
                             />
                         </div>
 
