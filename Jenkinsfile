@@ -48,12 +48,19 @@ pipeline {
                 }
             }
             steps {
-                // 1. Sync source code จาก Jenkins workspace ไปยัง folder บน Host
+                // 1. ลบไฟล์เก่าใน deploy folder บน Host
+                sh '''
+                docker run --rm \
+                    -v /root/apps/my-project/flyup:/deploy \
+                    alpine find /deploy -mindepth 1 -delete
+                '''
+
+                // 2. Copy source code จาก Jenkins workspace ไป Host
                 sh '''
                 docker run --rm \
                     --volumes-from ${JENKINS_CONTAINER} \
                     -v /root/apps/my-project/flyup:/deploy \
-                    alpine sh -c "rm -rf /deploy/* && cp -r ${WORKSPACE}/. /deploy/"
+                    alpine cp -a ${WORKSPACE}/. /deploy/
                 '''
 
                 // 2. Build & Run จาก Host path (Docker daemon เห็น path นี้ได้)
