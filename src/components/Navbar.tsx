@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Menu, X, LayoutDashboard, ChevronDown, Clock } from 'lucide-react';
+import { Search, Menu, X, LayoutDashboard, ChevronDown} from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { useAuthStore } from '../store/useAuthStore';
 
