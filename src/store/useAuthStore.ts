@@ -5,7 +5,12 @@ import { jwtDecode } from 'jwt-decode'
 import { AxiosError } from 'axios'
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface DecodedUser extends Record<string, unknown> { }
+interface DecodedUser extends Record<string, unknown> {
+    role?: string;
+    email?: string;
+    name?: string;
+    profile_url?: string;
+}
 
 interface RegisterData {
     first_name: string;
