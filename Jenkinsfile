@@ -10,7 +10,7 @@ pipeline {
             steps {
                 // ดึงชื่อ Container ID ของ Jenkins ปัจจุบัน
                 script {
-                    env.JENKINS_CONTAINER = sh(script: "basename $(cat /proc/1/cpuset)", returnStdout: true).trim()
+                    env.JENKINS_CONTAINER = sh(script: 'cat /etc/hostname', returnStdout: true).trim()
                 }
                 
                 // ใช้ --volumes-from เพื่อแชร์โฟลเดอร์ workspace เดียวกับ Jenkins ให้ Container ใหม่
