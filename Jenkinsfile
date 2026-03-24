@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Build & Test') {
             steps {
-                // ดึงชื่อ Container ID ของ Jenkins ปัจจุบัน
+                // ดึงชื่อ Container ID ของ Jenkins ปัจจุบั
                 script {
                     env.JENKINS_CONTAINER = sh(script: 'cat /etc/hostname', returnStdout: true).trim()
                 }
