@@ -1,15 +1,23 @@
 pipeline {
     agent any
 
+    // บอกให้ Jenkins เตรียม Node.js ให้ โดยอ้างอิงจากชื่อที่ตั้งไว้ใน Global Tool Configuration
+    tools {
+        nodejs 'node20' // *ต้องไปตั้งชื่อนี้ใน Jenkins ก่อน*
+    }
+
     environment {
         SONAR_TOKEN = credentials('SonarQubeTokens')
     }
 
     stages {
-        stage('Check Node') {
+        stage('Check Environment') {
             steps {
                 sh 'node --version'
                 sh 'npm --version'
+                
+                // เช็คว่ามี wget/curl unzip ไหมสำหรับโหลด Sonar
+                sh 'apt-get update && apt-get install -y curl unzip || apk add --no-cache curl unzip || echo "Skip install"'
             }
         }
 
@@ -28,17 +36,20 @@ pipeline {
         stage('Sonar Scan') {
             steps {
                 withSonarQubeEnv('sonarcloud') {
-                    // ใช้ Docker ของเครื่อง Host รัน Scanner ให้ โดยส่ง Token เข้าไป
+                    // ใช้ Sonar Scanner แบบ Download สด เพราะไม่มี Docker
                     sh '''
-                    docker run --rm \
-                        -v ${WORKSPACE}:/usr/src \
-                        -e SONAR_TOKEN=$SONAR_TOKEN \
-                        sonarsource/sonar-scanner-cli \
-                        -Dsonar.projectKey=sundayyogurt_flyup \
-                        -Dsonar.organization=sundayyogurt \
-                        -Dsonar.sources=src \
-                        -Dsonar.exclusions=**/node_modules/**,**/dist/** \
-                        -Dsonar.host.url=https://sonarcloud.io
+                    rm -rf sonar-scanner*
+
+                    curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+                    unzip -o sonar-scanner.zip
+
+                    ./sonar-scanner-*/bin/sonar-scanner \
+                      -Dsonar.projectKey=sundayyogurt_flyup \
+                      -Dsonar.organization=sundayyogurt \
+                      -Dsonar.sources=src \
+                      -Dsonar.exclusions=**/node_modules/**,**/dist/** \
+                      -Dsonar.host.url=https://sonarcloud.io \
+                      -Dsonar.login=$SONAR_TOKEN
                     '''
                 }
             }
@@ -51,12 +62,10 @@ pipeline {
                 }
             }
             steps {
-                // เพิ่มคำสั่ง cd เข้าไปในโฟลเดอร์ที่เก็บไฟล์ docker-compose.yml ของคุณ
+                // TODO: Jenkins Server ต้องสามารถสั่งรัน Docker ของเครื่อง Host ได้
                 sh '''
-                    apk add --no-cache docker-cli docker-compose-plugin
-                    
-                    # ตรวจสอบว่า path นี้ตรงกับโฟลเดอร์โปรเจกต์ใน Jenkins Workspace
-                    docker compose down
+                    # ถ้า Jenkins ไม่มี Docker 명령이, 부분นี้จะพัง
+                    docker compose down || true
                     docker compose up -d --build
                 '''
             }
