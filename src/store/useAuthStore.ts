@@ -2,15 +2,34 @@ import { create } from 'zustand'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { jwtDecode } from "jwt-decode";
+import { AxiosError } from 'axios'
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface DecodedUser extends Record<string, unknown> {}
+
+interface RegisterData {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    password: string;
+    role: string;
+    accept_terms: boolean;
+}
+
+interface LoginData {
+    email: string;
+    password: string;
+}
 
 interface AuthStore {
-    authUser: any;
+    authUser: DecodedUser | null;
     checkAuth: () => Promise<void>;
     isCheckingAuth: boolean;
     isRegistering: boolean;
     isLoggingIn: boolean;
-    register: (data: any) => Promise<boolean>;
-    login: (dayta: any) => Promise<void>;
+    register: (data: RegisterData) => Promise<boolean>;
+    login: (data: LoginData) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -23,7 +42,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
             const response = await api.get('/user/me')
             console.log(response?.data)
             set({ authUser: response?.data?.data})
-        }catch(error: any) {
+        }catch(_error: unknown) {
             set({ authUser: null})
         }finally {
             set({ isCheckingAuth: false })
@@ -36,15 +55,18 @@ export const useAuthStore = create<AuthStore>((set) => ({
             console.log(data)
             toast.success('สร้างบัญชีสำเร็จ กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
             return true
-        }catch(error: any) {
-            if (error.response?.data === 'this email is already registered') {
+        }catch(error: unknown) {
+            const err = error instanceof AxiosError ? error : null;
+            const data = err?.response?.data;
+            const message = data?.message;
+            if (data === 'this email is already registered') {
                 toast.error('อีเมล์นี้ถูกใช้แล้ว')
-            }else if (error.response?.data?.message === `sorry!, the domain doesn't exist`) {
+            }else if (message === `sorry!, the domain doesn't exist`) {
                 toast.error('ไม่รองรับมหาลัยนี้')
-            }else if (error.response?.data?.message === 'password must contain at least one uppercase letter' || error.response?.data?.message === 'password must contain at least one special character' || error.response?.data?.message === `Validation failed: Key: 'UserSignup.Password' Error:Field validation for 'Password' failed on the 'min' tag` || error.response?.data?.message === `password must contain at least one lowercase letter` || error.response?.data?.message === `password must contain at least one number`) {
+            }else if (message === 'password must contain at least one uppercase letter' || message === 'password must contain at least one special character' || message === `Validation failed: Key: 'UserSignup.Password' Error:Field validation for 'Password' failed on the 'min' tag` || message === `password must contain at least one lowercase letter` || message === `password must contain at least one number`) {
                 toast.error('ต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว, พิมพ์เล็ก 1 ตัว, ตัวเลข 1 ตัว, อักษรพิเศษ 1 ตัว และ ไม่ต่ำกว่า 8 ตัว')
             }else {
-                toast.error(error.response?.data?.error || 'เกิดข้อผิดพลาดบางอย่าง');
+                toast.error(data?.error || 'เกิดข้อผิดพลาดบางอย่าง');
             }
             return false
         }finally {
@@ -58,9 +80,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
             const token = response.data.token;
             const decodeUser = jwtDecode(token)
             set({ authUser: decodeUser })
-        }catch(error: any){
+        }catch(error: unknown){
             console.log(error)
-            const errorMessage = error.response?.data?.error;
+            const err = error instanceof AxiosError ? error : null;
+            const errorMessage = err?.response?.data?.error;
 
             if (errorMessage === 'please verify email') {
                 toast.error('กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')

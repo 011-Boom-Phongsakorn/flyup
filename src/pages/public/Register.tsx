@@ -75,7 +75,7 @@ const Register = () => {
         }
 
         const fields = ['first_name', 'last_name', 'email', 'phone', 'password'];
-        fields.forEach(f => { if (!(formData as any)[f].trim()) newErrors[f] = true });
+        fields.forEach(f => { if (!(formData as unknown as Record<string, string>)[f].trim()) newErrors[f] = true });
 
         if (!confirmPassword.trim()) {
             newErrors.confirmPassword = true;
@@ -103,7 +103,8 @@ const Register = () => {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         if (validateForm()) {
-            await register(formData) && navigate('/login')
+            const success = await register(formData)
+            if (success) navigate('/login')
         }
     }
 

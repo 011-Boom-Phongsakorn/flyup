@@ -41,7 +41,7 @@ const Login = () => {
 
         const fields = ['email', 'password']
         fields.forEach(f => {
-            if (!(formData as any)[f].trim()) newErrors[f] = true;
+            if (!(formData as unknown as Record<string, string>)[f].trim()) newErrors[f] = true;
         })
 
         setErrors(newErrors)
