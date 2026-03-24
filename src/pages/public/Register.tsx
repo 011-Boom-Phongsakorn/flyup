@@ -136,7 +136,7 @@ const Register = () => {
                             </div>
                             <div className="text-center">
                                 <h3 className="text-foreground text-[16px] font-bold">Booster</h3>
-                                <p className="text-muted-foreground text-[12px]">ผู้สร้างโปรเจกต์</p>
+                                <p className="text-muted-foreground text-[12px]">ผู้ลงทุน</p>
                             </div>
                         </div>
                     </div>
@@ -179,7 +179,7 @@ const Register = () => {
                                     <Loader2 className="h-5 w-5 animate-spin" />
                                     <span>สร้างบัญชี...</span>
                                 </>
-                            ): <p>สร้างบัญชี</p>
+                            ) : <p>สร้างบัญชี</p>
                         }
                     </button>
                 </form>
