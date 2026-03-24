@@ -43,16 +43,23 @@ pipeline {
 
         stage('Build & Deploy') {
             when {
-                anyOf {
-                    branch 'develop'
-                    branch 'origin/develop'
+                expression {
+                    return env.GIT_BRANCH == 'origin/develop' || env.GIT_BRANCH == 'develop'
                 }
             }
             steps {
-                // ตรงนี้ถ้าโปรเจกต์คุณจะ Build Docker Image ให้ใช้ ${WORKSPACE} เป็น Context ระวังเรื่อง Path ของ docker-compose ด้วย
+                // 1. Sync source code จาก Jenkins workspace ไปยัง folder บน Host
                 sh '''
-                docker compose down || true
-                docker compose up -d --build
+                docker run --rm \
+                    --volumes-from ${JENKINS_CONTAINER} \
+                    -v /root/apps/my-project/flyup:/deploy \
+                    alpine sh -c "rm -rf /deploy/* && cp -r ${WORKSPACE}/. /deploy/"
+                '''
+
+                // 2. Build & Run จาก Host path (Docker daemon เห็น path นี้ได้)
+                sh '''
+                docker compose -f /root/apps/my-project/flyup/docker-compose.yml down || true
+                docker compose -f /root/apps/my-project/flyup/docker-compose.yml up -d --build
                 '''
             }
         }
