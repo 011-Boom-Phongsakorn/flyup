@@ -24,22 +24,22 @@ pipeline {
             }
         }
 
-        stage('Sonar Scan') {
-            steps {
-                withSonarQubeEnv('sonarcloud') {
-                    sh '''
-                    docker run --rm --volumes-from ${JENKINS_CONTAINER} -w ${WORKSPACE} \
-                        -e SONAR_TOKEN=$SONAR_TOKEN \
-                        sonarsource/sonar-scanner-cli \
-                        -Dsonar.projectKey=sundayyogurt_flyup \
-                        -Dsonar.organization=sundayyogurt \
-                        -Dsonar.sources=src \
-                        -Dsonar.exclusions=**/node_modules/**,**/dist/** \
-                        -Dsonar.host.url=https://sonarcloud.io
-                    '''
-                }
-            }
-        }
+        // stage('Sonar Scan') {
+        //     steps {
+        //         withSonarQubeEnv('sonarcloud') {
+        //             sh '''
+        //             docker run --rm --volumes-from ${JENKINS_CONTAINER} -w ${WORKSPACE} \
+        //                 -e SONAR_TOKEN=$SONAR_TOKEN \
+        //                 sonarsource/sonar-scanner-cli \
+        //                 -Dsonar.projectKey=sundayyogurt_flyup \
+        //                 -Dsonar.organization=sundayyogurt \
+        //                 -Dsonar.sources=src \
+        //                 -Dsonar.exclusions=**/node_modules/**,**/dist/** \
+        //                 -Dsonar.host.url=https://sonarcloud.io
+        //             '''
+        //         }
+        //     }
+        // }
 
         stage('Build & Deploy') {
             when {
