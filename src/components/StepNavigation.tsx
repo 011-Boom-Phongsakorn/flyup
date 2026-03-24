@@ -1,7 +1,12 @@
 import { Link, useParams, useLocation } from "react-router";
 import { ChevronLeft, ChevronRight, Send } from 'lucide-react';
 
-const StepNavigation = () => {
+interface StepNavigationProps {
+  onSubmit?: () => void;
+  disableSubmit?: boolean;
+}
+
+const StepNavigation = ({ onSubmit, disableSubmit }: StepNavigationProps = {}) => {
   const { projectId } = useParams();
   const location = useLocation();
   
@@ -45,8 +50,13 @@ const StepNavigation = () => {
       ) : (
         // ถ้าเป็น Step สุดท้าย เปลี่ยนเป็นปุ่ม Button แทน Link เพื่อเอาไว้ Submit ฟอร์ม
         <button 
-          onClick={() => console.log("ส่งคำขอแล้ว!")}
-          className="px-[20px] h-[38px] bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-[6px] rounded-[12px] transition-all duration-200"
+          onClick={onSubmit || (() => console.log("ส่งคำขอแล้ว!"))}
+          disabled={disableSubmit}
+          className={`px-[20px] h-[38px] flex items-center justify-center gap-[6px] rounded-[12px] transition-all duration-200 ${
+            disableSubmit 
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              : 'bg-primary hover:bg-primary-hover text-white'
+          }`}
         >
           <Send size={14} />
           <span className="text-[14px]">ส่งคำขอสร้างโปรเจกต์</span>

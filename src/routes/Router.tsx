@@ -19,6 +19,7 @@ import Step1Basics from '../components/steps/Step1Basics';
 import Step2Story from '../components/steps/Step2Story';
 import Step3Milestone from '../components/steps/Step3Milestone';
 import Step4Agreement from '../components/steps/Step4Agreement';
+import Preview from '../pages/pioneer/Preview';
 
 const Router = () => {
   return (
@@ -29,6 +30,7 @@ const Router = () => {
                     <Route path='/' element={<Home />} />
                     <Route path='/register' element={<Register />} />
                     <Route path='/login' element={<Login />} />
+                    <Route path='/preview/:projectId' element={<Preview />} />
                 </Route>
 
                 <Route>

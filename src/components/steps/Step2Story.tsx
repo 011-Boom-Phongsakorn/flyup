@@ -232,8 +232,9 @@ const Step2Story = () => {
           {/* ✅ Container หลักต้องเป็น overflow-visible เพื่อให้เมนูเด้งออกมาได้ */}
           <p className='text-[14px] text-foreground'>ความเป็นมาของโปรเจกต์</p>
           <div
+            tabIndex={0}
             ref={editorContainerRef}
-            className="relative border border-border rounded-[6px] bg-background min-h-[450px] overflow-visible" // ✅ เพิ่ม margin left เพื่อเผื่อพื้นที่ให้ปุ่ม + ทางซ้าย
+            className="relative border border-border rounded-[6px] bg-background min-h-[450px] overflow-visible focus:outline-none focus-within:border-primary transition-all duration-200 hover:border-primary/50" // ✅ เพิ่ม margin left เพื่อเผื่อพื้นที่ให้ปุ่ม + ทางซ้าย
           >
 
             {/* ✅ Custom Floating Menu — แสดงเฉพาะบรรทัดว่างเท่านั้น */}
@@ -497,7 +498,15 @@ const Step2Story = () => {
             </div>
 
           </div>
-          <p className='text-[12px] text-muted-foreground'>*ระบุความเสี่ยงที่อาจเกิดขึ้น  เพื่อให้ผู้สนับสนุนได้รับทราบข้อมูลที่ครบถ้วน *</p>
+          <p className='text-[12px] text-muted-foreground'>*อธิบายความเป็นมาและรายละเอียด เชิงลึกเพื่อสร้างความเชื่อมั่น  *</p>
+          <p className='text-[14px] text-foreground'>ความเสี่ยงของโปรเจกต์</p>
+          <textarea
+            // value={localData.risk} // สมมติว่ามี field นี้
+            // onChange={(e) => setLocalData({ ...localData, risk: e.target.value })}
+            // onBlur={() => handleAutoSave('risk', localData.risk)}
+            rows={4} // กำหนดความสูงเริ่มต้น
+            className="w-full border border-border bg-background h-[100px] p-[12px] rounded-[8px] resize-none focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"/>
+          <p className='text-[12px] text-muted-foreground'>*ระบุความเสี่ยงที่อาจเกิดขึ้น  เพื่อให้ผู้สนับสนุนได้รับทราบข้อมูลที่ครบถ้วน  *</p>
         </div>
       </div>
       <StepNavigation />

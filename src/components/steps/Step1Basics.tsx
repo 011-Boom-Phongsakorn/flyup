@@ -63,13 +63,6 @@ const Step1Basics = () => {
     setShowSavedTick(true);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      (e.target as HTMLElement).blur();
-    }
-  };
-
-
   const handleMultipleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -159,7 +152,6 @@ const Step1Basics = () => {
             <label className="text-foreground text-[14px]">ชื่อโปรเจกต์</label>
             <input
               value={localData.title}
-              onKeyDown={handleKeyDown}
               onBlur={() => handleAutoSave('title', localData.title)}
               onChange={(e) => setLocalData({ ...localData, title: e.target.value })}
               type="text"
@@ -170,7 +162,6 @@ const Step1Basics = () => {
             <label className="text-foreground text-[14px]">คำอธิบาย</label>
             <textarea
               value={localData.description}
-              onKeyDown={handleKeyDown}
               onBlur={() => handleAutoSave('description', localData.description)}
               onChange={(e) => setLocalData({ ...localData, description: e.target.value })}
               className="border border-border bg-background h-[100px] p-[12px] rounded-[8px] focus:outline-none focus:border-primary resize-none transition-all duration-200 hover:border-primary/50"
@@ -220,7 +211,6 @@ const Step1Basics = () => {
               value={localData.fundingGoal || ''}
               onChange={(e) => setLocalData({ ...localData, fundingGoal: Number(e.target.value) })}
               onBlur={() => handleAutoSave('fundingGoal', localData.fundingGoal)}
-              onKeyDown={handleKeyDown}
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
           <div className="flex flex-col gap-[4px]">
@@ -230,7 +220,6 @@ const Step1Basics = () => {
               value={localData.projectDuration || ''}
               onChange={(e) => setLocalData({ ...localData, projectDuration: Number(e.target.value) })}
               onBlur={() => handleAutoSave('projectDuration', localData.projectDuration)}
-              onKeyDown={handleKeyDown}
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
           <div className="grid grid-cols-1 gap-[20px] md:grid-cols-3 md:gap-[20px]">
@@ -241,7 +230,6 @@ const Step1Basics = () => {
                 value={localData.softCap || ''}
                 onChange={(e) => setLocalData({ ...localData, softCap: Number(e.target.value) })}
                 onBlur={() => handleAutoSave('softCap', localData.softCap)}
-                onKeyDown={handleKeyDown}
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
             </div>
             <div className="flex flex-col gap-[4px]">
@@ -251,7 +239,6 @@ const Step1Basics = () => {
                 value={localData.campaignDuration || ''}
                 onChange={(e) => setLocalData({ ...localData, campaignDuration: Number(e.target.value) })}
                 onBlur={() => handleAutoSave('campaignDuration', localData.campaignDuration)}
-                onKeyDown={handleKeyDown}
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
             </div>
             <div className="flex flex-col gap-[4px]">
@@ -261,7 +248,6 @@ const Step1Basics = () => {
                 value={localData.revenueShare || ''}
                 onChange={(e) => setLocalData({ ...localData, revenueShare: Number(e.target.value) })}
                 onBlur={() => handleAutoSave('revenueShare', localData.revenueShare)}
-                onKeyDown={handleKeyDown}
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
             </div>
           </div>

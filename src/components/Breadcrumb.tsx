@@ -49,7 +49,7 @@ const Breadcrumb = () => {
                     })
                 }
             </ul>
-            <Link to='/preview' className="border border-border bg-white-foreground text-foreground rounded-[4px] flex gap-[10px] p-[8px] w-[165px] h-[38px] items-center justify-center hover:bg-white-foreground/50 transition-all duration-200">
+            <Link to={`/preview/${projectId}`} className="border border-border bg-white-foreground text-foreground rounded-[4px] flex gap-[10px] p-[8px] w-[165px] h-[38px] items-center justify-center hover:bg-white-foreground/50 transition-all duration-200">
                 <Eye size={16} />
                 <span className="text-[14px] font-medium">ดูตัวอย่าง</span>
             </Link>
