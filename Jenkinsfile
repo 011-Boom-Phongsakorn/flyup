@@ -45,7 +45,6 @@ pipeline {
                 }
             }
             steps {
-                // สั่ง Docker Compose ของเครื่อง DigitalOcean ผ่าน Socket
                 sh '''
                 docker compose down
                 docker compose up -d --build
