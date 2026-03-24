@@ -63,7 +63,10 @@ pipeline {
                     alpine cp -a ${WORKSPACE}/. /deploy/
                 '''
 
-                // 3. Stop old container
+                // 3. ลบ container เก่า (อาจถูกสร้างจาก project อื่น)
+                sh 'docker rm -f flyup-frontend || true'
+
+                // 4. Stop old compose project
                 sh '''
                 docker run --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock \
