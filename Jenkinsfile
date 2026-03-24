@@ -1,5 +1,5 @@
 pipeline {
-    agent any // เราใช้ any เพราะเราลง Docker CLI ไว้ใน Jenkins แล้ว
+    agent any
 
     environment {
         SONAR_TOKEN = credentials('SonarQubeTokens')
@@ -8,8 +8,14 @@ pipeline {
     stages {
         stage('Build & Test') {
             steps {
+                // ดึงชื่อ Container ID ของ Jenkins ปัจจุบัน
+                script {
+                    env.JENKINS_CONTAINER = sh(script: "basename $(cat /proc/1/cpuset)", returnStdout: true).trim()
+                }
+                
+                // ใช้ --volumes-from เพื่อแชร์โฟลเดอร์ workspace เดียวกับ Jenkins ให้ Container ใหม่
                 sh '''
-                docker run --rm -v ${WORKSPACE}:/app -w /app node:20-alpine sh -c "
+                docker run --rm --volumes-from ${JENKINS_CONTAINER} -w ${WORKSPACE} node:20-alpine sh -c "
                     npm install && 
                     npm run lint && 
                     npm run build
@@ -21,9 +27,8 @@ pipeline {
         stage('Sonar Scan') {
             steps {
                 withSonarQubeEnv('sonarcloud') {
-                    // ใช้ Image ของ Sonar Scanner โดยตรง (มี Java ในตัว ไม่ต้องลงเพิ่ม)
                     sh '''
-                    docker run --rm -v ${WORKSPACE}:/usr/src \
+                    docker run --rm --volumes-from ${JENKINS_CONTAINER} -w ${WORKSPACE} \
                         -e SONAR_TOKEN=$SONAR_TOKEN \
                         sonarsource/sonar-scanner-cli \
                         -Dsonar.projectKey=sundayyogurt_flyup \
@@ -44,8 +49,9 @@ pipeline {
                 }
             }
             steps {
+                // ตรงนี้ถ้าโปรเจกต์คุณจะ Build Docker Image ให้ใช้ ${WORKSPACE} เป็น Context ระวังเรื่อง Path ของ docker-compose ด้วย
                 sh '''
-                docker compose down
+                docker compose down || true
                 docker compose up -d --build
                 '''
             }
