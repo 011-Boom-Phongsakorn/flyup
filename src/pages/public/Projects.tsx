@@ -106,7 +106,11 @@ const mockProjects: Project[] = [
 
 const Projects = () => {
   const [activeCategory, setActiveCategory] = useState('ทั้งหมด');
-  const [searchQuery, setSearchQuery] = useState(''); 
+  const [searchQuery, setSearchQuery] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('q') || '';
+  }); 
+
   const [sortOrder, setSortOrder] = useState<'latest' | 'oldest'>('latest');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false); 
 
@@ -133,7 +137,7 @@ const Projects = () => {
   }, [activeCategory, searchQuery, sortOrder]);
 
   return (
-    <div className="bg-background min-h-screen md:pt-12 pb-20 font-sans text-foreground">
+    <div className="bg-background min-h-screen pt-28 md:pt-32 pb-20 font-sans text-foreground">
       <div className="container mx-auto px-4 md:px-8 max-w-7xl">
         
         <div className="mb-5 md:mb-6">
@@ -185,7 +189,6 @@ const Projects = () => {
           </div>
         </div>
 
-        {/* Categories Bar */}
         <div className="flex overflow-x-auto gap-2.5 pb-3 mb-6 md:mb-8 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
           {categoriesMap.map((category) => {
             const Icon = category.icon;
