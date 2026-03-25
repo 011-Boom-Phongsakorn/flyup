@@ -126,7 +126,22 @@ const newProjects = [
   },
 ];
 
-const ProjectCard = ({ project }: { project: any }) => (
+interface Project {
+  id?: number | string;
+  title: string;
+  image: string;
+  category?: string;
+  description?: string;
+  author?: string;
+  progress: number;
+  raised: number;
+  daysLeft: number;
+  isHot?: boolean;
+  isNew?: boolean;
+  [key: string]: unknown;
+}
+
+const ProjectCard = ({ project }: { project: Project }) => (
   <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group flex flex-col">
     <div className="relative h-48 w-full overflow-hidden bg-gray-100">
       <img src={project.image} alt={project.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />

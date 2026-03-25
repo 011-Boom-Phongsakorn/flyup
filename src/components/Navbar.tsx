@@ -12,10 +12,18 @@ const mockProjects = [
   { id: 1, title: 'CyberShield', description: 'เว็บแอปตรวจสอบช่องโหว่เว็บไซต์เบื้องต้น', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=800', category: 'Cybersecurity' }
 ];
 
+interface SearchSuggestion {
+    id: number | string;
+    title: string;
+    description: string;
+    image: string;
+    category: string;
+}
+
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const { authUser } = useAuthStore();
     const navigate = useNavigate();
