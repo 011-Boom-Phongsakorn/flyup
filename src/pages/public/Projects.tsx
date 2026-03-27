@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router';
 import type { ElementType } from 'react';
 import { 
   Search, ChevronDown, Flame, Sparkles,
@@ -137,7 +138,7 @@ const Projects = () => {
   }, [activeCategory, searchQuery, sortOrder]);
 
   return (
-    <div className="bg-background min-h-screen pt-28 md:pt-32 pb-20 font-sans text-foreground">
+    <div className="bg-background min-h-screen pb-20 font-sans text-foreground">
       <div className="container mx-auto px-4 md:px-8 max-w-7xl">
         
         <div className="mb-5 md:mb-6">
@@ -217,8 +218,9 @@ const Projects = () => {
               const ProjectCategoryIcon = categoryConfig ? categoryConfig.icon : LayoutGrid;
 
               return (
-                <div 
-                  key={project.id} 
+                <Link 
+      key={project.id} 
+      to={`/projects/${project.id}`} 
                   className="bg-card rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer group flex flex-col"
                 >
                   <div className="relative h-48 w-full overflow-hidden bg-muted">
@@ -274,7 +276,7 @@ const Projects = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

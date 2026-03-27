@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef} from 'react';
 import { Search, Menu, X, LayoutDashboard, ChevronDown} from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { useAuthStore } from '../store/useAuthStore';
@@ -20,7 +20,13 @@ interface SearchSuggestion {
     category: string;
 }
 
-const Navbar = () => {
+// 1. เพิ่ม Interface สำหรับรับ Prop
+interface NavbarProps {
+    isHome?: boolean;
+}
+
+// 2. รับ isHome เข้ามา (กำหนดค่าเริ่มต้นเป็น false)
+const Navbar = ({ isHome = false }: NavbarProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -78,7 +84,8 @@ const Navbar = () => {
     };
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 w-full py-4 bg-transparent px-4">
+        // 3. เปลี่ยนจาก "fixed" แบบตายตัว เป็นใช้เงื่อนไขเช็ค isHome
+        <nav className={`${isHome ? 'fixed' : 'sticky'} top-0 left-0 right-0 z-50 w-full py-4 bg-transparent px-4 transition-all duration-300`}>
             <div className="w-full max-w-[1104px] mx-auto relative">
                 <div className="flex items-center justify-between bg-card/90 backdrop-blur-md w-full border border-border h-[70px] px-6 md:px-8 rounded-full shadow-sm">
                     
@@ -101,45 +108,45 @@ const Navbar = () => {
                         </div>
 
                         {showSuggestions && (
-    <div className="absolute top-[50px] left-0 w-full bg-card border border-border rounded-[16px] shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[60]">
-        <div className="py-2">
-            {suggestions.length > 0 ? (
-                suggestions.map((item) => (
-                    <button
-                        key={item.id}
-                        onClick={() => performSearch(item.title)}
-                        className="w-full flex items-center gap-4 px-4 py-3 hover:bg-muted transition-all text-left group"
-                    >
-                        <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border border-border">
-                            <img 
-                                src={item.image} 
-                                alt={item.title} 
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
-                            />
-                        </div>
+                            <div className="absolute top-[50px] left-0 w-full bg-card border border-border rounded-[16px] shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[60]">
+                                <div className="py-2">
+                                    {suggestions.length > 0 ? (
+                                        suggestions.map((item) => (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => performSearch(item.title)}
+                                                className="w-full flex items-center gap-4 px-4 py-3 hover:bg-muted transition-all text-left group"
+                                            >
+                                                <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border border-border">
+                                                    <img 
+                                                        src={item.image} 
+                                                        alt={item.title} 
+                                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
+                                                    />
+                                                </div>
 
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[14px] font-semibold text-foreground truncate">
-                                {item.title}
-                            </span>
-                            <span className="text-[12px] text-muted-foreground truncate">
-                                {item.description}
-                            </span>
-                        </div>
-                    </button>
-                ))
-            ) : (
-                <button 
-                    onClick={() => performSearch(searchQuery)}
-                    className="w-full px-5 py-3 text-sm text-muted-foreground flex items-center gap-3 hover:bg-muted"
-                >
-                    <Search size={16} /> 
-                    <span>ค้นหาแบบละเอียดสำหรับ "{searchQuery}"</span>
-                </button>
-            )}
-        </div>
-    </div>
-)}
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-[14px] font-semibold text-foreground truncate">
+                                                        {item.title}
+                                                    </span>
+                                                    <span className="text-[12px] text-muted-foreground truncate">
+                                                        {item.description}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <button 
+                                            onClick={() => performSearch(searchQuery)}
+                                            className="w-full px-5 py-3 text-sm text-muted-foreground flex items-center gap-3 hover:bg-muted"
+                                        >
+                                            <Search size={16} /> 
+                                            <span>ค้นหาแบบละเอียดสำหรับ "{searchQuery}"</span>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="hidden md:flex items-center gap-4">

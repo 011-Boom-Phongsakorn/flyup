@@ -11,6 +11,7 @@ import Projects from '../pages/public/Projects';
 import Register from '../pages/public/Register';
 import Login from '../pages/public/Login';
 import VerifyEmail from '../pages/public/VerifyEmail';
+import ProjectDetail from '../pages/public/ProjectDetail';
 
 import { Loader2 } from 'lucide-react';
 
@@ -39,6 +40,7 @@ const Router = () => {
                         <Route path='/login' element={!authUser ? <Login /> : <Navigate to='/' />} />
                         <Route path='/projects' element={<Projects />} />
                         <Route path='/verify' element={<VerifyEmail />} />
+                        <Route path='/projects/:id' element={<ProjectDetail />} />
                     </Route>
                 </Routes>
                 <Toaster position='top-right' />
