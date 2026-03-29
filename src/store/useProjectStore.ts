@@ -36,8 +36,14 @@ export interface Project {
     milestones: Milestone[];
 }
 
+export interface ProjectSummary {
+    id: number;
+    title: string;
+    status: string;
+}
+
 interface ProjectState {
-    projects: any[];
+    projects: ProjectSummary[];
     currentProject: Project;
     isLoading: boolean;
     isCreating: boolean;
