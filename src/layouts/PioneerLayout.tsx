@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, startTransition } from "react"
 import { Outlet, useLocation } from "react-router"
 import SidebarPioneer from "../components/SidebarPioneer"
 import NavbarDashboard from "../components/NavbarDashboard"
@@ -8,7 +8,7 @@ const PioneerLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
-        setIsSidebarOpen(false)
+        startTransition(() => setIsSidebarOpen(false))
     }, [location])
 
     return (

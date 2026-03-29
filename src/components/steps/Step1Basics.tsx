@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, X, ImageIcon, Upload, FileImage, Video } from "lucide-react";
 import StepNavigation from "../StepNavigation";
-import { useProjectStore } from "../../store/useProjectStore";
+import { useProjectStore, type Project } from "../../store/useProjectStore";
 import toast from "react-hot-toast";
 
 const categories = [
@@ -14,34 +14,19 @@ const Step1Basics = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [showSavedTick, setShowSavedTick] = useState(false)
 
-  const [localData, setLocalData] = useState({
-    title: '',
-    description: '',
-    category: '',
-    fundingGoal: 0,
-    projectDuration: 0,
-    softCap: 0,
-    campaignDuration: 0,
-    revenueShare: 0,
-  });
+  const [localData, setLocalData] = useState(() => ({
+    title: currentProject.title || '',
+    description: currentProject.description || '',
+    category: currentProject.category || '',
+    fundingGoal: currentProject.fundingGoal || 0,
+    projectDuration: currentProject.projectDuration || 0,
+    softCap: currentProject.softCap || 0,
+    campaignDuration: currentProject.campaignDuration || 0,
+    revenueShare: currentProject.revenueShare || 0,
+  }));
 
   const additionalImagesRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (currentProject) {
-      setLocalData({
-        title: currentProject.title || '',
-        description: currentProject.description || '',
-        category: currentProject.category || '',
-        fundingGoal: currentProject.fundingGoal || 0,
-        projectDuration: currentProject.projectDuration || 0,
-        softCap: currentProject.softCap || 0,
-        campaignDuration: currentProject.campaignDuration || 0,
-        revenueShare: currentProject.revenueShare || 0,
-      });
-    }
-  }, []);
 
   useEffect(() => {
     if (showSavedTick) {
@@ -51,7 +36,7 @@ const Step1Basics = () => {
     }
   }, [showSavedTick]);
 
-  const handleAutoSave = async (field: string, newValue: any) => {
+  const handleAutoSave = async (field: keyof Project, newValue: string | number) => {
     const oldValue = currentProject?.[field as keyof typeof currentProject];
     const isSame = typeof newValue === 'string'
       ? newValue.trim() === (oldValue as string || '')

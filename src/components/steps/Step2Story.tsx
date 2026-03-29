@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useEditor, EditorContent, mergeAttributes } from '@tiptap/react'
+import { NodeSelection } from '@tiptap/pm/state'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -31,7 +32,7 @@ const CustomImage = Image.extend({
     }
   },
   renderHTML({ HTMLAttributes }) {
-    const { href, target, align, ...imgAttributes } = HTMLAttributes
+    const { href, target: _target, align, ...imgAttributes } = HTMLAttributes
 
     let style = ''
     if (align === 'left') {
@@ -42,10 +43,12 @@ const CustomImage = Image.extend({
       style += 'display: block; margin: 0 auto; width: 100%;'
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const img = ['img', mergeAttributes(this.options.HTMLAttributes, imgAttributes, { style })] as any
 
     if (href) {
       // ✅ ใช้ span ทรงเป็นลิงก์แทน a ตอนเรา render บน Editor จะได้ไม่ดื้อเด้งไปลิงก์จริงๆ
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return ['span', { 'data-href': href, class: 'cursor-pointer block relative' }, img] as any
     }
 
@@ -168,7 +171,7 @@ const Step2Story = () => {
     editor.on('blur', handleBlur)
 
     // เรียกครั้งแรก
-    updateFloatingMenu()
+    setTimeout(updateFloatingMenu, 0)
 
     return () => {
       editor.off('update', handleUpdate)
@@ -370,9 +373,9 @@ const Step2Story = () => {
               <BubbleMenu
                 pluginKey="imageBubbleMenu"
                 editor={editor}
-                shouldShow={(props: any) => {
-                  const { state, editor } = props;
-                  const isImage = state.selection.node?.type.name === 'image' || editor.isActive('image')
+                shouldShow={({ state, editor }) => {
+                  const { selection } = state
+                  const isImage = (selection instanceof NodeSelection && selection.node.type.name === 'image') || editor.isActive('image')
                   return isImage
                 }}
               >

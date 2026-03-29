@@ -8,7 +8,7 @@ const Dashboard = () => {
 
   const handleCreateProject = async () => {
     const newProjectId = await createProject()
-    newProjectId && navigate(`/project/overview/${newProjectId}`)
+    if (newProjectId) navigate(`/project/overview/${newProjectId}`)
   }
 
   return (

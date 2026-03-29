@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useProjectStore } from '../../store/useProjectStore'
+import { useProjectStore, type Milestone } from '../../store/useProjectStore'
 import { Plus, Trash2, Upload, Video, X } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
 import toast from 'react-hot-toast'
@@ -15,7 +15,7 @@ const Step3Milestone = () => {
   const videoInputRef = useRef<HTMLInputElement>(null)
 
   // 1. ฟังก์ชันอัปเดตข้อมูลทั่วไปของ Milestone
-  const handleChange = (field: string, value: any) => {
+  const handleChange = <K extends keyof Milestone>(field: K, value: Milestone[K]) => {
     updateMilestone(activePhase, { [field]: value })
   }
 
