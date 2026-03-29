@@ -3,6 +3,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+
 @theme {
     /* --- colors --- */
     --color-primary: #7C4DDB;
@@ -45,6 +46,8 @@
     /* 4. Gradient Sidebar: พื้นหลังไซด์บาร์เข้ม */
     /* บนเข้ม (100%) -> ล่างจางลง (50%) */
     --gradient-sidebar: linear-gradient(180deg, #1A1525 0%, rgba(19, 15, 30, 0.5) 100%);
+
+    --font-sans: "Kanit", sans-serif;
 
 }
 

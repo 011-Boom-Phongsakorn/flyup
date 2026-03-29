@@ -1,0 +1,10 @@
+services:
+  flyup-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_URL: ${VITE_BASE_URL}
+    container_name: flyup-frontend
+    network_mode: host
+    restart: unless-stopped

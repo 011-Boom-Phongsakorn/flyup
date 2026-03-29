@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router"
-import { Users } from 'lucide-react'
+import { Loader2, Users } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useAuthStore } from "../../store/useAuthStore"
 
@@ -17,7 +17,7 @@ interface RegisterFormData {
 }
 
 const Register = () => {
-    const { register } = useAuthStore()
+    const { register, isRegistering } = useAuthStore()
     const navigate = useNavigate()
     const [role, setRole] = useState<UserRole>('')
     const [confirmPassword, setConfirmPassword] = useState<string>('')
@@ -75,7 +75,7 @@ const Register = () => {
         }
 
         const fields = ['first_name', 'last_name', 'email', 'phone', 'password'];
-        fields.forEach(f => { if (!(formData as any)[f].trim()) newErrors[f] = true });
+        fields.forEach(f => { if (!(formData as unknown as Record<string, string>)[f].trim()) newErrors[f] = true });
 
         if (!confirmPassword.trim()) {
             newErrors.confirmPassword = true;
@@ -100,12 +100,11 @@ const Register = () => {
         return true;
     }
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        console.log(formData)
         if (validateForm()) {
-            register(formData)
-            navigate('/login')
+            const success = await register(formData)
+            if (success) navigate('/login')
         }
     }
 
@@ -137,7 +136,7 @@ const Register = () => {
                             </div>
                             <div className="text-center">
                                 <h3 className="text-foreground text-[16px] font-bold">Booster</h3>
-                                <p className="text-muted-foreground text-[12px]">ผู้สร้างโปรเจกต์</p>
+                                <p className="text-muted-foreground text-[12px]">ผู้ลงทุน</p>
                             </div>
                         </div>
                     </div>
@@ -173,7 +172,16 @@ const Register = () => {
                             <label className="text-muted-foreground text-[14px]">ฉันยอมรับ <Link to='/condition' className="underline text-foreground">ข้อกำหนดและเงื่อนไข</Link> ของ FlyUp</label>
                         </div>
                     </div>
-                    <button type="submit" className="bg-primary text-white text-[14px] w-full flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300">สร้างบัญชี</button>
+                    <button disabled={isRegistering} type="submit" className="bg-primary text-white text-[14px] w-full flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300">
+                        {
+                            isRegistering ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    <span>สร้างบัญชี...</span>
+                                </>
+                            ) : <p>สร้างบัญชี</p>
+                        }
+                    </button>
                 </form>
                 <div className="text-center">
                     <p className="text-[14px] text-foreground">มีบัญชีอยู่แล้ว? <Link to='/login' className="text-primary">เข้าสู่ระบบ</Link></p>
