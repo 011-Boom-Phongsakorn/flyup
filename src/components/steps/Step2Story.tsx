@@ -32,7 +32,8 @@ const CustomImage = Image.extend({
     }
   },
   renderHTML({ HTMLAttributes }) {
-    const { href, target: _target, align, ...imgAttributes } = HTMLAttributes
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { href, target, align, ...imgAttributes } = HTMLAttributes
 
     let style = ''
     if (align === 'left') {
