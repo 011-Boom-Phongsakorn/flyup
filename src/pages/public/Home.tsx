@@ -142,7 +142,8 @@ interface Project {
 }
 
 const ProjectCard = ({ project }: { project: Project }) => (
-  <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group flex flex-col">
+  <Link 
+    to={`/projects/${project.id}`} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group flex flex-col">
     <div className="relative h-48 w-full overflow-hidden bg-gray-100">
       <img src={project.image} alt={project.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
       <div className="absolute top-3 right-3 flex gap-2">
@@ -177,7 +178,7 @@ const ProjectCard = ({ project }: { project: Project }) => (
         <span className="text-xs text-gray-500">{project.daysLeft} วัน</span>
       </div>
     </div>
-  </div>
+  </Link>
 );
 
 const Home = () => {
@@ -238,7 +239,8 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <Link 
+  to={`/projects/${recommendedMain.id}`} className="py-16 bg-white">
         <div className="container mx-auto px-4 md:px-8 max-w-7xl">
           <div className="flex justify-between items-end mb-8">
             <div>
@@ -273,7 +275,9 @@ const Home = () => {
 
             <div className="flex flex-col gap-4">
               {recommendedList.map(item => (
-                <div key={item.id} className="flex gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-100">
+                <Link 
+      key={item.id} 
+      to={`/projects/${item.id}`} className="flex gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-100">
                   <img src={item.image} alt={item.title} className="w-24 h-24 rounded-xl object-cover" />
                   <div className="flex-1 py-1">
                     <h4 className="font-bold mb-1">{item.title}</h4>
@@ -286,12 +290,12 @@ const Home = () => {
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
         </div>
-      </section>
+      </Link>
 
       <section className="py-16">
         <div className="container mx-auto px-4 md:px-8 max-w-7xl">
