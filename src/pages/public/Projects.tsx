@@ -106,7 +106,10 @@ const mockProjects: Project[] = [
 ];
 
 const Projects = () => {
-  const [activeCategory, setActiveCategory] = useState('ทั้งหมด');
+  const [activeCategory, setActiveCategory] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('category') || 'ทั้งหมด';
+  });
   const [searchQuery, setSearchQuery] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('q') || '';
