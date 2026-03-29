@@ -21,6 +21,7 @@ import ProjectOverview from '../pages/pioneer/ProjectOverview';
 import Dashboard from '../pages/pioneer/Dashboard';
 import PioneerLayout from '../layouts/PioneerLayout';
 import MyProjects from '../pages/pioneer/MyProjects';
+import Profile from '../pages/pioneer/Profile';
 import ProjectStageLayout from '../layouts/ProjectStageLayout';
 import Step1Basics from '../components/steps/Step1Basics';
 import Step2Story from '../components/steps/Step2Story';
@@ -61,6 +62,7 @@ const Router = () => {
                         <Route element={<PioneerLayout />}>
                             <Route path='/pioneer/dashboard' element={<Dashboard />} />
                             <Route path='/pioneer/dashboard/projects' element={<MyProjects />} />
+                            <Route path='/pioneer/profile' element={<Profile />} />
                         </Route>
                         <Route element={<MainLayout />}>
                             <Route path='/project/overview/:projectId' element={<ProjectOverview />} />

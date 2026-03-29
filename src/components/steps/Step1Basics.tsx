@@ -1,15 +1,18 @@
 import { useState, useRef, useEffect } from "react";
+import { useParams } from "react-router";
 import { ChevronDown, X, ImageIcon, Upload, FileImage, Video } from "lucide-react";
 import StepNavigation from "../StepNavigation";
 import { useProjectStore, type Project } from "../../store/useProjectStore";
 import toast from "react-hot-toast";
+import api from "../../services/api";
 
 const categories = [
   'Web App', 'Mobile App', 'AI', 'Data Analytics', 'Cloud', 'DevOps', 'Blockchain', 'Fintech', 'Cybersecurity', 'Game', 'Business', 'Education', 'IOT'
 ];
 
 const Step1Basics = () => {
-  const { currentProject, updateProjectInfo } = useProjectStore()
+  const { projectId } = useParams();
+  const { currentProject, updateProjectInfo, updateProject } = useProjectStore()
 
   const [isOpen, setIsOpen] = useState(false)
   const [showSavedTick, setShowSavedTick] = useState(false)
@@ -24,6 +27,24 @@ const Step1Basics = () => {
     campaignDuration: currentProject.campaignDuration || 0,
     revenueShare: currentProject.revenueShare || 0,
   }));
+
+  // Sync localData เมื่อ store โหลดข้อมูลจาก API เสร็จ (เช่น เปิดหน้าใหม่หลัง refresh)
+  const hasInitializedRef = useRef(false);
+  useEffect(() => {
+    if (!hasInitializedRef.current && currentProject.title) {
+      hasInitializedRef.current = true;
+      setLocalData({
+        title: currentProject.title,
+        description: currentProject.description || '',
+        category: currentProject.category || '',
+        fundingGoal: currentProject.fundingGoal || 0,
+        projectDuration: currentProject.projectDuration || 0,
+        softCap: currentProject.softCap || 0,
+        campaignDuration: currentProject.campaignDuration || 0,
+        revenueShare: currentProject.revenueShare || 0,
+      });
+    }
+  }, [currentProject]);
 
   const additionalImagesRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -45,62 +66,104 @@ const Step1Basics = () => {
     if (isSame) return;
 
     updateProjectInfo({ [field]: newValue });
+
+    if (projectId) {
+      await updateProject(Number(projectId), { [field]: newValue });
+    }
+
     setShowSavedTick(true);
   };
 
-  const handleMultipleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const currentImages = currentProject?.files || [];
-
-      // ✅ 1. กรองเฉพาะไฟล์ที่เป็น image/png หรือ image/jpeg เท่านั้น
-      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-      const validFiles = Array.from(files).filter(file =>
-        allowedTypes.includes(file.type)
-      );
-
-      // แจ้งเตือนถ้ามีบางไฟล์ถูกคัดออก
-      if (validFiles.length !== files.length) {
-        toast.error("อนุญาตเฉพาะไฟล์ PNG และ JPEG เท่านั้น");
-      }
-
-      if (validFiles.length === 0) return;
-
-      // ✅ 2. เช็คจำนวนที่ว่าง (Limit 5 รูปเหมือนเดิม)
-      const remainingSlots = 5 - currentImages.length;
-      if (remainingSlots <= 0) {
-        toast.error("คุณสามารถอัปโหลดได้สูงสุด 5 รูป");
-        return;
-      }
-
-      const newFiles = validFiles
-        .slice(0, remainingSlots)
-        .map(file => ({
-          name: file.name,
-          url: URL.createObjectURL(file),
-          file: file
-        }));
-
-      updateProjectInfo({ files: [...currentImages, ...newFiles] });
-      setShowSavedTick(true);
-
-      if (additionalImagesRef.current) additionalImagesRef.current.value = "";
+  const uploadMediaToServer = async (file: File): Promise<string | null> => {
+    if (!projectId) return null;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post(`/pioneer/projects/${projectId}/media`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return res.data?.data?.url ?? null;
+    } catch (error) {
+      console.error('upload media failed:', error);
+      return null;
     }
   };
 
-  // ✅ จัดการวิดีโอ (คลิปเดียว)
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // เช็คขนาดไฟล์วิดีโอ (ตัวอย่าง: ไม่เกิน 50MB)
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error("วิดีโอต้องมีขนาดไม่เกิน 50MB");
-        return;
-      }
-      const videoObj = { name: file.name, url: URL.createObjectURL(file), file };
-      updateProjectInfo({ video: videoObj });
-      setShowSavedTick(true);
+  const handleMultipleFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const currentImages = currentProject?.files || [];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const validFiles = Array.from(files).filter(file => allowedTypes.includes(file.type));
+
+    if (validFiles.length !== files.length) {
+      toast.error("อนุญาตเฉพาะไฟล์ PNG และ JPEG เท่านั้น");
     }
+    if (validFiles.length === 0) return;
+
+    const remainingSlots = 5 - currentImages.length;
+    if (remainingSlots <= 0) {
+      toast.error("คุณสามารถอัปโหลดได้สูงสุด 5 รูป");
+      return;
+    }
+
+    const filesToUpload = validFiles.slice(0, remainingSlots);
+
+    // แสดง blob preview ก่อนทันที แล้ว upload ใน background
+    const previews = filesToUpload.map(file => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+      file,
+    }));
+    updateProjectInfo({ files: [...currentImages, ...previews] });
+
+    // Upload ทีละไฟล์แล้วแทนที่ blob URL ด้วย server URL
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const serverUrl = await uploadMediaToServer(filesToUpload[i]);
+      if (serverUrl) {
+        set_replaceFileUrl(previews[i].url, serverUrl, filesToUpload[i].name);
+      }
+    }
+
+    setShowSavedTick(true);
+    if (additionalImagesRef.current) additionalImagesRef.current.value = "";
+  };
+
+  const set_replaceFileUrl = (blobUrl: string, serverUrl: string, name: string) => {
+    URL.revokeObjectURL(blobUrl);
+    useProjectStore.setState((state) => ({
+      currentProject: {
+        ...state.currentProject,
+        files: state.currentProject.files.map(f =>
+          f.url === blobUrl ? { name, url: serverUrl } : f
+        ),
+      },
+    }));
+  };
+
+  // ✅ จัดการวิดีโอ (คลิปเดียว)
+  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("วิดีโอต้องมีขนาดไม่เกิน 20MB");
+      return;
+    }
+
+    const blobUrl = URL.createObjectURL(file);
+    updateProjectInfo({ video: { name: file.name, url: blobUrl, file } });
+
+    const serverUrl = await uploadMediaToServer(file);
+    if (serverUrl) {
+      URL.revokeObjectURL(blobUrl);
+      useProjectStore.setState((state) => ({
+        currentProject: { ...state.currentProject, video: { name: file.name, url: serverUrl } },
+      }));
+    }
+
+    setShowSavedTick(true);
   };
 
   // ✅ แก้ไขฟังก์ชันลบรูปภาพ

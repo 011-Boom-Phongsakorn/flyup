@@ -1,6 +1,8 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { useProjectStore } from "../../store/useProjectStore";
+import { useProjectDetailStore } from "../../store/useProjectDetailStore";
+import { useAuthStore } from "../../store/useAuthStore";
 import { CheckCircle2, Users, Clock, Flag, Shield } from "lucide-react";
 import PreviewStory from "../../components/preview/PreviewStory";
 import PreviewMilestone from "../../components/preview/PreviewMilestone";
@@ -8,18 +10,32 @@ import { PreviewUpdate, PreviewQuestion, PreviewComment } from "../../components
 
 const Preview = () => {
     const navigate = useNavigate();
+    const { projectId } = useParams();
     const { currentProject } = useProjectStore();
+    const { updates, questions, comments, fetchProjectDetail } = useProjectDetailStore();
+    const { authUser } = useAuthStore();
     const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
 
-    // ตัวจัดฟอร์แมตเงิน
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat("th-TH").format(amount);
-    };
+    useEffect(() => {
+        if (projectId) {
+            fetchProjectDetail(Number(projectId));
+        }
+    }, [projectId, fetchProjectDetail]);
+
+    const formatCurrency = (amount: number) => new Intl.NumberFormat("th-TH").format(amount);
 
     const targetGoal = currentProject.fundingGoal || 0;
     const profitShare = currentProject.revenueShare || 0;
-    const mainImg = currentProject.files?.[0]?.url || "";
-    const otherImgs = currentProject.files || [];
+    const activeMilestones = currentProject.milestones?.filter(m => m.title) ?? [];
+
+    // video นำหน้า แล้วตามด้วยรูปภาพ
+    type MediaItem = { type: 'video' | 'image'; url: string; name: string };
+    const mediaList: MediaItem[] = [
+        ...(currentProject.video ? [{ type: 'video' as const, url: currentProject.video.url, name: currentProject.video.name }] : []),
+        ...(currentProject.files ?? []).map(f => ({ type: 'image' as const, url: f.url, name: f.name })),
+    ];
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const selected = mediaList[selectedIndex] ?? null;
 
     return (
         <div className="min-h-screen bg-[#F8F9FA] pb-[100px] pt-[100px]">
@@ -52,8 +68,12 @@ const Preview = () => {
                     <div className="flex-1 flex flex-col gap-[20px]">
                         {/* Main Media */}
                         <div className="w-full aspect-[16/10] bg-white rounded-[16px] border border-border overflow-hidden">
-                            {mainImg ? (
-                                <img src={mainImg} alt="Main" className="w-full h-full object-cover" />
+                            {selected ? (
+                                selected.type === 'video' ? (
+                                    <video src={selected.url} controls className="w-full h-full object-cover" />
+                                ) : (
+                                    <img src={selected.url} alt={selected.name} className="w-full h-full object-cover" />
+                                )
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gray-100 text-muted-foreground">
                                     ไม่มีรูปภาพ
@@ -62,11 +82,19 @@ const Preview = () => {
                         </div>
 
                         {/* Thumbnails */}
-                        {otherImgs.length > 0 ? (
+                        {mediaList.length > 0 ? (
                             <div className="flex gap-[10px] overflow-x-auto pb-2">
-                                {otherImgs.map((img, idx) => (
-                                    <div key={idx} className="w-[80px] h-[60px] flex-shrink-0 border border-border rounded-[8px] overflow-hidden cursor-pointer hover:border-primary">
-                                        <img src={img.url} className="w-full h-full object-cover" />
+                                {mediaList.map((media, idx) => (
+                                    <div
+                                        key={idx}
+                                        onClick={() => setSelectedIndex(idx)}
+                                        className={`w-[80px] h-[60px] flex-shrink-0 border-2 rounded-[8px] overflow-hidden cursor-pointer transition-colors ${selectedIndex === idx ? 'border-primary' : 'border-border hover:border-primary/50'}`}
+                                    >
+                                        {media.type === 'video' ? (
+                                            <video src={media.url} className="w-full h-full object-cover pointer-events-none" />
+                                        ) : (
+                                            <img src={media.url} alt={media.name} className="w-full h-full object-cover" />
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -80,57 +108,55 @@ const Preview = () => {
 
                         {/* Tabs Navigation */}
                         <div className="flex flex-wrap md:flex-nowrap bg-[#F1F3F5] rounded-[8px] p-[4px] mt-[10px] overflow-x-auto">
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('story')}
                                 className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'story' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
                                 เรื่องราว
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('milestone')}
                                 className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'milestone' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
-                                Milestone ({currentProject.milestones?.filter(m => m.title).length || 4})
+                                Milestone ({activeMilestones.length})
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('update')}
                                 className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'update' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
-                                อัปเดต (2)
+                                อัปเดต ({updates.length})
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('comment')}
                                 className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'comment' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
-                                ความคิดเห็น (0)
+                                ความคิดเห็น ({comments.length})
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('question')}
                                 className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'question' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
-                                คำถาม (3)
+                                คำถาม ({questions.length})
                             </button>
                         </div>
 
-                        {/* Content Area Rendering Correct Component */}
+                        {/* Tab Content */}
                         <div className="w-full mt-[10px]">
                             {activeTab === 'story' && <PreviewStory story={currentProject.story} risks={currentProject.risks} />}
-                            {activeTab === 'milestone' && <PreviewMilestone />}
-                            {activeTab === 'update' && <PreviewUpdate />}
-                            {activeTab === 'comment' && <PreviewComment />}
-                            {activeTab === 'question' && <PreviewQuestion />}
+                            {activeTab === 'milestone' && <PreviewMilestone milestones={currentProject.milestones ?? []} />}
+                            {activeTab === 'update' && <PreviewUpdate updates={updates} />}
+                            {activeTab === 'comment' && <PreviewComment comments={comments} />}
+                            {activeTab === 'question' && <PreviewQuestion questions={questions} />}
                         </div>
                     </div>
+
                     {/* Right Column (Sidebar Funding Info) */}
                     <div className="w-full lg:w-[380px] flex flex-col gap-[20px]">
                         {/* Funding Card */}
                         <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col shadow-sm relative overflow-hidden">
-                            {/* Top decorative line (just visual detail) */}
                             <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-primary to-purple-300"></div>
 
-                            <h2 className="text-[32px] font-bold text-primary tracking-tight">
-                                ฿0
-                            </h2>
+                            <h2 className="text-[32px] font-bold text-primary tracking-tight">฿0</h2>
                             <p className="text-[13px] text-muted-foreground mt-[2px]">
                                 {targetGoal > 0 ? `เป้าหมาย ฿${formatCurrency(targetGoal)} • 0%` : "ยังไม่ได้กำหนดเป้าหมาย • 0%"}
                             </p>
@@ -168,7 +194,9 @@ const Preview = () => {
                                 </div>
                                 <div className="flex justify-between items-center text-[13px]">
                                     <span className="text-muted-foreground">ระยะเวลา</span>
-                                    <span className="font-semibold text-foreground text-right w-[150px] truncate">{currentProject.projectDuration ? `${currentProject.projectDuration} เดือน` : "ยังไม่ได้กำหนด"}</span>
+                                    <span className="font-semibold text-foreground text-right w-[150px] truncate">
+                                        {currentProject.projectDuration ? `${currentProject.projectDuration} เดือน` : "ยังไม่ได้กำหนด"}
+                                    </span>
                                 </div>
                             </div>
 
@@ -192,22 +220,23 @@ const Preview = () => {
                             <h3 className="text-[12px] text-muted-foreground font-medium">ผู้สร้างโปรเจกต์</h3>
                             <div className="flex items-center gap-[12px]">
                                 <div className="w-[44px] h-[44px] rounded-full bg-gray-200 overflow-hidden border border-border">
-                                    {/* Mock profile picture */}
-                                    <img src="https://i.pravatar.cc/150?img=68" alt="Creator" className="w-full h-full object-cover" />
+                                    {authUser?.profile_url ? (
+                                        <img src={authUser.profile_url as string} alt="Creator" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-foreground font-bold text-[16px]">
+                                            {(authUser?.name as string)?.[0] ?? '?'}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[14px] font-bold text-foreground">ชื่อผู้สร้างโปรเจกต์</span>
-                                    <span className="text-[12px] text-muted-foreground">ตำแหน่ง / องค์กร</span>
+                                    <span className="text-[14px] font-bold text-foreground">{(authUser?.name as string) || "ผู้สร้างโปรเจกต์"}</span>
+                                    <span className="text-[12px] text-muted-foreground">{(authUser?.email as string) || ""}</span>
                                 </div>
                             </div>
-                            <p className="text-[12px] text-muted-foreground leading-relaxed">
-                                ยินดีต้อนรับสู่โปรเจกต์ของเรา มาร่วมกันสร้างสรรค์ผลงานที่ยอดเยี่ยมและสร้างผลกระทบต่อสังคม
-                            </p>
                             <div className="flex items-center gap-[12px]">
                                 <span className="inline-flex items-center gap-[4px] border border-primary text-primary px-[8px] py-[2px] rounded-full text-[10px] font-medium">
                                     <CheckCircle2 size={12} /> ยืนยันแล้ว
                                 </span>
-                                <span className="text-[11px] text-muted-foreground">1 โปรเจกต์</span>
                             </div>
                         </div>
 

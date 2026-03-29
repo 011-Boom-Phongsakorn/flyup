@@ -1,11 +1,21 @@
-import { Outlet, useLocation } from 'react-router';
+import { useEffect } from 'react';
+import { Outlet, useLocation, useParams } from 'react-router';
 import Breadcrumb from '../components/Breadcrumb';
 import Stepper from '../components/Stepper';
+import { useProjectStore } from '../store/useProjectStore';
 
 const ProjectStageLayout = () => {
   const location = useLocation();
+  const { projectId } = useParams();
+  const { loadCurrentProject } = useProjectStore();
 
   const currentStepNum = Number(location.pathname.split('/').pop()) || 1;
+
+  useEffect(() => {
+    if (projectId) {
+      loadCurrentProject(Number(projectId));
+    }
+  }, [projectId]);
 
   return (
     <div className="w-full min-h-screen">

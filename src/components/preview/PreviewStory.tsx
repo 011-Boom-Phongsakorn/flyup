@@ -5,43 +5,11 @@ interface PreviewStoryProps {
   risks?: string;
 }
 
-const mockStory = `
-  <h2>ปัญหาที่เราแก้ไข</h2>
-  <p>นักศึกษาใหม่และแม้แต่นักศึกษาปัจจุบันมักจะหลงทางในมหาวิทยาลัยขนาดใหญ่ ไม่รู้ว่าห้องเรียนอยู่ตรงไหน กิจกรรมวันนี้มีอะไรบ้าง และจะไปใช้บริการต่างๆ ได้ที่ไหน</p>
-  <br/>
-  <h2>วิธีแก้ปัญหาของเรา</h2>
-  <p>UniTrack เป็นแอปมือถือที่รวมทุกอย่างไว้ในที่เดียว:</p>
-  <ul>
-    <li><strong>แผนที่แบบเรียลไทม์</strong> — นำทางไปห้องเรียน, ห้องสมุด, โรงอาหาร</li>
-    <li><strong>ปฏิทินกิจกรรม</strong> — ดูกิจกรรมทั้งหมดในมหาวิทยาลัย</li>
-    <li><strong>ระบบค้นหาบริการ</strong> — ค้นหาร้านอาหาร, ATM, จุดบริการ</li>
-    <li><strong>แจ้งเตือนอัจฉริยะ</strong> — เตือนก่อนเรียน 15 นาที พร้อมเส้นทาง</li>
-  </ul>
-  <br/>
-  <h2>เทคโนโลยีที่ใช้</h2>
-  <ul>
-    <li>React Native สำหรับ Cross-platform</li>
-    <li>Firebase สำหรับ Backend</li>
-    <li>Mapbox สำหรับ Indoor Mapping</li>
-    <li>AI สำหรับ Route Optimization</li>
-  </ul>
-`;
-
-const mockRisks = `
-  โปรเจกต์นี้เป็นผลงานนักศึกษา <br/>
-  มีความเสี่ยงด้านการพัฒนาและการตลาดทีมงานจะรายงานความคืบหน้าอย่างสม่ำเสมอ
-`;
-
 const PreviewStory = ({ story, risks }: PreviewStoryProps) => {
-  // If story is empty or just <p></p>, use mockStory for the nice preview
-  const isStoryEmpty = !story || story.replace(/<[^>]*>?/gm, '').trim() === '';
-  const contentToRender = isStoryEmpty ? mockStory : story;
-  const risksToRender = risks || mockRisks;
-  
   const { html, toc } = useMemo(() => {
-    if (typeof window === 'undefined') return { html: contentToRender, toc: [] };
-    
-    const doc = new DOMParser().parseFromString(contentToRender, 'text/html');
+    if (!story || typeof window === 'undefined') return { html: '', toc: [] };
+
+    const doc = new DOMParser().parseFromString(story, 'text/html');
     const headings = Array.from(doc.querySelectorAll('h1, h2, h3'));
     
     const tocList = headings.map((h, i) => {
@@ -55,7 +23,7 @@ const PreviewStory = ({ story, risks }: PreviewStoryProps) => {
     });
     
     return { html: doc.body.innerHTML, toc: tocList };
-  }, [contentToRender]);
+  }, [story]);
 
   const scrollToHeading = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -95,14 +63,14 @@ const PreviewStory = ({ story, risks }: PreviewStoryProps) => {
           dangerouslySetInnerHTML={{ __html: html }} 
         />
 
-        {risksToRender && (
+        {risks && (
           <div className="mt-[20px] border border-[#FCD34D] bg-[#FEF3C7]/40 rounded-[12px] p-[20px] flex gap-[16px] max-w-[800px]">
               <div className="text-[#D97706] mt-1 shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
               </div>
               <div className="flex flex-col gap-[4px]">
                   <h3 className="text-[14px] font-bold text-foreground">ความเสี่ยงและความท้าทาย</h3>
-                  <div className="text-[13px] text-muted-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: risksToRender }} />
+                  <div className="text-[13px] text-muted-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: risks }} />
               </div>
           </div>
         )}
