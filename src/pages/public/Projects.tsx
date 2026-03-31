@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router';
 import type { ElementType } from 'react';
-import { 
+import {
   Search, ChevronDown, Flame, Sparkles,
-  LayoutGrid, Laptop, Smartphone, Bot, Briefcase, 
-  Rocket, BookOpen, ShieldCheck, Wifi, Gamepad2 
+  LayoutGrid, Laptop, Smartphone, Bot, Briefcase,
+  Rocket, BookOpen, ShieldCheck, Wifi, Gamepad2
 } from 'lucide-react';
 
 interface Project {
@@ -17,7 +17,7 @@ interface Project {
   raised: number;
   daysLeft: number;
   isHot?: boolean;
-  isNew?: boolean; 
+  isNew?: boolean;
 }
 
 interface CategoryConfig {
@@ -106,21 +106,24 @@ const mockProjects: Project[] = [
 ];
 
 const Projects = () => {
-  const [activeCategory, setActiveCategory] = useState('ทั้งหมด');
+  const [activeCategory, setActiveCategory] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('category') || 'ทั้งหมด';
+  });
   const [searchQuery, setSearchQuery] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('q') || '';
-  }); 
+  });
 
   const [sortOrder, setSortOrder] = useState<'latest' | 'oldest'>('latest');
-  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false); 
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
 
   const filteredProjects = useMemo(() => {
     let result = [...mockProjects];
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(project => 
+      result = result.filter(project =>
         project.title.toLowerCase().includes(query) ||
         project.description.toLowerCase().includes(query)
       );
@@ -140,7 +143,7 @@ const Projects = () => {
   return (
     <div className="bg-background min-h-screen pb-20 font-sans text-foreground mt-[100px]">
       <div className="container mx-auto px-4 md:px-8 max-w-7xl">
-        
+
         <div className="mb-5 md:mb-6">
           <h1 className="text-2xl md:text-3xl font-bold mb-1">สำรวจโปรเจกต์</h1>
           <p className="text-sm text-muted-foreground">ค้นพบโปรเจกต์ซอฟต์แวร์จากนักศึกษาที่กำลังระดมทุน</p>
@@ -160,7 +163,7 @@ const Projects = () => {
 
           <div className="flex gap-3 w-full lg:w-auto">
             <div className="relative flex-1 lg:flex-none w-full lg:w-auto">
-              <div 
+              <div
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
                 className="flex items-center justify-between bg-card border border-border h-12 md:h-11 rounded-lg px-4 lg:min-w-[140px] cursor-pointer hover:bg-muted/30 transition-all shadow-sm select-none w-full"
               >
@@ -172,13 +175,13 @@ const Projects = () => {
 
               {isSortDropdownOpen && (
                 <div className="absolute top-14 md:top-12 left-0 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden z-20">
-                  <div 
+                  <div
                     onClick={() => { setSortOrder('latest'); setIsSortDropdownOpen(false); }}
                     className={`px-4 py-3 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap ${sortOrder === 'latest' ? 'text-primary font-medium bg-primary-light' : ''}`}
                   >
                     ล่าสุด
                   </div>
-                  <div 
+                  <div
                     onClick={() => { setSortOrder('oldest'); setIsSortDropdownOpen(false); }}
                     className={`px-4 py-3 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap ${sortOrder === 'oldest' ? 'text-primary font-medium bg-primary-light' : ''}`}
                   >
@@ -198,11 +201,10 @@ const Projects = () => {
               <button
                 key={category.name}
                 onClick={() => setActiveCategory(category.name)}
-                className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all border shadow-sm flex-shrink-0 ${
-                  isActive
-                    ? 'bg-primary-light text-primary border-primary' 
+                className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all border shadow-sm flex-shrink-0 ${isActive
+                    ? 'bg-primary-light text-primary border-primary'
                     : 'bg-card text-muted-foreground border-border hover:border-primary hover:text-foreground'
-                }`}
+                  }`}
               >
                 <Icon size={16} className={isActive ? 'text-primary' : ''} />
                 {category.name}
@@ -218,15 +220,15 @@ const Projects = () => {
               const ProjectCategoryIcon = categoryConfig ? categoryConfig.icon : LayoutGrid;
 
               return (
-                <Link 
-      key={project.id} 
-      to={`/projects/${project.id}`} 
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}`}
                   className="bg-card rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer group flex flex-col"
                 >
                   <div className="relative h-48 w-full overflow-hidden bg-muted">
-                    <img 
-                      src={project.image} 
-                      alt={project.title} 
+                    <img
+                      src={project.image}
+                      alt={project.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-3 right-3 flex gap-2">
@@ -253,13 +255,13 @@ const Projects = () => {
                         {project.category}
                       </span>
                     </div>
-                    
+
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-4 h-10">
                       {project.description}
                     </p>
 
                     <div className="w-full h-1.5 bg-muted rounded-full mb-3 overflow-hidden mt-auto">
-                      <div 
+                      <div
                         className="h-full bg-primary rounded-full transition-all duration-500"
                         style={{ width: `${project.progress}%` }}
                       ></div>
@@ -287,8 +289,8 @@ const Projects = () => {
             </div>
             <h3 className="text-base md:text-lg font-bold mb-1">ไม่พบโปรเจกต์</h3>
             <p className="text-sm text-muted-foreground">ลองเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่ใหม่อีกครั้ง</p>
-            <button 
-              onClick={() => {setSearchQuery(''); setActiveCategory('ทั้งหมด');}}
+            <button
+              onClick={() => { setSearchQuery(''); setActiveCategory('ทั้งหมด'); }}
               className="mt-4 text-primary text-sm font-medium hover:underline p-2"
             >
               ล้างตัวกรอง
