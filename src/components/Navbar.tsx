@@ -20,12 +20,7 @@ interface SearchSuggestion {
     category: string;
 }
 
-interface NavbarProps {
-    isHome?: boolean;
-    isInvestment?: boolean;
-}
-
-const Navbar = (_props: NavbarProps) => {
+const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
