@@ -11,16 +11,17 @@ import { PreviewUpdate, PreviewQuestion, PreviewComment } from "../../components
 const Preview = () => {
     const navigate = useNavigate();
     const { projectId } = useParams();
-    const { currentProject } = useProjectStore();
+    const { currentProject, loadCurrentProject } = useProjectStore();
     const { updates, questions, comments, fetchProjectDetail } = useProjectDetailStore();
     const { authUser } = useAuthStore();
     const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
 
     useEffect(() => {
         if (projectId) {
+            loadCurrentProject(Number(projectId));
             fetchProjectDetail(Number(projectId));
         }
-    }, [projectId, fetchProjectDetail]);
+    }, [projectId]);
 
     const formatCurrency = (amount: number) => new Intl.NumberFormat("th-TH").format(amount);
 
@@ -186,11 +187,15 @@ const Preview = () => {
                             <div className="flex flex-col gap-[12px] mt-[20px] mb-[24px]">
                                 <div className="flex justify-between items-center text-[13px]">
                                     <span className="text-muted-foreground">ลงทุนขั้นต่ำ</span>
-                                    <span className="font-semibold text-foreground">0 ฿</span>
+                                    <span className="font-semibold text-foreground">
+                                        {currentProject.minInvestAmount > 0 ? `฿${formatCurrency(currentProject.minInvestAmount)}` : 'ยังไม่ได้กำหนด'}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between items-center text-[13px]">
                                     <span className="text-muted-foreground">ลงทุนได้สูงสุด</span>
-                                    <span className="font-semibold text-foreground">0 ฿</span>
+                                    <span className="font-semibold text-foreground">
+                                        {currentProject.maxInvestAmount > 0 ? `฿${formatCurrency(currentProject.maxInvestAmount)}` : 'ยังไม่ได้กำหนด'}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between items-center text-[13px]">
                                     <span className="text-muted-foreground">ระยะเวลา</span>

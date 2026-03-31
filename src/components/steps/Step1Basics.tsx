@@ -17,15 +17,23 @@ const Step1Basics = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [showSavedTick, setShowSavedTick] = useState(false)
 
+  const formatNum = (n: number) => n > 0 ? n.toLocaleString('th-TH') : '';
+  const parseNum = (s: string) => Number(s.replace(/,/g, '')) || 0;
+
+  const [allCategories, setAllCategories] = useState<{ id: number; name: string }[]>([]);
+
   const [localData, setLocalData] = useState(() => ({
     title: currentProject.title || '',
     description: currentProject.description || '',
     category: currentProject.category || '',
+    categoryId: currentProject.categoryId || 0,
     fundingGoal: currentProject.fundingGoal || 0,
     projectDuration: currentProject.projectDuration || 0,
     softCap: currentProject.softCap || 0,
     campaignDuration: currentProject.campaignDuration || 0,
     revenueShare: currentProject.revenueShare || 0,
+    minInvestAmount: currentProject.minInvestAmount || 0,
+    maxInvestAmount: currentProject.maxInvestAmount || 0,
   }));
 
   // Sync localData เมื่อ store โหลดข้อมูลจาก API เสร็จ (เช่น เปิดหน้าใหม่หลัง refresh)
@@ -37,14 +45,23 @@ const Step1Basics = () => {
         title: currentProject.title,
         description: currentProject.description || '',
         category: currentProject.category || '',
+        categoryId: currentProject.categoryId || 0,
         fundingGoal: currentProject.fundingGoal || 0,
         projectDuration: currentProject.projectDuration || 0,
         softCap: currentProject.softCap || 0,
         campaignDuration: currentProject.campaignDuration || 0,
         revenueShare: currentProject.revenueShare || 0,
+        minInvestAmount: currentProject.minInvestAmount || 0,
+        maxInvestAmount: currentProject.maxInvestAmount || 0,
       });
     }
   }, [currentProject]);
+
+  useEffect(() => {
+    api.get('/categories').then(res => {
+      setAllCategories(res.data?.data ?? []);
+    }).catch(() => {});
+  }, []);
 
   const additionalImagesRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -229,16 +246,22 @@ const Step1Basics = () => {
             {isOpen && (
               <div className="absolute top-[70px] left-0 w-full bg-white border border-border rounded-[6px] shadow-lg z-10 overflow-hidden">
                 <ul className="max-h-[240px] overflow-y-auto py-1">
-                  {categories.map((category) => (
+                  {allCategories.length === 0 ? (
+                    <li className="px-[12px] py-[8px] text-[13px] text-muted-foreground">กำลังโหลด...</li>
+                  ) : null}
+                  {allCategories.map((cat) => (
                     <li
-                      key={category}
+                      key={cat.id}
                       onClick={() => {
-                        setLocalData({ ...localData, category: category });
-                        handleAutoSave('category', category)
+                        setLocalData({ ...localData, category: cat.name, categoryId: cat.id });
+                        updateProjectInfo({ category: cat.name, categoryId: cat.id });
+                        if (projectId) {
+                          updateProject(Number(projectId), { categoryId: cat.id });
+                        }
                         setIsOpen(false);
                       }}
-                      className={`px-[12px] py-[8px] text-[14px] cursor-pointer transition-colors ${localData.category === category ? 'bg-primary/10 text-primary font-medium' : 'text-foreground hover:bg-[#F8F9FB]'}`}>
-                      {category}
+                      className={`px-[12px] py-[8px] text-[14px] cursor-pointer transition-colors ${localData.category === cat.name ? 'bg-primary/10 text-primary font-medium' : 'text-foreground hover:bg-[#F8F9FB]'}`}>
+                      {cat.name}
                     </li>
                   ))}
                 </ul>
@@ -255,18 +278,18 @@ const Step1Basics = () => {
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">เป้าหมายเงินทุน (บาท)</label>
             <input
-              type="number"
-              value={localData.fundingGoal || ''}
-              onChange={(e) => setLocalData({ ...localData, fundingGoal: Number(e.target.value) })}
+              type="text"
+              value={formatNum(localData.fundingGoal)}
+              onChange={(e) => setLocalData({ ...localData, fundingGoal: parseNum(e.target.value) })}
               onBlur={() => handleAutoSave('fundingGoal', localData.fundingGoal)}
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">ระยะเวลาโปรเจกต์  (เดือน)</label>
             <input
-              type="number"
-              value={localData.projectDuration || ''}
-              onChange={(e) => setLocalData({ ...localData, projectDuration: Number(e.target.value) })}
+              type="text"
+              value={formatNum(localData.projectDuration)}
+              onChange={(e) => setLocalData({ ...localData, projectDuration: parseNum(e.target.value) })}
               onBlur={() => handleAutoSave('projectDuration', localData.projectDuration)}
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
@@ -274,29 +297,49 @@ const Step1Basics = () => {
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">Soft Cap (ได้รับทุนแม้ไม่ถึงเป้า)</label>
               <input
-                type="number"
-                value={localData.softCap || ''}
-                onChange={(e) => setLocalData({ ...localData, softCap: Number(e.target.value) })}
-                onBlur={() => handleAutoSave('softCap', localData.softCap)}
+                type="text"
+                value={formatNum(localData.softCap)}
+                onChange={(e) => setLocalData({ ...localData, softCap: parseNum(e.target.value) })}
+                onBlur={() => {
+                  const minSoftCap = Math.ceil(localData.fundingGoal * 0.7);
+                  if (localData.softCap > 0 && localData.softCap < minSoftCap) {
+                    toast.error(`Soft Cap ต้องไม่ต่ำกว่า 70% ของเป้าหมาย (${formatNum(minSoftCap)} บาท)`);
+                    setLocalData({ ...localData, softCap: minSoftCap });
+                    handleAutoSave('softCap', minSoftCap);
+                    return;
+                  }
+                  handleAutoSave('softCap', localData.softCap);
+                }}
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
             </div>
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">ระยะเวลาระดมทุน (วัน)</label>
               <input
-                type="number"
-                value={localData.campaignDuration || ''}
-                onChange={(e) => setLocalData({ ...localData, campaignDuration: Number(e.target.value) })}
+                type="text"
+                value={formatNum(localData.campaignDuration)}
+                onChange={(e) => setLocalData({ ...localData, campaignDuration: parseNum(e.target.value) })}
                 onBlur={() => handleAutoSave('campaignDuration', localData.campaignDuration)}
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
             </div>
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">ส่วนแบ่งกำไร (%)</label>
               <input
-                type="number"
-                value={localData.revenueShare || ''}
-                onChange={(e) => setLocalData({ ...localData, revenueShare: Number(e.target.value) })}
+                type="text"
+                value={formatNum(localData.revenueShare)}
+                onChange={(e) => setLocalData({ ...localData, revenueShare: parseNum(e.target.value) })}
                 onBlur={() => handleAutoSave('revenueShare', localData.revenueShare)}
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-[20px] md:grid-cols-2 md:gap-[20px]">
+            <div className="flex flex-col gap-[4px]">
+              <label className="text-foreground text-[14px]">ลงทุนขั้นต่ำ (บาท)</label>
+              <input
+                type="text"
+                value={formatNum(localData.minInvestAmount)}
+                disabled
+                className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] text-muted-foreground cursor-not-allowed opacity-60"
+              />
             </div>
           </div>
           <p className="text-[12px] text-muted-foreground">*ระบุเป้าหมายเงินทุนและระยะเวลา ให้ชัดเจน พร้อมกำหนดเงื่อนไขการรับเงินทั้งแบบ Soft Cap และ Hard Cap รวมถึงสัดส่วนผลตอบแทนที่แน่นอน เพื่อใช้เป็นข้อตกลงในการระดมทุน*</p>

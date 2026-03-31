@@ -64,7 +64,7 @@ const Login = () => {
     const inputStyle = (n: string) => `border focus:outline-none bg-background text-foreground rounded-[6px] border-border outline-none p-[12px] h-[38px] ${errors[n] ? 'border-error focus:border-error' : 'border-border focus:border-primary'}`
 
     return (
-        <div className="w-full mx-auto max-w-[510px] border border-border rounded-[12px] bg-white">
+        <div className="w-full mx-auto max-w-[510px] border border-border rounded-[12px] bg-white mt-[100px]">
             <div className="flex flex-col gap-[16px] p-[24px]">
                 <div>
                     <div className="flex flex-col items-center justify-center">

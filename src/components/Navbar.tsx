@@ -20,12 +20,10 @@ interface SearchSuggestion {
     category: string;
 }
 
-// 1. เพิ่ม Interface สำหรับรับ Prop
 interface NavbarProps {
     isHome?: boolean;
 }
 
-// 2. รับ isHome เข้ามา (กำหนดค่าเริ่มต้นเป็น false)
 const Navbar = ({ isHome = false }: NavbarProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -84,8 +82,8 @@ const Navbar = ({ isHome = false }: NavbarProps) => {
     };
 
     return (
-        // 3. เปลี่ยนจาก "fixed" แบบตายตัว เป็นใช้เงื่อนไขเช็ค isHome
-        <nav className={`${isHome ? 'fixed' : 'sticky'} top-0 left-0 right-0 z-50 w-full py-4 bg-transparent px-4 transition-all duration-300`}>
+
+        <nav className={`fixed top-0 left-0 right-0 z-50 w-full py-4 bg-transparent px-4 transition-all duration-300`}>
             <div className="w-full max-w-[1104px] mx-auto relative">
                 <div className="flex items-center justify-between bg-card/90 backdrop-blur-md w-full border border-border h-[70px] px-6 md:px-8 rounded-full shadow-sm">
                     

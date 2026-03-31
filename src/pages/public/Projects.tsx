@@ -138,7 +138,7 @@ const Projects = () => {
   }, [activeCategory, searchQuery, sortOrder]);
 
   return (
-    <div className="bg-background min-h-screen pb-20 font-sans text-foreground">
+    <div className="bg-background min-h-screen pb-20 font-sans text-foreground mt-[100px]">
       <div className="container mx-auto px-4 md:px-8 max-w-7xl">
         
         <div className="mb-5 md:mb-6">

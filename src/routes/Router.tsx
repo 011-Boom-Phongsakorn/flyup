@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
 import { useEffect } from 'react';
@@ -29,6 +29,13 @@ import Step3Milestone from '../components/steps/Step3Milestone';
 import Step4Agreement from '../components/steps/Step4Agreement';
 import Preview from '../pages/pioneer/Preview';
 
+const PioneerGuard = () => {
+    const { authUser } = useAuthStore()
+    if (!authUser) return <Navigate to='/login' replace />
+    if (authUser.role !== 'pioneer') return <Navigate to='/' replace />
+    return <Outlet />
+}
+
 const Router = () => {
     const { authUser, checkAuth, isCheckingAuth } = useAuthStore()
 
@@ -55,10 +62,9 @@ const Router = () => {
                         <Route path='/projects' element={<Projects />} />
                         <Route path='/verify' element={<VerifyEmail />} />
                         <Route path='/projects/:id' element={<ProjectDetail />} />
-                        <Route path='/preview/:projectId' element={<Preview />} />
                     </Route>
 
-                    <Route>
+                    <Route element={<PioneerGuard />}>
                         <Route element={<PioneerLayout />}>
                             <Route path='/pioneer/dashboard' element={<Dashboard />} />
                             <Route path='/pioneer/dashboard/projects' element={<MyProjects />} />
@@ -73,6 +79,7 @@ const Router = () => {
                                 <Route path='3' element={<Step3Milestone />} />
                                 <Route path='4' element={<Step4Agreement />} />
                             </Route>
+                            <Route path='/preview/:projectId' element={<Preview />} />
                         </Route>
                     </Route>
                 </Routes>

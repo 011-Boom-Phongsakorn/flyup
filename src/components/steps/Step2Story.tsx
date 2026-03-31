@@ -61,7 +61,7 @@ const CustomImage = Image.extend({
 
 const Step2Story = () => {
   const { projectId } = useParams()
-  const { currentProject, updateProjectInfo, updateProject } = useProjectStore()
+  const { currentProject, updateProjectInfo, updateProject, saveStory } = useProjectStore()
   const [isMenuExpanded, setIsMenuExpanded] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mediaUrlInputOpen, setMediaUrlInputOpen] = useState(false)
@@ -102,10 +102,14 @@ const Step2Story = () => {
     onUpdate: ({ editor }) => {
       setIsMenuExpanded(false)
       setDropdownOpen(false)
-      // debounce save story to store
+      // debounce save story to store + backend
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      saveTimerRef.current = setTimeout(() => {
-        updateProjectInfo({ story: editor.getHTML() })
+      saveTimerRef.current = setTimeout(async () => {
+        const html = editor.getHTML()
+        updateProjectInfo({ story: html })
+        if (projectId) {
+          await saveStory(Number(projectId), html)
+        }
       }, 500)
     },
     onSelectionUpdate: () => {

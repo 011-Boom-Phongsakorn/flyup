@@ -10,25 +10,30 @@ export interface ProjectMedia {
 
 // ✅ สำหรับข้อมูลแต่ละ Milestone (Phase)
 export interface Milestone {
+    id?: number;          // backend ID (มีเมื่อถูก save แล้ว)
     title: string;
     description: string;
     amount: number;
     startDate: string;
     endDate: string;
-    criteria: string[]; // รายการเกณฑ์การยอมรับ (Array of string)
-    files: ProjectMedia[]; // ไฟล์ประกอบ (ไม่บังคับ)
-    video: ProjectMedia | null; // วิดีโอ (ไม่บังคับ)
+    criteria: string[];
+    files: ProjectMedia[];
+    video: ProjectMedia | null;
 }
 
 export interface Project {
     title: string;
     description: string;
     category: string;
+    categoryId: number;
+    storyId?: number;     // backend ID ของ story section
     fundingGoal: number;
     projectDuration: number;
     softCap: number;
     campaignDuration: number;
     revenueShare: number;
+    minInvestAmount: number;
+    maxInvestAmount: number;
     files: ProjectMedia[]; // รองรับสูงสุด 5 รูป
     video: ProjectMedia | null;
     story: string;
@@ -60,6 +65,8 @@ interface ProjectState {
     fetchMyProjects: () => Promise<void>;
     updateProject: (id: number, data: Partial<Project>) => Promise<void>;
     deleteProject: (id: number) => Promise<boolean>;
+    saveStory: (projectId: number, html?: string) => Promise<void>;
+    saveMilestonePhase: (projectId: number, phaseIndex: number) => Promise<void>;
     updateProjectInfo: (data: Partial<Project>) => void;
     updateMilestone: (index: number, data: Partial<Milestone>) => void;
 }
@@ -68,11 +75,14 @@ const initialProject: Project = {
     title: '',
     description: '',
     category: '',
+    categoryId: 0,
     fundingGoal: 0,
     projectDuration: 0,
     softCap: 0,
     campaignDuration: 0,
     revenueShare: 0,
+    minInvestAmount: 0,
+    maxInvestAmount: 0,
     files: [],
     video: null,
     story: '',
@@ -89,7 +99,7 @@ const initialProject: Project = {
     })),
 };
 
-export const useProjectStore = create<ProjectState>((set) => ({
+export const useProjectStore = create<ProjectState>((set, get) => ({
     projects: [],
     currentProject: initialProject,
     isLoading: false,
@@ -152,16 +162,25 @@ export const useProjectStore = create<ProjectState>((set) => ({
                 ? { name: videoMedia.url.split('/').pop() ?? 'video', url: videoMedia.url }
                 : null;
 
-            // Map stories → join body HTML เข้า story field
-            const stories: { body: string; sort_order: number }[] = d.stories ?? [];
-            const story = stories
-                .sort((a, b) => a.sort_order - b.sort_order)
-                .map((s) => s.body)
-                .join('');
+            // Map stories → join body HTML เข้า story field + เก็บ storyId
+            const stories: { id: number; body: string; sort_order: number }[] = d.stories ?? [];
+            const sortedStories = stories.sort((a, b) => a.sort_order - b.sort_order);
+            const story = sortedStories.map((s) => s.body).join('');
+            const storyId = sortedStories[0]?.id;
 
-            // Map milestones
-            const bms: { title?: string; description?: string }[] = d.milestones ?? [];
+            // Resolve category id from name
+            let categoryId = 0;
+            try {
+                const catRes = await api.get('/categories');
+                const allCats: { id: number; name: string }[] = catRes.data?.data ?? [];
+                const matched = allCats.find(c => c.name === d.category);
+                categoryId = matched?.id ?? 0;
+            } catch { /* ignore */ }
+
+            // Map milestones (เก็บ id ด้วย)
+            const bms: { id?: number; title?: string; description?: string }[] = d.milestones ?? [];
             const milestones = Array.from({ length: 4 }, (_, i) => ({
+                id: bms[i]?.id,
                 title: bms[i]?.title ?? '',
                 description: bms[i]?.description ?? '',
                 amount: 0,
@@ -177,11 +196,15 @@ export const useProjectStore = create<ProjectState>((set) => ({
                     title: d.title ?? '',
                     description: d.description ?? '',
                     category: d.category ?? '',
+                    categoryId,
                     fundingGoal: d.funding_goal ?? 0,
-                    projectDuration: 0,
+                    projectDuration: d.duration_days ?? 0,
                     softCap: d.softcap ?? 0,
                     campaignDuration: 0,
                     revenueShare: d.profit_share_pct ?? 0,
+                    minInvestAmount: d.min_invest_amount ?? 0,
+                    maxInvestAmount: d.max_invest_amount ?? 0,
+                    storyId,
                     files: images,
                     video,
                     story,
@@ -206,6 +229,9 @@ export const useProjectStore = create<ProjectState>((set) => ({
         if (data.softCap         !== undefined) payload.softcap          = data.softCap;
         if (data.projectDuration !== undefined) payload.duration_days    = data.projectDuration;
         if (data.revenueShare    !== undefined) payload.profit_share_pct = data.revenueShare;
+        if (data.categoryId !== undefined && data.categoryId > 0) payload.category_id = data.categoryId;
+        if (data.minInvestAmount   !== undefined) payload.min_invest_amount = data.minInvestAmount;
+        if (data.maxInvestAmount   !== undefined) payload.max_invest_amount = data.maxInvestAmount;
 
         if (Object.keys(payload).length === 0) return;
 
@@ -257,6 +283,64 @@ export const useProjectStore = create<ProjectState>((set) => ({
             console.error('deleteProject:', error);
             toast.error('ไม่สามารถลบโปรเจกต์ได้');
             return false;
+        }
+    },
+
+    saveStory: async (projectId, html?: string) => {
+        const { currentProject } = get();
+        const content = html ?? currentProject.story;
+        if (!content || content === '<p></p>') return;
+        try {
+            if (currentProject.storyId) {
+                await api.patch(`/pioneer/projects/stories/${currentProject.storyId}`, { body: content });
+            } else {
+                const res = await api.post(`/pioneer/projects/${projectId}/stories`, {
+                    title: 'Story',
+                    body: content,
+                    sort_order: 1,
+                });
+                const newId = res.data?.data?.id;
+                if (newId) {
+                    set(state => ({ currentProject: { ...state.currentProject, storyId: newId } }));
+                }
+            }
+        } catch (error) {
+            console.error('saveStory:', error);
+            toast.error('บันทึก Story ไม่สำเร็จ');
+        }
+    },
+
+    saveMilestonePhase: async (projectId, phaseIndex) => {
+        const { currentProject } = get();
+        const m = currentProject.milestones[phaseIndex];
+        if (!m?.title) return;
+        const phasePercents = [15, 20, 30, 35];
+        try {
+            if (m.id) {
+                await api.patch(`/pioneer/projects/milestones/${m.id}`, {
+                    title: m.title,
+                    description: m.description || undefined,
+                    phase_no: phaseIndex + 1,
+                });
+            } else {
+                const res = await api.post(`/pioneer/projects/${projectId}/milestones`, {
+                    phase_no: phaseIndex + 1,
+                    title: m.title,
+                    description: m.description || undefined,
+                    percent_release: phasePercents[phaseIndex],
+                });
+                const newId = res.data?.data?.id;
+                if (newId) {
+                    set(state => {
+                        const milestones = [...state.currentProject.milestones];
+                        milestones[phaseIndex] = { ...milestones[phaseIndex], id: newId };
+                        return { currentProject: { ...state.currentProject, milestones } };
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('saveMilestonePhase:', error);
+            toast.error('บันทึก Milestone ไม่สำเร็จ');
         }
     },
 

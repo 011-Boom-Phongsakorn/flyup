@@ -1,13 +1,21 @@
-import type { Milestone } from '../../store/useProjectStore';
+import { useProjectStore, type Milestone } from '../../store/useProjectStore';
 
 interface PreviewMilestoneProps {
   milestones: Milestone[];
 }
 
 const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
+
+  const { currentProject } = useProjectStore()
+
+  const fundingGoal = currentProject.fundingGoal || 0
+  const phasePercents = [0.15, 0.20, 0.30, 0.35]
+
   const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH').format(amount);
 
   const activeMilestones = milestones.filter(m => m.title);
+
+
 
   if (activeMilestones.length === 0) {
     return (
@@ -60,7 +68,7 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
             </div>
 
             <div className="flex flex-row xl:flex-col items-center xl:items-end justify-between xl:justify-start gap-[12px] shrink-0 mt-[10px] xl:mt-0">
-              <span className="text-[20px] font-bold text-primary">{formatCurrency(m.amount)}฿</span>
+              <span className="text-[20px] font-bold text-primary">{fundingGoal > 0 ? `฿${(fundingGoal * phasePercents[idx]).toLocaleString('th-TH')}` : 'กรุณากำหนดเป้าหมายเงินทุนก่อน'}฿</span>
               <span className="px-[12px] py-[4px] rounded-full text-[12px] font-medium border bg-white text-foreground border-border">
                 รอดำเนินการ
               </span>

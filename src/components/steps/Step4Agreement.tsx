@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Eye, Send } from "lucide-react";
 import StepNavigation from "../StepNavigation";
 import { useProjectStore } from "../../store/useProjectStore";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
+import api from "../../services/api";
 
 const Step4Agreement = () => {
   const navigate = useNavigate()
+  const { projectId } = useParams();
   const { currentProject } = useProjectStore();
 
   // State สำหรับเก็บค่าการยอมรับข้อตกลงและเงื่อนไข
@@ -14,17 +16,26 @@ const Step4Agreement = () => {
   // State สำหรับเปิด/ปิด Modal ยืนยันการส่งโปรเจกต์
   const [showModal, setShowModal] = useState(false);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // ฟังก์ชันจัดรูปแบบตัวเลข (เพื่อแสดงเป้าหมายเงินทุนให้อ่านง่ายขึ้น เช่น 10,000)
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("th-TH").format(amount);
   };
 
   // ฟังก์ชันจัดการเมื่อกดยืนยันส่งโปรเจกต์ใน Modal
-  const handleSubmitProject = () => {
-    console.log("ส่งข้อมูลโปรเจกต์ไปยัง Admin แล้ว...");
+  const handleSubmitProject = async () => {
+    setIsSubmitting(true);
+    if (projectId) {
+      try {
+        await api.patch(`/pioneer/projects/${projectId}/submit`);
+      } catch (error) {
+        console.error('submit failed:', error);
+      }
+    }
+    setIsSubmitting(false);
     setShowModal(false);
-    // TODO: เรียก API สำหรับส่งโปรเจกต์ที่นี่ และนำทางผู้ใช้ไปยังหน้า Success
-    navigate(`/pioneer/dashboard/projects`)
+    navigate(`/pioneer/dashboard/projects`);
   };
 
   return (
@@ -154,10 +165,11 @@ const Step4Agreement = () => {
               {/* ปุ่มส่งคำขออนุมัติจริง */}
               <button
                 onClick={handleSubmitProject}
-                className="col-span-1 h-[48px] rounded-[12px] bg-primary text-white font-medium hover:bg-primary-hover flex items-center justify-center gap-[8px] transition-colors"
+                disabled={isSubmitting}
+                className="col-span-1 h-[48px] rounded-[12px] bg-primary text-white font-medium hover:bg-primary-hover flex items-center justify-center gap-[8px] transition-colors disabled:opacity-50"
               >
                 <Send size={16} />
-                ส่งคำขอ
+                {isSubmitting ? 'กำลังส่ง...' : 'ส่งคำขอ'}
               </button>
             </div>
           </div>
