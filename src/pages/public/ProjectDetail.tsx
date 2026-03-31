@@ -1,3 +1,4 @@
+import { useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import {
   Calendar,
@@ -19,24 +20,33 @@ import { useProjectDetailStore } from "../../store/useProjectDetailStore";
 
 type Tab = "story" | "milestone" | "updates" | "comments" | "questions";
 
+const MOCK_PROJECT_IMAGES = [
+  "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800",
+  "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&q=80&w=800",
+  "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80&w=800",
+];
+
+const MOCK_MILESTONES = [
+  { phase: 1, title: "MVP Development", description: "พัฒนาฟีเจอร์หลักของแอป", amount: 30000, status: "completed", deadline: "มี.ค. 2568", deliverables: ["แผนที่ภายในอาคาร", "ระบบค้นหาห้อง"] },
+  { phase: 2, title: "Beta Testing", description: "ทดสอบกับนักศึกษาจริง 500 คน", amount: 40000, status: "pending", deadline: "พ.ค. 2568", deliverables: ["รายงานผล Beta", "ปรับปรุง UX"] },
+  { phase: 3, title: "Full Launch", description: "เปิดตัวเต็มรูปแบบ", amount: 50000, status: "pending", deadline: "ก.ค. 2568", deliverables: ["App Store", "Play Store", "Marketing"] },
+  { phase: 4, title: "Expansion", description: "ขยายไปมหาวิทยาลัยอื่น", amount: 30000, status: "pending", deadline: "ก.ย. 2568", deliverables: ["5 มหาวิทยาลัย", "API พาร์ทเนอร์"] },
+];
+
 function ProjectDetail() {
   const navigate = useNavigate();
-  const {
-    activeTab,
-    selectedImage,
-    isLoggedIn,
-    hasInvested,
-    fundedPercent,
-    fundedAmount,
-    targetAmount,
-    projectImages,
-    milestones,
-    updates,
-    comments,
-    questions,
-    setActiveTab: setActiveTabStore,
-    setSelectedImage: setSelectedImageStore,
-  } = useProjectDetailStore();
+  const [activeTab, setActiveTab] = useState<Tab>("story");
+  const [selectedImage, setSelectedImage] = useState(0);
+
+  const projectImages = MOCK_PROJECT_IMAGES;
+  const milestones = MOCK_MILESTONES;
+  const isLoggedIn = false;
+  const hasInvested = false;
+  const fundedPercent = 72;
+  const fundedAmount = 108000;
+  const targetAmount = 150000;
+
+  const { updates, comments, questions } = useProjectDetailStore();
 
   const handleInvest = () => {
     if (!isLoggedIn) {
@@ -65,7 +75,7 @@ function ProjectDetail() {
   ];
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden w-full">
+    <div className="min-h-screen bg-background overflow-x-hidden w-full mt-[100px]">
       <Toaster />
 
       {/* ── Main Content ── */}
@@ -104,7 +114,7 @@ function ProjectDetail() {
               {projectImages.map((img, i) => (
                 <button
                   key={i}
-                  onClick={() => setSelectedImageStore(i)}
+                  onClick={() => setSelectedImage(i)}
                   className={`rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 w-20 h-14 sm:w-24 sm:h-16 ${selectedImage === i
                     ? "border-primary"
                     : "border-transparent opacity-70 hover:opacity-100"
@@ -123,7 +133,7 @@ function ProjectDetail() {
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTabStore(tab.id)}
+                    onClick={() => setActiveTab(tab.id)}
                     className={`flex-shrink-0 py-2 px-3 sm:py-2.5 sm:px-6 text-xs sm:text-[13px] font-medium transition-all rounded-[8px] whitespace-nowrap ${activeTab === tab.id
                       ? "bg-white text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"

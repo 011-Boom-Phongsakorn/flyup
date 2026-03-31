@@ -131,7 +131,7 @@ const Step2Story = () => {
       hasInitializedRef.current = true
       if (currentProject.risks) setTimeout(() => setRisks(currentProject.risks), 0)
       if (currentProject.story && editor) {
-        editor.commands.setContent(currentProject.story, false)
+        editor.commands.setContent(currentProject.story, { emitUpdate: false })
       }
     }
   }, [currentProject.risks, currentProject.story, editor])
