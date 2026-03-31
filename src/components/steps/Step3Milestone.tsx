@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useProjectStore, type Milestone } from '../../store/useProjectStore'
 import { Plus, Trash2, Upload, Video, X } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
@@ -14,6 +14,20 @@ const Step3Milestone = () => {
   const phasePercents = [0.15, 0.20, 0.30, 0.35]
 
   const currentData = currentProject.milestones[activePhase]
+
+  const projectMaxDateStr = useMemo(() => {
+    if (!currentProject.projectDuration) return undefined
+    const d = new Date()
+    d.setMonth(d.getMonth() + currentProject.projectDuration)
+    return d.toISOString().split('T')[0]
+  }, [currentProject.projectDuration])
+
+  const projectMaxDateDisplay = useMemo(() => {
+    if (!currentProject.projectDuration) return ''
+    const d = new Date()
+    d.setMonth(d.getMonth() + currentProject.projectDuration)
+    return d.toLocaleDateString('th-TH')
+  }, [currentProject.projectDuration])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -163,9 +177,7 @@ const Step3Milestone = () => {
                   type="date"
                   value={currentData.startDate}
                   min={new Date().toISOString().split('T')[0]}
-                  max={currentProject.projectDuration
-                    ? new Date(Date.now() + currentProject.projectDuration * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-                    : undefined}
+                  max={projectMaxDateStr}
                   onChange={(e) => handleChange('startDate', e.target.value)}
                   className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
                 />
@@ -176,16 +188,14 @@ const Step3Milestone = () => {
                   type="date"
                   value={currentData.endDate}
                   min={currentData.startDate || new Date().toISOString().split('T')[0]}
-                  max={currentProject.projectDuration
-                    ? new Date(Date.now() + currentProject.projectDuration * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-                    : undefined}
+                  max={projectMaxDateStr}
                   onChange={(e) => handleChange('endDate', e.target.value)}
                   className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
                 />
               </div>
               {currentProject.projectDuration > 0 && (
                 <p className="md:col-span-2 text-[12px] text-muted-foreground">
-                  ระยะเวลาโปรเจกต์ทั้งหมด {currentProject.projectDuration} เดือน (วันสิ้นสุดไม่เกิน {new Date(Date.now() + currentProject.projectDuration * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('th-TH')})
+                  ระยะเวลาโปรเจกต์ทั้งหมด {currentProject.projectDuration} เดือน (วันสิ้นสุดไม่เกิน {projectMaxDateDisplay})
                 </p>
               )}
             </div>

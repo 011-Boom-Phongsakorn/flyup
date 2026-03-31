@@ -6,10 +6,6 @@ import { useProjectStore, type Project } from "../../store/useProjectStore";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 
-const categories = [
-  'Web App', 'Mobile App', 'AI', 'Data Analytics', 'Cloud', 'DevOps', 'Blockchain', 'Fintech', 'Cybersecurity', 'Game', 'Business', 'Education', 'IOT'
-];
-
 const Step1Basics = () => {
   const { projectId } = useParams();
   const { currentProject, updateProjectInfo, updateProject } = useProjectStore()
@@ -41,19 +37,21 @@ const Step1Basics = () => {
   useEffect(() => {
     if (!hasInitializedRef.current && currentProject.title) {
       hasInitializedRef.current = true;
-      setLocalData({
-        title: currentProject.title,
-        description: currentProject.description || '',
-        category: currentProject.category || '',
-        categoryId: currentProject.categoryId || 0,
-        fundingGoal: currentProject.fundingGoal || 0,
-        projectDuration: currentProject.projectDuration || 0,
-        softCap: currentProject.softCap || 0,
-        campaignDuration: currentProject.campaignDuration || 0,
-        revenueShare: currentProject.revenueShare || 0,
-        minInvestAmount: currentProject.minInvestAmount || 0,
-        maxInvestAmount: currentProject.maxInvestAmount || 0,
-      });
+      setTimeout(() => {
+        setLocalData({
+          title: currentProject.title,
+          description: currentProject.description || '',
+          category: currentProject.category || '',
+          categoryId: currentProject.categoryId || 0,
+          fundingGoal: currentProject.fundingGoal || 0,
+          projectDuration: currentProject.projectDuration || 0,
+          softCap: currentProject.softCap || 0,
+          campaignDuration: currentProject.campaignDuration || 0,
+          revenueShare: currentProject.revenueShare || 0,
+          minInvestAmount: currentProject.minInvestAmount || 0,
+          maxInvestAmount: currentProject.maxInvestAmount || 0,
+        });
+      }, 0);
     }
   }, [currentProject]);
 

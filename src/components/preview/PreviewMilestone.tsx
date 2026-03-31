@@ -11,8 +11,6 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
   const fundingGoal = currentProject.fundingGoal || 0
   const phasePercents = [0.15, 0.20, 0.30, 0.35]
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('th-TH').format(amount);
-
   const activeMilestones = milestones.filter(m => m.title);
 
 

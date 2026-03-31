@@ -129,7 +129,7 @@ const Step2Story = () => {
   useEffect(() => {
     if (!hasInitializedRef.current && (currentProject.risks || currentProject.story)) {
       hasInitializedRef.current = true
-      if (currentProject.risks) setRisks(currentProject.risks)
+      if (currentProject.risks) setTimeout(() => setRisks(currentProject.risks), 0)
       if (currentProject.story && editor) {
         editor.commands.setContent(currentProject.story, false)
       }

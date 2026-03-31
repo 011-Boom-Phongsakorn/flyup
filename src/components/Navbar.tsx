@@ -25,7 +25,7 @@ interface NavbarProps {
     isInvestment?: boolean;
 }
 
-const Navbar = ({ isHome = false }: NavbarProps) => {
+const Navbar = ({}: NavbarProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);

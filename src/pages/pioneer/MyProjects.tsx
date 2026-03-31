@@ -68,9 +68,6 @@ const MyProjects = () => {
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PAGE_SIZE));
   const pagedProjects = filteredProjects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // reset page เมื่อ filter/search เปลี่ยน
-  useEffect(() => { setPage(1); }, [searchQuery, activeFilter]);
-
   const handleView = (id: number) => navigate(`/preview/${id}`);
   const handleEdit = (id: number) => navigate(`/project/overview/${id}`);
   const handleCreate = async () => {
@@ -119,7 +116,7 @@ const MyProjects = () => {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
               placeholder="ค้นหาชื่อโปรเจกต์..."
               className="w-full pl-[44px] pr-[16px] py-[10px] bg-white border border-border rounded-[100px] text-[14px] outline-none focus:border-primary transition-colors h-[44px]"
             />
@@ -134,7 +131,7 @@ const MyProjects = () => {
             </button>
             <div className="absolute top-[48px] right-0 bg-white border border-border rounded-[12px] shadow-lg z-50 min-w-[180px] py-[4px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
               <button
-                onClick={() => setActiveFilter("all")}
+                onClick={() => { setActiveFilter("all"); setPage(1); }}
                 className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors ${activeFilter === "all" ? "text-primary font-semibold" : "text-foreground"}`}
               >
                 ทั้งหมด
@@ -142,7 +139,7 @@ const MyProjects = () => {
               {stateLabels.map(s => (
                 <button
                   key={s.type}
-                  onClick={() => setActiveFilter(s.type as StateType)}
+                  onClick={() => { setActiveFilter(s.type as StateType); setPage(1); }}
                   className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors ${activeFilter === s.type ? "text-primary font-semibold" : "text-foreground"}`}
                 >
                   {s.label}
@@ -159,7 +156,7 @@ const MyProjects = () => {
             return (
               <button
                 key={stat.type}
-                onClick={() => setActiveFilter(isActive ? "all" : stat.type as StateType)}
+                onClick={() => { setActiveFilter(isActive ? "all" : stat.type as StateType); setPage(1); }}
                 className={`bg-white border rounded-[12px] p-[16px] flex flex-col items-center justify-center text-center shadow-sm cursor-pointer transition-all hover:shadow-md ${isActive ? "border-primary ring-2 ring-primary/20" : "border-border"}`}
               >
                 <span className={`text-[24px] font-bold leading-none mb-[4px] ${isActive ? "text-primary" : "text-foreground"}`}>
