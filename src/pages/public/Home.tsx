@@ -239,8 +239,7 @@ const Home = () => {
         </div>
       </section>
 
-      <Link 
-  to={`/projects/${recommendedMain.id}`} className="py-16 bg-white">
+      <section className="py-16 bg-white">
         <div className="container mx-auto px-4 md:px-8 max-w-7xl">
           <div className="flex justify-between items-end mb-8">
             <div>
@@ -253,17 +252,17 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 cursor-pointer group">
+            <Link to={`/projects/${recommendedMain.id}`} className="lg:col-span-2 cursor-pointer group">
               <div className="bg-gray-100 rounded-3xl overflow-hidden relative h-[300px] md:h-[400px] mb-4">
                 <img src={recommendedMain.image} alt={recommendedMain.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
               </div>
               <h3 className="text-2xl font-bold mb-2">{recommendedMain.title}</h3>
               <p className="text-gray-500 mb-4">{recommendedMain.description}</p>
-              
+
               <div className="w-full h-2 bg-gray-100 rounded-full mb-3">
                 <div className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full" style={{ width: `${recommendedMain.progress}%` }}></div>
               </div>
-              
+
               <div className="flex gap-6 items-center text-sm">
                 <span className="font-bold text-lg">฿{recommendedMain.raised.toLocaleString()}</span>
                 <span className="text-gray-500">ระดมทุนแล้ว {recommendedMain.progress}%</span>
@@ -271,13 +270,15 @@ const Home = () => {
                   <Clock size={16} className="text-gray-400" /> {recommendedMain.daysLeft} วัน
                 </span>
               </div>
-            </div>
+            </Link>
 
             <div className="flex flex-col gap-4">
               {recommendedList.map(item => (
-                <Link 
-      key={item.id} 
-      to={`/projects/${item.id}`} className="flex gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-100">
+                <Link
+                  key={item.id}
+                  to={`/projects/${item.id}`}
+                  className="flex gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-100"
+                >
                   <img src={item.image} alt={item.title} className="w-24 h-24 rounded-xl object-cover" />
                   <div className="flex-1 py-1">
                     <h4 className="font-bold mb-1">{item.title}</h4>
@@ -295,7 +296,7 @@ const Home = () => {
             </div>
           </div>
         </div>
-      </Link>
+      </section>
 
       <section className="py-16">
         <div className="container mx-auto px-4 md:px-8 max-w-7xl">

@@ -8,6 +8,8 @@ import Image from '@tiptap/extension-image'
 import Youtube from '@tiptap/extension-youtube'
 import { SquarePlay, List, ImageIcon, Plus, ChevronDown, Check, X, Link as LinkIcon, Maximize, AlignLeft, AlignRight, Unlink } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
+import { useProjectStore } from '../../store/useProjectStore'
+import { useParams } from 'react-router'
 
 // ✅ Custom Image Extension ที่รองรับการแนบลิงก์ (href) และจับรูปภาพจัด Align
 const CustomImage = Image.extend({
@@ -58,10 +60,14 @@ const CustomImage = Image.extend({
 })
 
 const Step2Story = () => {
+  const { projectId } = useParams()
+  const { currentProject, updateProjectInfo, updateProject, saveStory } = useProjectStore()
   const [isMenuExpanded, setIsMenuExpanded] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mediaUrlInputOpen, setMediaUrlInputOpen] = useState(false)
   const [mediaUrl, setMediaUrl] = useState('')
+  const [risks, setRisks] = useState(currentProject.risks || '')
+  const hasInitializedRef = useRef(false)
 
   // ✅ State สำหรับลิงก์บนรูปภาพ
   const [imageLinkInputOpen, setImageLinkInputOpen] = useState(false)
@@ -72,6 +78,7 @@ const Step2Story = () => {
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
   const editorContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const editor = useEditor({
     extensions: [
@@ -92,22 +99,42 @@ const Step2Story = () => {
         emptyEditorClass: 'is-editor-empty',
       }),
     ],
-    onUpdate: () => {
+    onUpdate: ({ editor }) => {
       setIsMenuExpanded(false)
       setDropdownOpen(false)
+      // debounce save story to store + backend
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = setTimeout(async () => {
+        const html = editor.getHTML()
+        updateProjectInfo({ story: html })
+        if (projectId) {
+          await saveStory(Number(projectId), html)
+        }
+      }, 500)
     },
     onSelectionUpdate: () => {
       setIsMenuExpanded(false)
       setDropdownOpen(false)
       setMediaUrlInputOpen(false)
     },
-    content: '',
+    content: currentProject.story || '',
     editorProps: {
       attributes: {
         class: 'prose prose-slate max-w-none focus:outline-none min-h-[400px] p-4 [&_img.ProseMirror-selectednode]:outline [&_img.ProseMirror-selectednode]:outline-4 [&_img.ProseMirror-selectednode]:outline-blue-500 [&_img.ProseMirror-selectednode]:outline-offset-2',
       },
     },
   })
+
+  // Sync risks และ editor content เมื่อ store โหลดข้อมูลจาก API เสร็จ
+  useEffect(() => {
+    if (!hasInitializedRef.current && (currentProject.risks || currentProject.story)) {
+      hasInitializedRef.current = true
+      if (currentProject.risks) setRisks(currentProject.risks)
+      if (currentProject.story && editor) {
+        editor.commands.setContent(currentProject.story, false)
+      }
+    }
+  }, [currentProject.risks, currentProject.story, editor])
 
   // ✅ ฟังก์ชันเช็คว่า cursor อยู่บนบรรทัดว่างหรือไม่ + คำนวณตำแหน่ง
   const updateFloatingMenu = useCallback(() => {
@@ -505,10 +532,13 @@ const Step2Story = () => {
           <p className='text-[12px] text-muted-foreground'>*อธิบายความเป็นมาและรายละเอียด เชิงลึกเพื่อสร้างความเชื่อมั่น  *</p>
           <p className='text-[14px] text-foreground'>ความเสี่ยงของโปรเจกต์</p>
           <textarea
-            // value={localData.risk} // สมมติว่ามี field นี้
-            // onChange={(e) => setLocalData({ ...localData, risk: e.target.value })}
-            // onBlur={() => handleAutoSave('risk', localData.risk)}
-            rows={4} // กำหนดความสูงเริ่มต้น
+            value={risks}
+            onChange={(e) => setRisks(e.target.value)}
+            onBlur={() => {
+              updateProjectInfo({ risks });
+              if (projectId) updateProject(Number(projectId), { risks });
+            }}
+            rows={4}
             className="w-full border border-border bg-background h-[100px] p-[12px] rounded-[8px] resize-none focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"/>
           <p className='text-[12px] text-muted-foreground'>*ระบุความเสี่ยงที่อาจเกิดขึ้น  เพื่อให้ผู้สนับสนุนได้รับทราบข้อมูลที่ครบถ้วน  *</p>
         </div>

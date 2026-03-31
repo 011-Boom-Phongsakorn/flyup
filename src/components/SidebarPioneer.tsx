@@ -3,10 +3,10 @@ import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files } from 
 
 const menu = [
     { icon: <HomeIcon size={20} />, title: 'หน้าหลัก', path: '/' },
-    { icon: <SearchIcon size={20} />, title: 'สำรวจโปรเจกต์', path: '/search' },
+    { icon: <SearchIcon size={20} />, title: 'สำรวจโปรเจกต์', path: '/projects' },
     { icon: <LayoutDashboard size={20} />, title: 'แดชบอร์ด', path: '/pioneer/dashboard' },
     { icon: <Files size={20} />, title: 'โปรเจกต์ของฉัน', path: '/pioneer/dashboard/projects' },
-    { icon: <UserRound size={20} />, title: 'โปรไฟล์', path: '/pioneer/dashboard/profile' },
+    { icon: <UserRound size={20} />, title: 'โปรไฟล์', path: '/pioneer/profile' },
 ]
 
 const SidebarPioneer = () => {

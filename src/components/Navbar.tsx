@@ -25,7 +25,7 @@ interface NavbarProps {
     isInvestment?: boolean;
 }
 
-const Navbar = ({ isHome = false, isInvestment = false }: NavbarProps) => {
+const Navbar = ({ isHome = false }: NavbarProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -83,7 +83,8 @@ const Navbar = ({ isHome = false, isInvestment = false }: NavbarProps) => {
     };
 
     return (
-        <nav className={`${isHome || isInvestment ? 'fixed' : 'sticky'} top-0 left-0 right-0 z-50 w-full py-4 bg-transparent px-4 transition-all duration-300`}>
+
+        <nav className={`fixed top-0 left-0 right-0 z-50 w-full py-4 bg-transparent px-4 transition-all duration-300`}>
             <div className="w-full max-w-[1104px] mx-auto relative">
                 <div className="flex items-center justify-between bg-card/90 backdrop-blur-md w-full border border-border h-[70px] px-6 md:px-8 rounded-full shadow-sm">
 

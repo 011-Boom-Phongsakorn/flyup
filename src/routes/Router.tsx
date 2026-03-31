@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
 import { useEffect } from 'react';
@@ -22,12 +22,20 @@ import ProjectOverview from '../pages/pioneer/ProjectOverview';
 import Dashboard from '../pages/pioneer/Dashboard';
 import PioneerLayout from '../layouts/PioneerLayout';
 import MyProjects from '../pages/pioneer/MyProjects';
+import Profile from '../pages/pioneer/Profile';
 import ProjectStageLayout from '../layouts/ProjectStageLayout';
 import Step1Basics from '../components/steps/Step1Basics';
 import Step2Story from '../components/steps/Step2Story';
 import Step3Milestone from '../components/steps/Step3Milestone';
 import Step4Agreement from '../components/steps/Step4Agreement';
 import Preview from '../pages/pioneer/Preview';
+
+const PioneerGuard = () => {
+    const { authUser } = useAuthStore()
+    if (!authUser) return <Navigate to='/login' replace />
+    if (authUser.role !== 'pioneer') return <Navigate to='/' replace />
+    return <Outlet />
+}
 
 const Router = () => {
     const { authUser, checkAuth, isCheckingAuth } = useAuthStore()
@@ -59,10 +67,11 @@ const Router = () => {
                         <Route path='/preview/:projectId' element={<Preview />} />
                     </Route>
 
-                    <Route>
+                    <Route element={<PioneerGuard />}>
                         <Route element={<PioneerLayout />}>
                             <Route path='/pioneer/dashboard' element={<Dashboard />} />
                             <Route path='/pioneer/dashboard/projects' element={<MyProjects />} />
+                            <Route path='/pioneer/profile' element={<Profile />} />
                         </Route>
                         <Route element={<MainLayout />}>
                             <Route path='/project/overview/:projectId' element={<ProjectOverview />} />
@@ -73,6 +82,7 @@ const Router = () => {
                                 <Route path='3' element={<Step3Milestone />} />
                                 <Route path='4' element={<Step4Agreement />} />
                             </Route>
+                            <Route path='/preview/:projectId' element={<Preview />} />
                         </Route>
                     </Route>
                 </Routes>

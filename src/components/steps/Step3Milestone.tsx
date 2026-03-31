@@ -3,11 +3,15 @@ import { useProjectStore, type Milestone } from '../../store/useProjectStore'
 import { Plus, Trash2, Upload, Video, X } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
 import toast from 'react-hot-toast'
+import { useParams } from 'react-router'
 
 const Step3Milestone = () => {
+  const { projectId } = useParams()
   const [activePhase, setActivePhase] = useState(0) // 0-3
   // ✅ ดึง currentProject มาก่อน แล้วค่อยเข้าถึง milestones
-  const { currentProject, updateMilestone } = useProjectStore()
+  const { currentProject, updateMilestone, saveMilestonePhase } = useProjectStore()
+  const fundingGoal = currentProject.fundingGoal || 0
+  const phasePercents = [0.15, 0.20, 0.30, 0.35]
 
   const currentData = currentProject.milestones[activePhase]
 
@@ -25,20 +29,17 @@ const Step3Milestone = () => {
     if (selectedFiles) {
       const currentFiles = currentData.files || []
       const remainingSlots = 5 - currentFiles.length
-
       if (remainingSlots <= 0) {
-        toast.error("อัปโหลดรูปภาพได้สูงสุด 5 รูปต่อ Milestone")
+        toast.error("อัปโหลดได้สูงสุด 5 ไฟล์ต่อ Milestone")
         return
       }
-
       const newFiles = Array.from(selectedFiles)
         .slice(0, remainingSlots)
         .map(file => ({
           name: file.name,
-          url: URL.createObjectURL(file),
+          url: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
           file: file
         }))
-
       handleChange('files', [...currentFiles, ...newFiles])
       if (fileInputRef.current) fileInputRef.current.value = ""
     }
@@ -121,6 +122,7 @@ const Step3Milestone = () => {
                 type="text"
                 value={currentData.title}
                 onChange={(e) => handleChange('title', e.target.value)}
+                onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
                 className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-[14px]"
               />
             </div>
@@ -132,18 +134,24 @@ const Step3Milestone = () => {
                 rows={4}
                 value={currentData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
+                onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
                 className="w-full p-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none text-[14px]"
               />
             </div>
 
-            {/* กล่อง input ป้อน จำนวนเงินงบประมาณ */}
+            {/* กล่อง input ป้อน จำนวนเงินงบประมาณ (auto-calculated, disabled) */}
             <div className="flex flex-col gap-[8px]">
-              <label className="text-[14px] font-semibold text-foreground">จำนวนเงิน</label>
+              <div className="flex items-center justify-between">
+                <label className="text-[14px] font-semibold text-foreground">จำนวนเงิน</label>
+                <span className="text-[12px] text-primary font-medium bg-primary/10 px-[8px] py-[2px] rounded-full">
+                  {(phasePercents[activePhase] * 100).toFixed(0)}% ของเป้าหมาย
+                </span>
+              </div>
               <input
-                type="number"
-                value={currentData.amount || ''}
-                onChange={(e) => handleChange('amount', Number(e.target.value))}
-                className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px]"
+                type="text"
+                disabled
+                value={fundingGoal > 0 ? `฿${(fundingGoal * phasePercents[activePhase]).toLocaleString('th-TH')}` : 'กรุณากำหนดเป้าหมายเงินทุนก่อน'}
+                className="w-full h-[40px] px-3 bg-[#F3F4F6] border border-[#E5E7EB] rounded-[8px] outline-none text-[14px] text-muted-foreground cursor-not-allowed"
               />
             </div>
 
@@ -154,8 +162,12 @@ const Step3Milestone = () => {
                 <input
                   type="date"
                   value={currentData.startDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  max={currentProject.projectDuration
+                    ? new Date(Date.now() + currentProject.projectDuration * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                    : undefined}
                   onChange={(e) => handleChange('startDate', e.target.value)}
-                  className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-muted-foreground"
+                  className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
                 />
               </div>
               <div className="flex flex-col gap-[8px]">
@@ -163,10 +175,19 @@ const Step3Milestone = () => {
                 <input
                   type="date"
                   value={currentData.endDate}
+                  min={currentData.startDate || new Date().toISOString().split('T')[0]}
+                  max={currentProject.projectDuration
+                    ? new Date(Date.now() + currentProject.projectDuration * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                    : undefined}
                   onChange={(e) => handleChange('endDate', e.target.value)}
-                  className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-muted-foreground"
+                  className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
                 />
               </div>
+              {currentProject.projectDuration > 0 && (
+                <p className="md:col-span-2 text-[12px] text-muted-foreground">
+                  ระยะเวลาโปรเจกต์ทั้งหมด {currentProject.projectDuration} เดือน (วันสิ้นสุดไม่เกิน {new Date(Date.now() + currentProject.projectDuration * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('th-TH')})
+                </p>
+              )}
             </div>
           </div>
 
@@ -240,16 +261,25 @@ const Step3Milestone = () => {
                 onClick={() => fileInputRef.current?.click()}
                 className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
               >
-                <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
+                <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,.xlsx,.xls,.pdf" />
                 <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
-                <span className="text-[13px] text-muted-foreground">อัปโหลดไฟล์</span>
+                <span className="text-[13px] text-muted-foreground">รูปภาพ, PDF, Excel</span>
               </div>
 
               {/* วนลูปแสดงรูปภาพที่ผู้ใช้เลือก (Preview) พร้อมปุ่มลบ X */}
               <div className="flex flex-wrap gap-3 mt-2">
                 {currentData.files?.map((f, i) => (
-                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border group shadow-sm">
-                    <img src={f.url} className="w-full h-full object-cover" alt="preview" />
+                  <div key={i} className="relative rounded-lg overflow-hidden border border-border group shadow-sm">
+                    {f.url ? (
+                      <div className="w-16 h-16">
+                        <img src={f.url} className="w-full h-full object-cover" alt="preview" />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 flex flex-col items-center justify-center bg-[#F8F9FB] text-[10px] text-muted-foreground text-center px-1 gap-1">
+                        <span className="text-[18px]">{f.name.endsWith('.pdf') ? '📄' : '📊'}</span>
+                        <span className="truncate w-full text-center">{f.name}</span>
+                      </div>
+                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); removeImage(i); }}
                       className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
