@@ -14,6 +14,8 @@ import Login from '../pages/public/Login';
 import VerifyEmail from '../pages/public/VerifyEmail';
 import ProjectDetail from '../pages/public/ProjectDetail';
 import Investment from '../pages/public/Investment';
+import ForgotPassword from '../pages/public/ForgotPassword';
+import ResetPassword from '../pages/public/ResetPassword';
 
 import { Loader2 } from 'lucide-react';
 
@@ -60,6 +62,8 @@ const Router = () => {
                         <Route path='/' element={<Home />} />
                         <Route path='/register' element={!authUser ? <Register /> : <Navigate to='/' />} />
                         <Route path='/login' element={!authUser ? <Login /> : <Navigate to='/' />} />
+                        <Route path='/forgot/password' element={!authUser ? <ForgotPassword /> : <Navigate to='/' />} />
+                        <Route path='/reset-password' element={!authUser ? <ResetPassword /> : <Navigate to='/' />} />
                         <Route path='/projects' element={<Projects />} />
                         <Route path='/verify' element={<VerifyEmail />} />
                         <Route path='/projects/:id' element={<ProjectDetail />} />

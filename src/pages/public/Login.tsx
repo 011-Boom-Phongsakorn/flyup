@@ -89,7 +89,7 @@ const Login = () => {
                             <label className="text-[14px] text-foreground">รหัสผ่าน <span className="text-error">*</span></label>
                             <input name="password" onChange={handleChange} value={formData.password} type="password" className={inputStyle('password')} />
                         </div>
-                        <Link to='/forgot/password' className="self-start text-[14px] text-foreground hover:text-primary transition-all duration-200">ลืมรหัสผ่าน</Link>
+                        <Link to='/forgot/password' className="self-start text-[14px] text-muted-foreground hover:text-primary transition-all duration-200">ลืมรหัสผ่าน</Link>
                     </div>
                     <button disabled={isLoggingIn} type="submit" className="bg-primary text-white text-[14px] w-full flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300">
                         {isLoggingIn ? (
