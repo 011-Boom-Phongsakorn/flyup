@@ -59,7 +59,9 @@ interface ProjectState {
     isLoading: boolean;
     isCreating: boolean;
     isSaving: boolean;
-    
+    saveStatus: 'idle' | 'saving' | 'saved';
+    setSaveStatus: (status: 'idle' | 'saving' | 'saved') => void;
+
     // Actions
     createProject: () => Promise<number | null>;
     loadCurrentProject: (id: number) => Promise<void>;
@@ -106,6 +108,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     isLoading: false,
     isCreating: false,
     isSaving: false,
+    saveStatus: 'idle',
+    setSaveStatus: (status) => set({ saveStatus: status }),
 
     // ✅ Action สำหรับอัปเดตข้อมูลทั่วไป (Step 1: Basics, Step 2: Story/Risks)
     updateProjectInfo: (data) => {
@@ -212,9 +216,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     category: d.category ?? '',
                     categoryId,
                     fundingGoal: d.funding_goal ?? 0,
-                    projectDuration: d.duration_days ?? 0,
+                    projectDuration: d.duration_months ?? 0,
                     softCap: d.softcap ?? 0,
-                    campaignDuration: 0,
+                    campaignDuration: d.duration_days ?? 0,
                     revenueShare: d.profit_share_pct ?? 0,
                     minInvestAmount: d.min_invest_amount ?? 0,
                     maxInvestAmount: d.max_invest_amount ?? 0,
@@ -241,7 +245,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         if (data.risks           !== undefined) payload.risk             = data.risks;
         if (data.fundingGoal     !== undefined) payload.funding_goal     = data.fundingGoal;
         if (data.softCap         !== undefined) payload.softcap          = data.softCap;
-        if (data.projectDuration !== undefined) payload.duration_days    = data.projectDuration;
+        if (data.projectDuration  !== undefined) payload.duration_months  = data.projectDuration;
+        if (data.campaignDuration !== undefined) payload.duration_days    = data.campaignDuration;
         if (data.revenueShare    !== undefined) payload.profit_share_pct = data.revenueShare;
         if (data.categoryId !== undefined && data.categoryId > 0) payload.category_id = data.categoryId;
         if (data.minInvestAmount   !== undefined) payload.min_invest_amount = data.minInvestAmount;
@@ -250,7 +255,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         if (Object.keys(payload).length === 0) return;
 
         try {
-            await api.patch(`/pioneer/projects/${id}`, payload);
+            const res = await api.patch(`/pioneer/projects/${id}`, payload);
+            const d = res.data?.data;
+            if (d?.min_invest_amount !== undefined) {
+                set((state) => ({
+                    currentProject: {
+                        ...state.currentProject,
+                        minInvestAmount: d.min_invest_amount,
+                    },
+                }));
+            }
         } catch (error) {
             console.error('updateProject:', error);
             toast.error('บันทึกไม่สำเร็จ');

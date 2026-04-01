@@ -29,6 +29,16 @@ const Preview = () => {
     const profitShare = currentProject.revenueShare || 0;
     const activeMilestones = currentProject.milestones?.filter(m => m.title) ?? [];
 
+    const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const formatThDate = (d: Date) => `${d.getDate()} ${thMonths[d.getMonth()]} ${d.getFullYear()}`;
+    const getProjectDateRange = () => {
+        if (!currentProject.projectDuration) return 'ยังไม่ได้กำหนด';
+        const start = new Date();
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + currentProject.projectDuration);
+        return `${formatThDate(start)} — ${formatThDate(end)}`;
+    };
+
     // video นำหน้า แล้วตามด้วยรูปภาพ
     type MediaItem = { type: 'video' | 'image'; url: string; name: string };
     const mediaList: MediaItem[] = [
@@ -194,13 +204,19 @@ const Preview = () => {
                                 <div className="flex justify-between items-center text-[13px]">
                                     <span className="text-muted-foreground">ลงทุนได้สูงสุด</span>
                                     <span className="font-semibold text-foreground">
-                                        {currentProject.maxInvestAmount > 0 ? `฿${formatCurrency(currentProject.maxInvestAmount)}` : 'ยังไม่ได้กำหนด'}
+                                        {(() => {
+                                            const remaining = targetGoal > 0 ? targetGoal : 0;
+                                            const effectiveMax = currentProject.maxInvestAmount > 0
+                                                ? Math.min(currentProject.maxInvestAmount, remaining)
+                                                : remaining;
+                                            return effectiveMax > 0 ? `฿${formatCurrency(effectiveMax)}` : 'ยังไม่ได้กำหนด';
+                                        })()}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-[13px]">
                                     <span className="text-muted-foreground">ระยะเวลา</span>
                                     <span className="font-semibold text-foreground text-right w-[150px] truncate">
-                                        {currentProject.projectDuration ? `${currentProject.projectDuration} เดือน` : "ยังไม่ได้กำหนด"}
+                                        {getProjectDateRange()}
                                     </span>
                                 </div>
                             </div>

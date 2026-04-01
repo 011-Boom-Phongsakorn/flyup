@@ -10,6 +10,8 @@ import { SquarePlay, List, ImageIcon, Plus, ChevronDown, Check, X, Link as LinkI
 import StepNavigation from "../StepNavigation"
 import { useProjectStore } from '../../store/useProjectStore'
 import { useParams } from 'react-router'
+import api from '../../services/api'
+import toast from 'react-hot-toast'
 
 // ✅ Custom Image Extension ที่รองรับการแนบลิงก์ (href) และจับรูปภาพจัด Align
 const CustomImage = Image.extend({
@@ -61,7 +63,12 @@ const CustomImage = Image.extend({
 
 const Step2Story = () => {
   const { projectId } = useParams()
-  const { currentProject, updateProjectInfo, updateProject, saveStory } = useProjectStore()
+  const { currentProject, updateProjectInfo, updateProject, saveStory, setSaveStatus } = useProjectStore()
+
+  const triggerSaved = () => {
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2500);
+  };
   const [isMenuExpanded, setIsMenuExpanded] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mediaUrlInputOpen, setMediaUrlInputOpen] = useState(false)
@@ -103,6 +110,7 @@ const Step2Story = () => {
       setIsMenuExpanded(false)
       setDropdownOpen(false)
       // debounce save story to store + backend
+      setSaveStatus('saving')
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       saveTimerRef.current = setTimeout(async () => {
         const html = editor.getHTML()
@@ -110,6 +118,7 @@ const Step2Story = () => {
         if (projectId) {
           await saveStory(Number(projectId), html)
         }
+        triggerSaved()
       }, 500)
     },
     onSelectionUpdate: () => {
@@ -221,18 +230,40 @@ const Step2Story = () => {
     fileInputRef.current?.click()
   }, [])
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !editor) return
 
-    // สร้าง URL ชั่วคราวจากไฟล์ (ใน production ควรอัพโหลดไป server)
-    const url = URL.createObjectURL(file)
-    editor.chain().focus().setImage({ src: url, alt: file.name }).run()
-
-    // รีเซ็ต input เพื่อให้เลือกไฟล์เดิมซ้ำได้
     e.target.value = ''
     setIsMenuExpanded(false)
-  }, [editor])
+
+    // แสดง blob URL ก่อนทันทีเพื่อ UX
+    const blobUrl = URL.createObjectURL(file)
+    editor.chain().focus().setImage({ src: blobUrl, alt: file.name }).run()
+
+    // Upload ขึ้น server แล้วแทนที่ blob URL ด้วย URL จริง
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      const { url: serverUrl } = res.data?.data ?? {}
+      if (serverUrl) {
+        const updatedHtml = editor.getHTML().replace(blobUrl, serverUrl)
+        editor.commands.setContent(updatedHtml, { emitUpdate: false })
+        updateProjectInfo({ story: updatedHtml })
+        if (projectId) await saveStory(Number(projectId), updatedHtml)
+      }
+    } catch {
+      toast.error('อัปโหลดรูปไม่สำเร็จ')
+      // ลบรูปที่ยังเป็น blob URL ออกจาก editor
+      const cleanedHtml = editor.getHTML().replace(/<img[^>]*src="blob:[^"]*"[^>]*>/g, '')
+      editor.commands.setContent(cleanedHtml, { emitUpdate: false })
+    } finally {
+      URL.revokeObjectURL(blobUrl)
+    }
+  }, [editor, projectId, updateProjectInfo, saveStory])
 
   // ✅ ฟังก์ชันเพิ่ม media จาก URL
   const handleAddMediaUrl = useCallback(() => {

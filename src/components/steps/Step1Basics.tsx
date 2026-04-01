@@ -8,10 +8,9 @@ import api from "../../services/api";
 
 const Step1Basics = () => {
   const { projectId } = useParams();
-  const { currentProject, updateProjectInfo, updateProject } = useProjectStore()
+  const { currentProject, updateProjectInfo, updateProject, setSaveStatus } = useProjectStore()
 
   const [isOpen, setIsOpen] = useState(false)
-  const [showSavedTick, setShowSavedTick] = useState(false)
 
   const formatNum = (n: number) => n > 0 ? n.toLocaleString('th-TH') : '';
   const parseNum = (s: string) => Number(s.replace(/,/g, '')) || 0;
@@ -56,6 +55,10 @@ const Step1Basics = () => {
   }, [currentProject]);
 
   useEffect(() => {
+    setLocalData(prev => ({ ...prev, minInvestAmount: currentProject.minInvestAmount }));
+  }, [currentProject.minInvestAmount]);
+
+  useEffect(() => {
     api.get('/categories').then(res => {
       setAllCategories(res.data?.data ?? []);
     }).catch(() => {});
@@ -64,13 +67,10 @@ const Step1Basics = () => {
   const additionalImagesRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (showSavedTick) {
-      const timer = setTimeout(() => setShowSavedTick(false), 2000);
-      toast.success('บันทึก')
-      return () => clearTimeout(timer);
-    }
-  }, [showSavedTick]);
+  const triggerSaved = () => {
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2500);
+  };
 
   const handleAutoSave = async (field: keyof Project, newValue: string | number) => {
     const oldValue = currentProject?.[field as keyof typeof currentProject];
@@ -80,13 +80,14 @@ const Step1Basics = () => {
 
     if (isSame) return;
 
+    setSaveStatus('saving');
     updateProjectInfo({ [field]: newValue });
 
     if (projectId) {
       await updateProject(Number(projectId), { [field]: newValue });
     }
 
-    setShowSavedTick(true);
+    triggerSaved();
   };
 
   const uploadMediaToServer = async (file: File): Promise<{ url: string; mediaId?: number } | null> => {
@@ -152,7 +153,7 @@ const Step1Basics = () => {
       }
     }
 
-    setShowSavedTick(true);
+    triggerSaved();
     if (additionalImagesRef.current) additionalImagesRef.current.value = "";
   };
 
@@ -194,7 +195,7 @@ const Step1Basics = () => {
       useProjectStore.setState((state) => ({
         currentProject: { ...state.currentProject, video: { id: result.mediaId, name: file.name, url: result.url } },
       }));
-      setShowSavedTick(true);
+      triggerSaved();
     } else {
       // upload failed — remove local preview
       URL.revokeObjectURL(blobUrl);
@@ -215,7 +216,7 @@ const Step1Basics = () => {
     if (targetImage.id) {
       await api.delete(`/pioneer/projects/media/${targetImage.id}`).catch(console.error);
     }
-    setShowSavedTick(true);
+    triggerSaved();
   };
 
   const removeVideo = async () => {
@@ -226,7 +227,7 @@ const Step1Basics = () => {
     if (vid?.id) {
       await api.delete(`/pioneer/projects/media/${vid.id}`).catch(console.error);
     }
-    setShowSavedTick(true);
+    triggerSaved();
   };
 
   return (
@@ -301,8 +302,17 @@ const Step1Basics = () => {
             <input
               type="text"
               value={formatNum(localData.fundingGoal)}
-              onChange={(e) => setLocalData({ ...localData, fundingGoal: parseNum(e.target.value) })}
-              onBlur={() => handleAutoSave('fundingGoal', localData.fundingGoal)}
+              onChange={(e) => {
+                const newGoal = parseNum(e.target.value);
+                const autoSoftCap = Math.ceil(newGoal * 0.7);
+                const autoMinInvest = Math.ceil(newGoal * 0.01);
+                setLocalData({ ...localData, fundingGoal: newGoal, softCap: autoSoftCap, minInvestAmount: autoMinInvest });
+              }}
+              onBlur={() => {
+                handleAutoSave('fundingGoal', localData.fundingGoal);
+                handleAutoSave('softCap', localData.softCap);
+                handleAutoSave('minInvestAmount', localData.minInvestAmount);
+              }}
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
           <div className="flex flex-col gap-[4px]">
@@ -363,7 +373,7 @@ const Step1Basics = () => {
               />
             </div>
           </div>
-          <p className="text-[12px] text-muted-foreground">*ระบุเป้าหมายเงินทุนและระยะเวลา ให้ชัดเจน พร้อมกำหนดเงื่อนไขการรับเงินทั้งแบบ Soft Cap และ Hard Cap รวมถึงสัดส่วนผลตอบแทนที่แน่นอน เพื่อใช้เป็นข้อตกลงในการระดมทุน*</p>
+          <p className="text-[12px] text-muted-foreground"><span className="text-error">*</span> ระบุเป้าหมายเงินทุนและระยะเวลา ให้ชัดเจน พร้อมกำหนดเงื่อนไขการรับเงินทั้งแบบ Soft Cap รวมถึงสัดส่วนผลตอบแทนที่แน่นอน เพื่อใช้เป็นข้อตกลงในการระดมทุน*</p>
         </form>
       </div>
 

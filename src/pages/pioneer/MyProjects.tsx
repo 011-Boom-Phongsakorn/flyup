@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Search, Plus, SlidersHorizontal, ChevronDown, Eye, Edit3, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, SlidersHorizontal, ChevronDown, Eye, Edit3, Trash2, Loader2, ChevronLeft, ChevronRight, XCircle } from "lucide-react";
 import { useProjectStore } from "../../store/useProjectStore";
 import Swal from "sweetalert2";
+import api from "../../services/api";
 
 type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled";
 
@@ -74,6 +75,28 @@ const MyProjects = () => {
     const id = await createProject();
     if (id) navigate(`/project/overview/${id}`);
   };
+  const handleCancel = async (id: number, title: string) => {
+    const result = await Swal.fire({
+      title: 'ยกเลิกคำขอ?',
+      html: `คุณต้องการถอนคำขอสร้างโปรเจกต์ <b>${title}</b> ใช่หรือไม่?<br/><span style="font-size:13px;color:#6b7280">โปรเจกต์จะกลับไปเป็นแบบร่าง</span>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#EF4444',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'ยกเลิกคำขอ',
+      cancelButtonText: 'ปิด',
+      reverseButtons: true,
+    });
+    if (result.isConfirmed) {
+      try {
+        await api.patch(`/admin/projects/${id}/status`, { status: 'draft' });
+        await fetchMyProjects();
+      } catch {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถยกเลิกได้ กรุณาลองใหม่', confirmButtonColor: '#8B5CF6' });
+      }
+    }
+  };
+
   const handleDelete = async (id: number, title: string) => {
     const result = await Swal.fire({
       title: 'ลบโปรเจกต์?',
@@ -187,6 +210,7 @@ const MyProjects = () => {
               const hasEdit = project.state === 'draft' || project.state === 'funding';
               const hasMilestone = project.state === 'funding';
               const hasDelete = project.state === 'draft';
+              const hasCancel = project.state === 'pending_review';
               const progress = project.funding_goal > 0
                 ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
                 : 0;
@@ -256,7 +280,7 @@ const MyProjects = () => {
                       <div className="flex items-center gap-[8px] shrink-0 mt-[10px] lg:mt-0">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleView(project.id); }}
-                          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] transition-colors rounded-[8px] text-[13px] font-medium text-foreground"
+                          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] transition-colors rounded-[8px] text-[13px] font-medium text-foreground cursor-pointer"
                         >
                           <Eye size={16} /> ดู
                         </button>
@@ -264,7 +288,7 @@ const MyProjects = () => {
                         {hasEdit && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleEdit(project.id); }}
-                            className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] transition-colors rounded-[8px] text-[13px] font-medium text-foreground"
+                            className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] transition-colors rounded-[8px] text-[13px] font-medium text-foreground cursor-pointer"
                           >
                             <Edit3 size={16} /> แก้ไข
                           </button>
@@ -280,10 +304,19 @@ const MyProjects = () => {
                           </button>
                         )}
 
+                        {hasCancel && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleCancel(project.id, project.title); }}
+                            className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-red-50 hover:bg-red-100 transition-colors rounded-[8px] text-[13px] font-medium text-[#EF4444] cursor-pointer"
+                          >
+                            <XCircle size={16} /> ยกเลิกคำขอ
+                          </button>
+                        )}
+
                         {hasDelete && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(project.id, project.title); }}
-                            className="flex flex-col items-center justify-center w-[36px] h-[36px] text-[#EF4444] hover:bg-red-50 rounded-[8px] transition-colors ml-[4px]"
+                            className="flex flex-col items-center justify-center w-[36px] h-[36px] text-[#EF4444] hover:bg-red-50 rounded-[8px] transition-colors ml-[4px] cursor-pointer"
                           >
                             <Trash2 size={18} />
                           </button>

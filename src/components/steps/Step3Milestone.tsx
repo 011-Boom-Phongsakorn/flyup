@@ -10,7 +10,19 @@ const Step3Milestone = () => {
   const { projectId } = useParams()
   const [activePhase, setActivePhase] = useState(0) // 0-3
   // ✅ ดึง currentProject มาก่อน แล้วค่อยเข้าถึง milestones
-  const { currentProject, updateMilestone, saveMilestonePhase } = useProjectStore()
+  const { currentProject, updateMilestone, saveMilestonePhase, setSaveStatus } = useProjectStore()
+
+  const triggerSaved = () => {
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2500);
+  };
+
+  const savePhase = async (phaseIndex: number) => {
+    if (!projectId) return;
+    setSaveStatus('saving');
+    await saveMilestonePhase(Number(projectId), phaseIndex);
+    triggerSaved();
+  };
   const fundingGoal = currentProject.fundingGoal || 0
   const phasePercents = [0.15, 0.20, 0.30, 0.35]
 
@@ -201,7 +213,7 @@ const Step3Milestone = () => {
                 type="text"
                 value={currentData.title}
                 onChange={(e) => handleChange('title', e.target.value)}
-                onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
+                onBlur={() => { savePhase(activePhase) }}
                 className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-[14px]"
               />
             </div>
@@ -213,7 +225,7 @@ const Step3Milestone = () => {
                 rows={4}
                 value={currentData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
-                onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
+                onBlur={() => { savePhase(activePhase) }}
                 className="w-full p-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none text-[14px]"
               />
             </div>
@@ -244,7 +256,7 @@ const Step3Milestone = () => {
                   min={new Date().toISOString().split('T')[0]}
                   max={projectMaxDateStr}
                   onChange={(e) => handleChange('startDate', e.target.value)}
-                  onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
+                  onBlur={() => { savePhase(activePhase) }}
                   className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
                 />
               </div>
@@ -256,7 +268,7 @@ const Step3Milestone = () => {
                   min={currentData.startDate || new Date().toISOString().split('T')[0]}
                   max={projectMaxDateStr}
                   onChange={(e) => handleChange('endDate', e.target.value)}
-                  onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
+                  onBlur={() => { savePhase(activePhase) }}
                   className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
                 />
               </div>
@@ -308,7 +320,7 @@ const Step3Milestone = () => {
                       newCriteria[cIdx] = e.target.value;
                       handleChange('criteria', newCriteria);
                     }}
-                    onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
+                    onBlur={() => { savePhase(activePhase) }}
                     className="flex-grow h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all text-[14px]"
                   />
                   {/* ปุ่มลบเกณฑ์ถังขยะ (แสดงเฉพาะเมื่อมีมากกว่า 1 ข้อ ไม่งั้นให้เหลือ 1 ไว้เสมอ) */}
