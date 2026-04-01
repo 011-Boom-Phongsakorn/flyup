@@ -89,15 +89,26 @@ const Step1Basics = () => {
     setShowSavedTick(true);
   };
 
-  const uploadMediaToServer = async (file: File): Promise<string | null> => {
+  const uploadMediaToServer = async (file: File): Promise<{ url: string; mediaId?: number } | null> => {
     if (!projectId) return null;
     try {
+      // Step 1: upload file to Cloudinary via /upload
       const formData = new FormData();
       formData.append('file', file);
-      const res = await api.post(`/pioneer/projects/${projectId}/media`, formData, {
+      const uploadRes = await api.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      return res.data?.data?.url ?? null;
+      const { url, type } = uploadRes.data?.data ?? {};
+      if (!url || !type) return null;
+
+      // Step 2: attach uploaded URL to project
+      await api.post(`/pioneer/projects/${projectId}/media`, { url, type });
+
+      // Step 3: fetch media list to get the DB id of the newly attached item
+      const mediaRes = await api.get(`/pioneer/projects/${projectId}/media`);
+      const mediaList: { id: number; url: string }[] = mediaRes.data?.data ?? [];
+      const matched = mediaList.find((m) => m.url === url);
+      return { url, mediaId: matched?.id };
     } catch (error) {
       console.error('upload media failed:', error);
       return null;
@@ -135,9 +146,9 @@ const Step1Basics = () => {
 
     // Upload ทีละไฟล์แล้วแทนที่ blob URL ด้วย server URL
     for (let i = 0; i < filesToUpload.length; i++) {
-      const serverUrl = await uploadMediaToServer(filesToUpload[i]);
-      if (serverUrl) {
-        set_replaceFileUrl(previews[i].url, serverUrl, filesToUpload[i].name);
+      const result = await uploadMediaToServer(filesToUpload[i]);
+      if (result) {
+        set_replaceFileUrl(previews[i].url, result.url, filesToUpload[i].name, result.mediaId);
       }
     }
 
@@ -145,13 +156,13 @@ const Step1Basics = () => {
     if (additionalImagesRef.current) additionalImagesRef.current.value = "";
   };
 
-  const set_replaceFileUrl = (blobUrl: string, serverUrl: string, name: string) => {
+  const set_replaceFileUrl = (blobUrl: string, serverUrl: string, name: string, mediaId?: number) => {
     URL.revokeObjectURL(blobUrl);
     useProjectStore.setState((state) => ({
       currentProject: {
         ...state.currentProject,
         files: state.currentProject.files.map(f =>
-          f.url === blobUrl ? { name, url: serverUrl } : f
+          f.url === blobUrl ? { id: mediaId, name, url: serverUrl } : f
         ),
       },
     }));
@@ -162,48 +173,60 @@ const Step1Basics = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error("วิดีโอต้องมีขนาดไม่เกิน 20MB");
+    const supportedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+    if (!supportedVideoTypes.includes(file.type)) {
+      toast.error("รองรับเฉพาะไฟล์ MP4, WebM, OGG, MOV เท่านั้น");
+      if (videoInputRef.current) videoInputRef.current.value = "";
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("วิดีโอต้องมีขนาดไม่เกิน 50MB");
       return;
     }
 
     const blobUrl = URL.createObjectURL(file);
     updateProjectInfo({ video: { name: file.name, url: blobUrl, file } });
 
-    const serverUrl = await uploadMediaToServer(file);
-    if (serverUrl) {
+    const result = await uploadMediaToServer(file);
+    if (result) {
       URL.revokeObjectURL(blobUrl);
       useProjectStore.setState((state) => ({
-        currentProject: { ...state.currentProject, video: { name: file.name, url: serverUrl } },
+        currentProject: { ...state.currentProject, video: { id: result.mediaId, name: file.name, url: result.url } },
       }));
+      setShowSavedTick(true);
+    } else {
+      // upload failed — remove local preview
+      URL.revokeObjectURL(blobUrl);
+      updateProjectInfo({ video: null });
+      if (videoInputRef.current) videoInputRef.current.value = "";
+      toast.error("อัปโหลดวิดีโอไม่สำเร็จ กรุณาลองใหม่");
     }
+  };
 
+  const removeImage = async (index: number) => {
+    const currentImages = currentProject?.files || [];
+    const targetImage = currentImages[index];
+    if (!targetImage) return;
+
+    if (targetImage.url) URL.revokeObjectURL(targetImage.url);
+    updateProjectInfo({ files: currentImages.filter((_, i) => i !== index) });
+
+    if (targetImage.id) {
+      await api.delete(`/pioneer/projects/media/${targetImage.id}`).catch(console.error);
+    }
     setShowSavedTick(true);
   };
 
-  // ✅ แก้ไขฟังก์ชันลบรูปภาพ
-  const removeImage = (index: number) => {
-    const currentImages = currentProject?.files || [];
-
-    const targetImage = currentImages[index];
-
-    // คืนค่าหน่วยความจำ
-    if (targetImage?.url) URL.revokeObjectURL(targetImage.url);
-
-    const updatedImages = currentImages.filter((_, i) => i !== index);
-    updateProjectInfo({ files: updatedImages });
-    setShowSavedTick(true); // <--- เพิ่มบรรทัดนี้เพื่อให้ขึ้น "บันทึกแล้ว"
-  };
-
-  // ✅ เพิ่มฟังก์ชันลบวิดีโอ (เพื่อให้เรียกใช้ง่ายขึ้น)
-  const removeVideo = () => {
+  const removeVideo = async () => {
+    const vid = currentProject?.video;
     updateProjectInfo({ video: null });
+    if (videoInputRef.current) videoInputRef.current.value = "";
 
-    if (videoInputRef.current) {
-      videoInputRef.current.value = "";
+    if (vid?.id) {
+      await api.delete(`/pioneer/projects/media/${vid.id}`).catch(console.error);
     }
-
-    setShowSavedTick(true); // <--- เพิ่มบรรทัดนี้เพื่อให้ขึ้น "บันทึกแล้ว"
+    setShowSavedTick(true);
   };
 
   return (

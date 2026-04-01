@@ -4,6 +4,7 @@ import { Plus, Trash2, Upload, Video, X } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
 import toast from 'react-hot-toast'
 import { useParams } from 'react-router'
+import api from '../../services/api'
 
 const Step3Milestone = () => {
   const { projectId } = useParams()
@@ -37,52 +38,116 @@ const Step3Milestone = () => {
     updateMilestone(activePhase, { [field]: value })
   }
 
-  // 2. ระบบจัดการรูปภาพ (จำกัดสูงสุด 5 รูป)
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // อัปโหลดไฟล์ไปยัง Cloudinary แล้วแนบกับ project media (เหมือน Step1)
+  const uploadToProjectMedia = async (file: File): Promise<{ url: string; mediaId?: number } | null> => {
+    if (!projectId) return null
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const uploadRes = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const { url, type } = uploadRes.data?.data ?? {}
+      if (!url || !type) return null
+      await api.post(`/pioneer/projects/${projectId}/media`, { url, type })
+      const mediaRes = await api.get(`/pioneer/projects/${projectId}/media`)
+      const mediaList: { id: number; url: string }[] = mediaRes.data?.data ?? []
+      const matched = mediaList.find((m) => m.url === url)
+      return { url, mediaId: matched?.id }
+    } catch {
+      return null
+    }
+  }
+
+  // 2. ระบบจัดการไฟล์ประกอบ (จำกัดสูงสุด 5 ไฟล์)
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files
-    if (selectedFiles) {
-      const currentFiles = currentData.files || []
-      const remainingSlots = 5 - currentFiles.length
-      if (remainingSlots <= 0) {
-        toast.error("อัปโหลดได้สูงสุด 5 ไฟล์ต่อ Milestone")
-        return
-      }
-      const newFiles = Array.from(selectedFiles)
-        .slice(0, remainingSlots)
-        .map(file => ({
-          name: file.name,
-          url: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
-          file: file
+    if (!selectedFiles) return
+    const currentFiles = currentData.files || []
+    const remainingSlots = 5 - currentFiles.length
+    if (remainingSlots <= 0) {
+      toast.error("อัปโหลดได้สูงสุด 5 ไฟล์ต่อ Milestone")
+      return
+    }
+    const filesToUpload = Array.from(selectedFiles).slice(0, remainingSlots)
+
+    // แสดง blob preview ทันที
+    const previews = filesToUpload.map(file => ({
+      name: file.name,
+      url: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
+      file,
+    }))
+    handleChange('files', [...currentFiles, ...previews])
+    if (fileInputRef.current) fileInputRef.current.value = ""
+
+    // อัปโหลดทีละไฟล์แล้วแทนที่ blob URL ด้วย server URL
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const result = await uploadToProjectMedia(filesToUpload[i])
+      if (result) {
+        const blobUrl = previews[i].url
+        if (blobUrl) URL.revokeObjectURL(blobUrl)
+        useProjectStore.setState(state => ({
+          currentProject: {
+            ...state.currentProject,
+            milestones: state.currentProject.milestones.map((m, idx) =>
+              idx !== activePhase ? m : {
+                ...m,
+                files: m.files.map(f =>
+                  f.url === blobUrl ? { id: result.mediaId, name: filesToUpload[i].name, url: result.url } : f
+                ),
+              }
+            ),
+          },
         }))
-      handleChange('files', [...currentFiles, ...newFiles])
-      if (fileInputRef.current) fileInputRef.current.value = ""
+      }
     }
   }
 
   // 3. ระบบจัดการวิดีโอ (จำกัดแค่ 1 คลิป)
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error("วิดีโอต้องมีขนาดไม่เกิน 50MB")
-        return
-      }
-      handleChange('video', {
-        name: file.name,
-        url: URL.createObjectURL(file),
-        file: file
-      })
+    if (!file) return
+    const supportedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']
+    if (!supportedVideoTypes.includes(file.type)) {
+      toast.error("รองรับเฉพาะไฟล์ MP4, WebM, OGG, MOV เท่านั้น")
+      if (videoInputRef.current) videoInputRef.current.value = ""
+      return
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("วิดีโอต้องมีขนาดไม่เกิน 50MB")
+      return
+    }
+    const blobUrl = URL.createObjectURL(file)
+    handleChange('video', { name: file.name, url: blobUrl, file })
+
+    const result = await uploadToProjectMedia(file)
+    if (result) {
+      URL.revokeObjectURL(blobUrl)
+      updateMilestone(activePhase, { video: { id: result.mediaId, name: file.name, url: result.url } })
+    } else {
+      URL.revokeObjectURL(blobUrl)
+      handleChange('video', null)
+      if (videoInputRef.current) videoInputRef.current.value = ""
+      toast.error("อัปโหลดวิดีโอไม่สำเร็จ กรุณาลองใหม่")
     }
   }
 
-  const removeImage = (index: number) => {
-    const updatedFiles = currentData.files.filter((_, i) => i !== index)
-    handleChange('files', updatedFiles)
+  const removeImage = async (index: number) => {
+    const f = currentData.files[index]
+    if (!f) return
+    if (f.url?.startsWith('blob:')) URL.revokeObjectURL(f.url)
+    handleChange('files', currentData.files.filter((_, i) => i !== index))
+    if (f.id) {
+      await api.delete(`/pioneer/projects/media/${f.id}`).catch(() => {})
+    }
   }
 
-  const removeVideo = () => {
+  const removeVideo = async () => {
+    const vid = currentData.video
     handleChange('video', null)
     if (videoInputRef.current) videoInputRef.current.value = ""
+    if (vid?.url?.startsWith('blob:')) URL.revokeObjectURL(vid.url)
+    if (vid?.id) {
+      await api.delete(`/pioneer/projects/media/${vid.id}`).catch(() => {})
+    }
   }
 
   return (
@@ -179,6 +244,7 @@ const Step3Milestone = () => {
                   min={new Date().toISOString().split('T')[0]}
                   max={projectMaxDateStr}
                   onChange={(e) => handleChange('startDate', e.target.value)}
+                  onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
                   className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
                 />
               </div>
@@ -190,6 +256,7 @@ const Step3Milestone = () => {
                   min={currentData.startDate || new Date().toISOString().split('T')[0]}
                   max={projectMaxDateStr}
                   onChange={(e) => handleChange('endDate', e.target.value)}
+                  onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
                   className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
                 />
               </div>
@@ -241,6 +308,7 @@ const Step3Milestone = () => {
                       newCriteria[cIdx] = e.target.value;
                       handleChange('criteria', newCriteria);
                     }}
+                    onBlur={() => { if (projectId) saveMilestonePhase(Number(projectId), activePhase) }}
                     className="flex-grow h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all text-[14px]"
                   />
                   {/* ปุ่มลบเกณฑ์ถังขยะ (แสดงเฉพาะเมื่อมีมากกว่า 1 ข้อ ไม่งั้นให้เหลือ 1 ไว้เสมอ) */}
@@ -264,49 +332,46 @@ const Step3Milestone = () => {
               นำพื้นที่อัปโหลดแบบลากวางมาเรียงซ้อนกันแนวตั้ง (Stacked)
               ========================================= */}
           <div className="flex flex-col gap-[24px]">
-            {/* 5.1 พื้นที่อัปโหลดไฟล์/รูปภาพ (เส้นประสีม่วงจาง) */}
+            {/* 5.1 พื้นที่อัปโหลดไฟล์/รูปภาพ */}
             <div className="flex flex-col gap-[8px]">
               <label className="text-[14px] font-semibold text-foreground">ไฟล์ประกอบ (ไม่บังคับ)</label>
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
               >
-                <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,.xlsx,.xls,.pdf" />
+                <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,.xlsx,.xls" />
                 <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
-                <span className="text-[13px] text-muted-foreground">รูปภาพ, PDF, Excel</span>
+                <span className="text-[13px] text-muted-foreground">รูปภาพ, Excel</span>
               </div>
 
-              {/* วนลูปแสดงรูปภาพที่ผู้ใช้เลือก (Preview) พร้อมปุ่มลบ X */}
               <div className="flex flex-wrap gap-3 mt-2">
                 {currentData.files?.map((f, i) => (
-                  <div key={i} className="relative rounded-lg overflow-hidden border border-border group shadow-sm">
+                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border shadow-sm">
                     {f.url ? (
-                      <div className="w-16 h-16">
-                        <img src={f.url} className="w-full h-full object-cover" alt="preview" />
-                      </div>
+                      <img src={f.url} className="w-full h-full object-cover" alt="preview" />
                     ) : (
-                      <div className="w-16 h-16 flex flex-col items-center justify-center bg-[#F8F9FB] text-[10px] text-muted-foreground text-center px-1 gap-1">
-                        <span className="text-[18px]">{f.name.endsWith('.pdf') ? '📄' : '📊'}</span>
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-[#F8F9FB] text-[10px] text-muted-foreground text-center px-1 gap-1">
+                        <span className="text-[18px]">📊</span>
                         <span className="truncate w-full text-center">{f.name}</span>
                       </div>
                     )}
                     <button
-                      onClick={(e) => { e.stopPropagation(); removeImage(i); }}
-                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeImage(i) }}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5 leading-none"
                     >
-                      <X size={14} />
+                      <X size={12} />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* 5.2 พื้นที่อัปโหลดวิดีโอสาธิต */}
+            {/* 5.2 พื้นที่อัปโหลดวิดีโอ */}
             <div className="flex flex-col gap-[8px]">
               <label className="text-[14px] font-semibold text-foreground flex items-center">
                 <Video size={16} className="mr-2" /> ไฟล์วิดีโอ (ไม่บังคับ)
               </label>
-              {/* ถ้ายังไม่มีวิดีโอ ให้โชว์ปุ่มอัปโหลด */}
               {!currentData.video ? (
                 <div
                   onClick={() => videoInputRef.current?.click()}
@@ -317,17 +382,15 @@ const Step3Milestone = () => {
                   <span className="text-[13px] text-muted-foreground">อัปโหลดวิดีโอ</span>
                 </div>
               ) : (
-                /* ถ้ามีวิดีโอแล้ว ให้เอาวิดีโอมาโชว์ พร้อมปุ่มลบ X */
-                <div className="relative aspect-video max-w-sm rounded-[12px] overflow-hidden border border-border group shadow-sm mt-2">
+                <div className="relative aspect-video max-w-sm rounded-[12px] overflow-hidden border border-border shadow-sm mt-2">
                   <video src={currentData.video.url} className="w-full h-full object-cover" muted />
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center transition-opacity">
-                    <button
-                      onClick={removeVideo}
-                      className="p-2 bg-white/90 text-error rounded-full shadow-lg hover:scale-110 transition-transform"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={removeVideo}
+                    className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:scale-110 transition-transform"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
               )}
             </div>

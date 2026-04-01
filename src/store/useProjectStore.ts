@@ -3,6 +3,7 @@ import api from '../services/api';
 import { toast } from 'react-hot-toast';
 
 export interface ProjectMedia {
+    id?: number;    // backend media ID (มีเมื่อถูก save แล้ว)
     name: string;
     url: string;    // Blob URL สำหรับ Preview หรือ URL จริงจาก Server
     file?: File;    // ไฟล์จริงสำหรับส่งไป API
@@ -152,14 +153,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             if (!d) return;
 
             // Map media
-            const media: { type: string; url: string; sort_order: number }[] = d.media ?? [];
+            const media: { id: number; type: string; url: string; sort_order: number }[] = d.media ?? [];
             const images = media
                 .filter((m) => m.type === 'image')
                 .sort((a, b) => a.sort_order - b.sort_order)
-                .map((m) => ({ name: m.url.split('/').pop() ?? 'image', url: m.url }));
+                .map((m) => ({ id: m.id, name: m.url.split('/').pop() ?? 'image', url: m.url }));
             const videoMedia = media.find((m) => m.type === 'video');
             const video = videoMedia
-                ? { name: videoMedia.url.split('/').pop() ?? 'video', url: videoMedia.url }
+                ? { id: videoMedia.id, name: videoMedia.url.split('/').pop() ?? 'video', url: videoMedia.url }
                 : null;
 
             // Map stories → join body HTML เข้า story field + เก็บ storyId
@@ -178,16 +179,29 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             } catch { /* ignore */ }
 
             // Map milestones (เก็บ id ด้วย)
-            const bms: { id?: number; title?: string; description?: string }[] = d.milestones ?? [];
+            const bms: {
+                id?: number;
+                title?: string;
+                description?: string;
+                acceptance_criteria?: string;
+                start_date?: string;
+                end_date?: string;
+                url?: string;
+                type?: string;
+            }[] = d.milestones ?? [];
             const milestones = Array.from({ length: 4 }, (_, i) => ({
                 id: bms[i]?.id,
                 title: bms[i]?.title ?? '',
                 description: bms[i]?.description ?? '',
                 amount: 0,
-                startDate: '',
-                endDate: '',
-                criteria: [''],
-                files: [],
+                startDate: bms[i]?.start_date ? bms[i].start_date!.split('T')[0] : '',
+                endDate: bms[i]?.end_date ? bms[i].end_date!.split('T')[0] : '',
+                criteria: bms[i]?.acceptance_criteria
+                    ? bms[i].acceptance_criteria!.split('\n').filter(Boolean)
+                    : [''],
+                files: bms[i]?.url && bms[i]?.type === 'raw'
+                    ? [{ name: bms[i].url!.split('/').pop() ?? 'file', url: '' }]
+                    : [],
                 video: null,
             }));
 
@@ -315,12 +329,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const m = currentProject.milestones[phaseIndex];
         if (!m?.title) return;
         const phasePercents = [15, 20, 30, 35];
+
+        const acceptanceCriteria = m.criteria.filter(c => c.trim()).join('\n') || undefined;
+        const startDate = m.startDate ? new Date(m.startDate).toISOString() : undefined;
+        const endDate = m.endDate ? new Date(m.endDate).toISOString() : undefined;
+
         try {
             if (m.id) {
                 await api.patch(`/pioneer/projects/milestones/${m.id}`, {
                     title: m.title,
                     description: m.description || undefined,
                     phase_no: phaseIndex + 1,
+                    acceptance_criteria: acceptanceCriteria,
+                    start_date: startDate,
+                    end_date: endDate,
                 });
             } else {
                 const res = await api.post(`/pioneer/projects/${projectId}/milestones`, {
@@ -328,6 +350,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     title: m.title,
                     description: m.description || undefined,
                     percent_release: phasePercents[phaseIndex],
+                    acceptance_criteria: acceptanceCriteria,
+                    start_date: startDate,
+                    end_date: endDate,
                 });
                 const newId = res.data?.data?.id;
                 if (newId) {
