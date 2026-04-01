@@ -8,6 +8,8 @@ interface DecodedUser extends Record<string, unknown> {
     role?: string;
     email?: string;
     name?: string;
+    first_name?: string;
+    last_name?: string;
     profile_url?: string;
 }
 
