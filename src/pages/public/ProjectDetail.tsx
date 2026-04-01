@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import {
   Calendar,
@@ -12,41 +12,65 @@ import {
   ShieldCheck,
   BadgeCheck,
   BarChart2,
+  Loader2,
 } from "lucide-react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, Link, useParams } from "react-router";
+import { usePublicProjectStore } from "../../store/usePublicProjectStore";
 import { useProjectDetailStore } from "../../store/useProjectDetailStore";
+import { useAuthStore } from "../../store/useAuthStore";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 type Tab = "story" | "milestone" | "updates" | "comments" | "questions";
 
-const MOCK_PROJECT_IMAGES = [
-  "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800",
-  "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&q=80&w=800",
-  "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80&w=800",
-];
-
-const MOCK_MILESTONES = [
-  { phase: 1, title: "MVP Development", description: "พัฒนาฟีเจอร์หลักของแอป", amount: 30000, status: "completed", deadline: "มี.ค. 2568", deliverables: ["แผนที่ภายในอาคาร", "ระบบค้นหาห้อง"] },
-  { phase: 2, title: "Beta Testing", description: "ทดสอบกับนักศึกษาจริง 500 คน", amount: 40000, status: "pending", deadline: "พ.ค. 2568", deliverables: ["รายงานผล Beta", "ปรับปรุง UX"] },
-  { phase: 3, title: "Full Launch", description: "เปิดตัวเต็มรูปแบบ", amount: 50000, status: "pending", deadline: "ก.ค. 2568", deliverables: ["App Store", "Play Store", "Marketing"] },
-  { phase: 4, title: "Expansion", description: "ขยายไปมหาวิทยาลัยอื่น", amount: 30000, status: "pending", deadline: "ก.ย. 2568", deliverables: ["5 มหาวิทยาลัย", "API พาร์ทเนอร์"] },
-];
+const PLACEHOLDER_IMG = "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800";
 
 function ProjectDetail() {
+  const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>("story");
   const [selectedImage, setSelectedImage] = useState(0);
 
-  const projectImages = MOCK_PROJECT_IMAGES;
-  const milestones = MOCK_MILESTONES;
-  const isLoggedIn = false;
-  const hasInvested = false;
-  const fundedPercent = 72;
-  const fundedAmount = 108000;
-  const targetAmount = 150000;
+  const { currentPublicProject, isDetailLoading, fetchPublicProjectById } = usePublicProjectStore();
+  const { updates, threads, faqs, fetchAll } = useProjectDetailStore();
+  const { authUser } = useAuthStore();
 
-  const { updates, comments, questions } = useProjectDetailStore();
+  const isLoggedIn = !!authUser;
+  const project = currentPublicProject;
+
+  useEffect(() => {
+    if (id) {
+      fetchPublicProjectById(Number(id));
+      fetchAll(Number(id));
+      window.scrollTo(0, 0);
+    }
+  }, [id, fetchPublicProjectById, fetchAll]);
+
+  // ─── Derived data ──────────────────────────────────────────────────────────
+
+  const projectImages = project?.media
+    ? project.media.filter(m => m.type === 'image').sort((a, b) => a.sort_order - b.sort_order).map(m => m.url)
+    : [];
+  const displayImages = projectImages.length > 0 ? projectImages : [PLACEHOLDER_IMG];
+
+  const milestones = project?.milestones ?? [];
+  const hasMilestones = milestones.length > 0;
+
+  const storyHtml = project?.stories
+    ? project.stories.sort((a, b) => a.sort_order - b.sort_order).map(s => s.body).join('')
+    : '';
+
+  const fundedAmount = project?.current_funding ?? 0;
+  const targetAmount = project?.funding_goal ?? 0;
+  const fundedPercent = targetAmount > 0 ? Math.min(Math.round((fundedAmount / targetAmount) * 100), 100) : 0;
+
+  const daysLeft = (() => {
+    if (!project?.end_date) return project?.duration_days ?? 0;
+    const diff = new Date(project.end_date).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  })();
+
+  const hasInvested = false; // TODO: check from investments API
 
   const handleInvest = () => {
     if (!isLoggedIn) {
@@ -55,24 +79,33 @@ function ProjectDetail() {
         duration: 3000,
         style: {
           borderRadius: "10px",
-          background: "var(--color-navbar-2)", // ดึงสีจาก CSS variables
-          color: "var(--color-white-foreground)",
+          background: "var(--color-card)",
+          color: "var(--color-foreground)",
           fontSize: "14px",
+          border: "1px solid var(--color-border)",
         },
         iconTheme: { primary: "var(--color-error)", secondary: "var(--color-white-foreground)" },
       });
       return;
     }
-    navigate(`/projects/1/invest`);
+    navigate(`/projects/${id}/invest`);
   };
 
   const tabs = [
     { id: "story" as Tab, label: "เรื่องราว", count: undefined },
-    { id: "milestone" as Tab, label: "Milestone", count: 4 },
-    { id: "updates" as Tab, label: "อัปเดต", count: updates.length },
-    { id: "comments" as Tab, label: "ความคิดเห็น", count: comments.length },
-    { id: "questions" as Tab, label: "คำถาม", count: questions.length },
+    { id: "milestone" as Tab, label: "Milestone", count: milestones.length || undefined },
+    { id: "updates" as Tab, label: "อัปเดต", count: updates.length || undefined },
+    { id: "comments" as Tab, label: "ความคิดเห็น", count: threads.length || undefined },
+    { id: "questions" as Tab, label: "คำถาม", count: faqs.length || undefined },
   ];
+
+  if (isDetailLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center mt-[100px]">
+        <Loader2 size={40} className="animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden w-full mt-[100px]">
@@ -82,16 +115,23 @@ function ProjectDetail() {
       <div className="max-w-[1340px] mx-auto px-4 sm:px-6 pt-6 md:pt-8 pb-16">
         {/* Tags */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <Link to="/projects?category=Mobile App" className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer">แอปมือถือ</Link>
-          <Link to="/projects?category=Education" className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer">Education Tech</Link>
-          <span className="text-xs px-3 py-1 rounded-full text-white-foreground bg-[image:var(--gradient-primary)]">
-            Funding
-          </span>
+          {project?.category && (
+            <Link to={`/projects?category=${project.category}`} className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer">
+              {project.category}
+            </Link>
+          )}
+          {project?.state === 'funding' && (
+            <span className="text-xs px-3 py-1 rounded-full text-white-foreground bg-[image:var(--gradient-primary)]">
+              Funding
+            </span>
+          )}
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 break-words">UniTrack</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 break-words">
+          {project?.title || "กำลังโหลด..."}
+        </h1>
         <p className="text-sm text-muted-foreground mb-6 break-words">
-          ช่วยนักศึกษาค้นหาห้องเรียน กิจกรรม และบริการต่างๆ ได้รวดเร็ว พร้อมแผนที่แบบเรียลไทม์
+          {project?.description || "รายละเอียดโปรเจกต์จะแสดงที่นี่เมื่อข้อมูลมาถึง"}
         </p>
 
         {/* Two-column layout */}
@@ -99,36 +139,34 @@ function ProjectDetail() {
           {/* ── LEFT COLUMN ── */}
           <div className="flex-1 min-w-0 w-full lg:w-auto">
             {/* Main image */}
-            <div
-              className="rounded-2xl overflow-hidden mb-3 w-full bg-primary-light min-h-[280px] sm:min-h-[380px] max-h-[420px]"
-            >
+            <div className="rounded-2xl overflow-hidden mb-3 w-full bg-primary-light min-h-[280px] sm:min-h-[380px] max-h-[420px]">
               <img
-                src={projectImages[selectedImage]}
+                src={displayImages[selectedImage]}
                 alt="project"
                 className="w-full h-full object-cover transition-all duration-300 ease-in-out"
               />
             </div>
 
             {/* Thumbnails */}
-            <div className="flex gap-2 mb-8 overflow-x-auto scrollbar-hide">
-              {projectImages.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  className={`rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 w-20 h-14 sm:w-24 sm:h-16 ${selectedImage === i
-                    ? "border-primary"
-                    : "border-transparent opacity-70 hover:opacity-100"
-                    }`}
-                >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
+            {displayImages.length > 1 && (
+              <div className="flex gap-2 mb-8 overflow-x-auto scrollbar-hide">
+                {displayImages.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedImage(i)}
+                    className={`rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 w-20 h-14 sm:w-24 sm:h-16 ${selectedImage === i
+                      ? "border-primary"
+                      : "border-transparent opacity-70 hover:opacity-100"
+                      }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* ── Tabs Content ── */}
-            <div> {/* เอาขอบการ์ดขาวออก */}
-
-              {/* ── Tabs Navigation: ปรับทำขอบแบบในรูป ── */}
+            <div>
               <div className="flex bg-[#f1f1f4] p-1.5 rounded-[10px] mb-8 border border-[#e4e4e7] w-full overflow-x-auto scrollbar-hide">
                 {tabs.map((tab) => (
                   <button
@@ -147,154 +185,80 @@ function ProjectDetail() {
                 ))}
               </div>
 
-              {/* ── Content Area: เอา Padding p-8 ออก ── */}
               <div className="min-h-[400px]">
 
                 {/* ── Story Content ── */}
                 {activeTab === "story" && (
                   <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300 w-full">
                     <section>
-                      <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 break-words">ปัญหาที่เราแก้ไข</h2>
-                      <p className="text-muted-foreground leading-relaxed text-sm sm:text-[15px] break-words">
-                        นักศึกษาใหม่และแม้แต่นักศึกษาปัจจุบันมักจะหลงทางในมหาวิทยาลัยขนาดใหญ่
-                        ไม่รู้ว่าห้องเรียนอยู่ตรงไหน กิจกรรมวันนี้มีอะไรบ้าง และจะไปใช้บริการต่างๆ ได้ที่ไหน
-                      </p>
+                      {storyHtml ? (
+                        <div
+                          className="prose prose-sm sm:prose-base max-w-none text-muted-foreground"
+                          dangerouslySetInnerHTML={{ __html: storyHtml }}
+                        />
+                      ) : (
+                        <div className="space-y-6">
+                          <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 break-words">โปรเจกต์นี้ยังไม่ได้เขียนบรรยาย Story</h2>
+                        </div>
+                      )}
                     </section>
 
-                    <section>
-                      <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 break-words">วิธีแก้ปัญหาของเรา</h2>
-                      <p className="text-muted-foreground mb-4 text-sm sm:text-[15px] break-words">
-                        <span className="text-primary font-bold">UniTrack</span> เป็นแอปมือถือที่รวมทุกอย่างไว้ในที่เดียว:
-                      </p>
-                      <ul className="space-y-4">
-                        {[
-                          { b: "แผนที่แบบเรียลไทม์", t: "— นำทางไปห้องเรียน, ห้องสมุด, โรงอาหาร" },
-                          { b: "ปฏิทินกิจกรรม", t: "— ดูกิจกรรมทั้งหมดในมหาวิทยาลัย" },
-                          { b: "ระบบค้นหาบริการ", t: "— ค้นหาร้านอาหาร, ATM, จุดบริการ" },
-                          { b: "แจ้งเตือนอัจฉริยะ", t: "— เตือนก่อนเรียน 15 นาที พร้อมเส้นทาง" },
-                        ].map((item, idx) => (
-                          <li key={idx} className="flex items-start gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-foreground mt-[9px] flex-shrink-0" />
-                            <span className="text-muted-foreground text-sm sm:text-[15px]">
-                              <strong className="text-foreground font-bold">{item.b}</strong> {item.t}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-
-                    <section>
-                      <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 break-words">เทคโนโลยีที่ใช้</h2>
-                      <ul className="space-y-3">
-                        {[
-                          "React Native สำหรับ Cross-platform",
-                          "Firebase สำหรับ Backend",
-                          "Mapbox สำหรับ Indoor Mapping",
-                          "AI สำหรับ Route Optimization",
-                        ].map((tech, idx) => (
-                          <li key={idx} className="flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 flex-shrink-0" />
-                            <span className="text-muted-foreground text-sm sm:text-[15px]">{tech}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-
-                    {/* Risk Box */}
-                    <div className="border border-orange-200 bg-orange-50/40 rounded-2xl p-4 sm:p-6 flex gap-4 mt-10">
-                      <AlertTriangle className="text-orange-500 flex-shrink-0 mt-0.5" size={20} />
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-foreground text-sm sm:text-[16px]">ความเสี่ยงและความท้าทาย</h4>
-                        <p className="text-xs sm:text-[14px] text-muted-foreground leading-relaxed">
-                          โปรเจกต์นี้เป็นผลงานนักศึกษา มีความเสี่ยงด้านการพัฒนาและการตลาด
-                          ทีมงานจะรายงานความคืบหน้าอย่างสม่ำเสมอ
-                        </p>
+                    {project?.risk && (
+                      <div className="border border-orange-200 bg-orange-50/40 rounded-2xl p-4 sm:p-6 flex gap-4 mt-10">
+                        <AlertTriangle className="text-orange-500 flex-shrink-0 mt-0.5" size={20} />
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-foreground text-sm sm:text-[16px]">ความเสี่ยงและความท้าทาย</h4>
+                          <p className="text-xs sm:text-[14px] text-muted-foreground leading-relaxed">
+                            {project.risk}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
                 {/* ── Milestone Content ── */}
                 {activeTab === "milestone" && (
                   <div className="relative animate-in fade-in duration-500 py-6">
-
-                    {/* 1. เส้น Timeline: ใช้สีจาก border หรือ placeholder */}
                     <div className="absolute left-6 sm:left-[46px] top-14 bottom-14 w-[1px] bg-border z-0 hidden sm:block" />
-
                     <div className="space-y-6 px-0 sm:px-6">
-                      {milestones.map((m) => (
-                        <div key={m.phase} className="flex gap-4 sm:gap-6 items-start relative z-10">
-
-                          {/* 2. ตัวเลข Phase: พื้นหลังใช้สี background เพื่อตัดเส้น Timeline */}
-                          <div className="w-10 h-10 sm:w-[44px] sm:h-[44px] mt-1 sm:mt-3 flex items-center justify-center flex-shrink-0 z-10 bg-background">
-                            {m.phase === 1 ? (
-                              <div className="w-full h-full rounded-full bg-primary text-white-foreground flex items-center justify-center text-lg sm:text-xl font-bold">
-                                {m.phase}
-                              </div>
-                            ) : m.phase === 2 ? (
-                              <div className="w-full h-full rounded-full bg-accent text-white-foreground flex items-center justify-center text-lg sm:text-xl font-bold">
-                                {m.phase}
-                              </div>
-                            ) : (
-                              <div className="text-xl sm:text-2xl font-medium text-foreground">
-                                {m.phase}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* 3. การ์ดรายละเอียด: ใช้ bg-card และ border-border */}
-                          <div className="flex-1 bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-sm">
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                              <div className="space-y-1">
-                                <h4 className="font-bold text-base sm:text-lg text-foreground">
-                                  {m.title}
-                                </h4>
-                                <p className="text-sm text-muted-foreground">
-                                  {m.description}
-                                </p>
-                              </div>
-
-                              {/* 4. ส่วนราคาและ Badge สถานะ */}
-                              <div className="flex flex-col items-start sm:items-end gap-2 flex-shrink-0">
-                                <span className="text-primary font-bold text-lg sm:text-xl tracking-tight">
-                                  {m.amount.toLocaleString()}฿
-                                </span>
-                                <span
-                                  className={`text-xs font-medium px-3 sm:px-4 py-1 rounded-full border ${m.status === "completed"
+                      {hasMilestones ? milestones.map((m, index) => {
+                        const phaseNumber = m.phase_no || (index + 1);
+                        return (
+                          <div key={m.id || index} className="flex gap-4 sm:gap-6 items-start relative z-10">
+                            <div className="w-10 h-10 sm:w-[44px] sm:h-[44px] mt-1 sm:mt-3 flex items-center justify-center flex-shrink-0 z-10 bg-background">
+                              {phaseNumber <= 2 ? (
+                                <div className={`w-full h-full rounded-full ${phaseNumber === 1 ? 'bg-primary' : 'bg-accent'} text-white-foreground flex items-center justify-center text-lg sm:text-xl font-bold`}>
+                                  {phaseNumber}
+                                </div>
+                              ) : (
+                                <div className="text-xl sm:text-2xl font-medium text-foreground">{phaseNumber}</div>
+                              )}
+                            </div>
+                            <div className="flex-1 bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-sm">
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                                <div className="space-y-1">
+                                  <h4 className="font-bold text-base sm:text-lg text-foreground">{m.title}</h4>
+                                  <p className="text-sm text-muted-foreground whitespace-pre-line">{m.description}</p>
+                                </div>
+                                <div className="flex flex-col items-start sm:items-end gap-2 flex-shrink-0">
+                                  <span className="text-primary font-bold text-lg sm:text-xl tracking-tight">
+                                    {m.percent_release}%
+                                  </span>
+                                  <span className={`text-xs font-medium px-3 sm:px-4 py-1 rounded-full border ${m.status === "completed"
                                     ? "bg-primary text-white-foreground border-primary"
                                     : "bg-card text-foreground border-border"
-                                    }`}
-                                >
-                                  {m.status === "completed" ? "เสร็จสิ้น" : "รอดำเนินการ"}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* 5. ไอคอนปฏิทินและกำหนดส่ง */}
-                            <div className="flex items-center gap-2 mt-4 text-xs sm:text-[13px] text-muted-foreground">
-                              <Calendar size={14} className="text-placeholder" />
-                              <span>กำหนดส่ง: {m.deadline}</span>
-                            </div>
-
-                            {/* 6. ส่วนสิ่งที่ส่งมอบ */}
-                            <div className="mt-6">
-                              <p className="text-xs sm:text-[13px] font-bold text-foreground mb-3">
-                                สิ่งที่ส่งมอบ:
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                {m.deliverables.map((d) => (
-                                  <span
-                                    key={d}
-                                    className="text-xs sm:text-[13px] px-3 sm:px-4 py-1.5 rounded-full border border-border text-foreground bg-card font-medium"
-                                  >
-                                    {d}
+                                    }`}>
+                                    {m.status === "completed" ? "เสร็จสิ้น" : "รอดำเนินการ"}
                                   </span>
-                                ))}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      }) : (
+                        <p className="text-center text-muted-foreground py-8">ยังไม่มี Milestone</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -302,20 +266,22 @@ function ProjectDetail() {
                 {/* ── Updates ── */}
                 {activeTab === "updates" && (
                   <div className="space-y-3 animate-in fade-in duration-300">
-                    {updates.map((u, i) => (
-                      <div key={i} className="border border-border rounded-xl p-3 sm:p-4">
+                    {updates.length > 0 ? updates.map((u) => (
+                      <div key={u.id} className="border border-border rounded-xl p-3 sm:p-4">
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
                           <Calendar size={12} />
-                          <span>{u.date}</span>
+                          <span>{new Date(u.created_at).toLocaleDateString('th-TH')}</span>
                         </div>
                         <h4 className="font-semibold text-sm text-foreground leading-snug">{u.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{u.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{u.content}</p>
                       </div>
-                    ))}
+                    )) : (
+                      <p className="text-center text-muted-foreground py-8">ยังไม่มีอัปเดต</p>
+                    )}
                   </div>
                 )}
 
-                {/* ── Comments ── */}
+                {/* ── Comments (Threads) ── */}
                 {activeTab === "comments" && (
                   <div className="space-y-4 animate-in fade-in duration-300">
                     {!hasInvested && (
@@ -327,21 +293,20 @@ function ProjectDetail() {
                     )}
                     <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
                       <MessageCircle size={15} className="text-primary" />
-                      ความคิดเห็น ({comments.length})
+                      ความคิดเห็น ({threads.length})
                     </p>
                     <div className={`space-y-3 ${!hasInvested ? "blur-sm pointer-events-none select-none" : ""}`}>
-                      {comments.map((c) => (
-                        <div key={c.id} className="border border-border rounded-xl p-3 sm:p-4 flex gap-3">
+                      {threads.map((t) => (
+                        <div key={t.id} className="border border-border rounded-xl p-3 sm:p-4 flex gap-3">
                           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-accent to-primary flex-shrink-0 flex items-center justify-center text-white-foreground text-xs font-bold shadow-md">
-                            {c.user.charAt(0)}
+                            {(t.user_name || '?').charAt(0)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-foreground leading-snug">{c.user}</span>
-                              <span className="text-[9px] font-black uppercase tracking-tight bg-primary-light text-primary px-2 py-0.5 rounded leading-none">{c.badge}</span>
-                              <span className="text-xs text-placeholder ml-auto">{c.time}</span>
+                              <span className="text-sm font-medium text-foreground leading-snug">{t.user_name || 'ผู้ใช้'}</span>
+                              <span className="text-xs text-placeholder ml-auto">{new Date(t.created_at).toLocaleDateString('th-TH')}</span>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{c.text}</p>
+                            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{t.body}</p>
                           </div>
                         </div>
                       ))}
@@ -349,10 +314,10 @@ function ProjectDetail() {
                   </div>
                 )}
 
-                {/* ── Questions ── */}
+                {/* ── Questions (FAQs) ── */}
                 {activeTab === "questions" && (
                   <div className="space-y-3 animate-in fade-in duration-300">
-                    {questions.map((q) => (
+                    {faqs.length > 0 ? faqs.map((q) => (
                       <div key={q.id} className="border border-border rounded-xl p-3 sm:p-4">
                         <div className="flex gap-2.5">
                           <MessageCircle size={16} className="text-primary flex-shrink-0 mt-0.5" />
@@ -362,7 +327,9 @@ function ProjectDetail() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <p className="text-center text-muted-foreground py-8">ยังไม่มีคำถาม</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -374,7 +341,6 @@ function ProjectDetail() {
 
             {/* ── Fund Card ── */}
             <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-              {/* Progress bar at top */}
               <div className="h-2 w-full bg-muted relative">
                 <div
                   className="h-full absolute left-0 top-0 transition-all duration-1000 ease-out bg-[image:var(--gradient-primary)]"
@@ -383,63 +349,58 @@ function ProjectDetail() {
               </div>
 
               <div className="p-4 sm:p-5">
-                {/* Amount */}
                 <p className="text-3xl sm:text-4xl font-black mb-0.5 text-primary">
                   ฿{fundedAmount.toLocaleString()}
                 </p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  เป้าหมาย ฿{targetAmount.toLocaleString()} · {fundedPercent}%
+                  {targetAmount > 0 ? `เป้าหมาย ฿${targetAmount.toLocaleString()} · ${fundedPercent}%` : 'ยังไม่ตั้งเป้าหมาย'}
                 </p>
 
                 <div className="border-t border-muted pt-4 mb-4 leading-none">
-                  {/* Stats row */}
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                         <Users size={13} />
-                        <span className="font-semibold text-base text-foreground">55</span>
+                        <span className="font-semibold text-base text-foreground">—</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">ผู้สนับสนุน</p>
                     </div>
                     <div>
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                         <Clock size={13} />
-                        <span className="font-semibold text-base text-foreground">6</span>
+                        <span className="font-semibold text-base text-foreground">{daysLeft}</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">วันที่เหลือ</p>
                     </div>
                     <div>
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                         <BarChart2 size={13} />
-                        <span className="font-semibold text-base text-foreground">15%</span>
+                        <span className="font-semibold text-base text-foreground">{project?.profit_share_pct || 0}%</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">ส่วนแบ่งกำไร</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Details */}
                 <div className="text-[11px] space-y-1 mb-4 leading-snug">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground font-bold">ลงทุนขั้นต่ำ</span>
-                    <span className="text-foreground font-medium">1000฿</span>
+                    <span className="text-foreground font-medium">{project?.min_invest_amount ? `${project.min_invest_amount.toLocaleString()}฿` : '—'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground font-bold">ลงทุนได้สูงสุด</span>
-                    <span className="text-foreground font-medium">14,000฿</span>
+                    <span className="text-foreground font-medium">{project?.max_invest_amount ? `${project.max_invest_amount.toLocaleString()}฿` : '—'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground font-bold">ระยะเวลา</span>
-                    <span className="text-foreground font-medium text-right text-[10px]">15 ม.ค. 26 — 15 มี.ค. 26</span>
+                    <span className="text-muted-foreground font-bold">ค่าธรรมเนียม</span>
+                    <span className="text-foreground font-medium">{project?.platform_fee || 5}%</span>
                   </div>
                 </div>
 
-                {/* Link */}
                 <button className="w-full text-sm text-primary font-medium text-center mb-3 hover:underline">
                   กำลังระดมทุน
                 </button>
 
-                {/* CTA + Flag */}
                 <div className="flex gap-2">
                   <button
                     onClick={handleInvest}
@@ -459,27 +420,25 @@ function ProjectDetail() {
             <div className="bg-card rounded-2xl border border-border shadow-sm p-4 sm:p-5 leading-snug">
               <p className="text-xs text-muted-foreground mb-3 uppercase font-bold text-[10px] tracking-wide">ผู้สร้างโปรเจคต์</p>
               <div className="flex items-center gap-3 mb-3 leading-none">
-                <img
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
-                  alt="creator"
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover flex-shrink-0 shadow-sm border border-background"
-                />
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-white-foreground text-lg font-bold shadow-sm border border-background flex-shrink-0">
+                  {(project?.owner_profile?.first_name || '?').charAt(0)}
+                </div>
                 <div>
-                  <p className="font-semibold text-sm text-foreground">ณัฐพล สุขใจ</p>
-                  <p className="text-xs text-muted-foreground">มรภ.นครปฐม</p>
+                  <p className="font-semibold text-sm text-foreground">
+                    {project?.owner_profile ? `${project.owner_profile.first_name} ${project.owner_profile.last_name}` : '—'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{project?.owner_profile?.university || '—'}</p>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                นักศึกษาชั้นปี 3 สาขาวิทยาการคอมพิวเตอร์ มรภ.นครปฐม หลงใหลด้าน Mobile Development
-              </p>
+              {project?.owner_profile?.bio && (
+                <p className="text-xs text-muted-foreground leading-relaxed mb-3">{project.owner_profile.bio}</p>
+              )}
               <div className="flex items-center gap-2">
-                <button
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors leading-none"
-                >
+                <button className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors leading-none">
                   <BadgeCheck size={13} className="text-primary" />
-                  ยืนยันแล้ว
+                  {project?.owner_profile?.verify_status === 'verified' ? 'ยืนยันแล้ว' : 'รอยืนยัน'}
                 </button>
-                <span className="text-xs text-muted-foreground">1 โปรเจคต์</span>
+                <span className="text-xs text-muted-foreground">{project?.owner_profile?.project_count || 0} โปรเจคต์</span>
               </div>
             </div>
 
