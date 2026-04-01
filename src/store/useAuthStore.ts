@@ -34,6 +34,10 @@ interface AuthStore {
     isLoggingIn: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
+    isSendingReset: boolean;
+    isResetting: boolean;
+    forgotPassword: (email: string) => Promise<boolean>;
+    resetPassword: (token: string, new_password: string) => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -41,6 +45,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
     isCheckingAuth: true,
     isRegistering: false,
     isLoggingIn: false,
+    isSendingReset: false,
+    isResetting: false,
     checkAuth: async () => {
         try {
             const response = await api.get('/user/me')
@@ -63,12 +69,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
             const err = error instanceof AxiosError ? error : null;
             const data = err?.response?.data;
             const message = data?.message;
-            if (data === 'this email is already registered') {
-                toast.error('อีเมล์นี้ถูกใช้แล้ว')
+            if (message === 'this email is already registered' || data === 'this email is already registered') {
+                toast.error('อีเมลนี้ถูกลงทะเบียนแล้ว')
             } else if (message === `sorry!, the domain doesn't exist`) {
                 toast.error('ไม่รองรับมหาลัยนี้')
-            } else if (message === 'password must contain at least one uppercase letter' || message === 'password must contain at least one special character' || message === `Validation failed: Key: 'UserSignup.Password' Error:Field validation for 'Password' failed on the 'min' tag` || message === `password must contain at least one lowercase letter` || message === `password must contain at least one number`) {
-                toast.error('ต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว, พิมพ์เล็ก 1 ตัว, ตัวเลข 1 ตัว, อักษรพิเศษ 1 ตัว และ ไม่ต่ำกว่า 8 ตัว')
             } else {
                 toast.error(data?.error || 'เกิดข้อผิดพลาดบางอย่าง');
             }
@@ -96,6 +100,34 @@ export const useAuthStore = create<AuthStore>((set) => ({
             }
         } finally {
             set({ isLoggingIn: false })
+        }
+    },
+    forgotPassword: async (email) => {
+        set({ isSendingReset: true })
+        try {
+            await api.post('/forgot-password', { email })
+            toast.success('ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว')
+            return true
+        } catch (error: unknown) {
+            const err = error instanceof AxiosError ? error : null;
+            toast.error(err?.response?.data?.error || 'เกิดข้อผิดพลาดในการส่งอีเมล')
+            return false
+        } finally {
+            set({ isSendingReset: false })
+        }
+    },
+    resetPassword: async (token, new_password) => {
+        set({ isResetting: true })
+        try {
+            await api.post(`/reset-password?reset_token=${token}`, { new_password })
+            toast.success('เปลี่ยนรหัสผ่านสำเร็จ สามารถเข้าสู่ระบบได้เลย')
+            return true
+        } catch (error: unknown) {
+            const err = error instanceof AxiosError ? error : null;
+            toast.error(err?.response?.data?.error || 'ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้อง หรือหมดอายุแล้ว')
+            return false
+        } finally {
+            set({ isResetting: false })
         }
     }
 }))

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router"
-import { Loader2, Users } from 'lucide-react'
+import { Loader2, Users, CheckCircle, Circle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useAuthStore } from "../../store/useAuthStore"
 
@@ -77,6 +77,19 @@ const Register = () => {
         const fields = ['first_name', 'last_name', 'email', 'phone', 'password'];
         fields.forEach(f => { if (!(formData as unknown as Record<string, string>)[f].trim()) newErrors[f] = true });
 
+        const isPasswordValid = /[A-Z]/.test(formData.password) &&
+            /[a-z]/.test(formData.password) &&
+            /[0-9]/.test(formData.password) &&
+            /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(formData.password) &&
+            formData.password.length >= 8;
+
+        if (formData.password && !isPasswordValid) {
+            newErrors.password = true;
+            setErrors(newErrors);
+            toast.error('กรุณาตั้งรหัสผ่านให้ตรงตามเงื่อนไข');
+            return false;
+        }
+
         if (!confirmPassword.trim()) {
             newErrors.confirmPassword = true;
         }
@@ -108,7 +121,7 @@ const Register = () => {
         }
     }
 
-    const inputStyle = (n: string) => `border focus:outline-none bg-background text-foreground rounded-[6px] border-border outline-none p-[12px] h-[38px] ${errors[n] ? 'border-error focus:border-error' : 'border-border focus:border-primary'}`
+    const inputStyle = (n: string) => `w-full border focus:outline-none bg-background text-foreground rounded-[6px] border-border outline-none p-[12px] h-[38px] ${errors[n] ? 'border-error focus:border-error' : 'border-border focus:border-primary'}`
 
     return (
         <div className="w-full mx-auto max-w-[510px] border border-border rounded-[12px] bg-card mt-[100px]">
@@ -141,35 +154,57 @@ const Register = () => {
                         </div>
                     </div>
                     <div className="flex flex-col gap-[16px]">
-                        <div className="flex justify-between">
+                        <div className="grid grid-cols-2 gap-[10px] w-full">
                             <div className="flex flex-col gap-[4px]">
-                                <label className="font-[14px] text-foreground">ชื่อ *</label>
+                                <label className="font-[14px] text-foreground">ชื่อ <span className="text-error">*</span></label>
                                 <input name="first_name" onChange={handleChange} value={formData.first_name} type="text" className={inputStyle('first_name')} />
                             </div>
                             <div className="flex flex-col gap-[4px]">
-                                <label className="font-[14px] text-foreground">นามสกุล *</label>
+                                <label className="font-[14px] text-foreground">นามสกุล <span className="text-error">*</span></label>
                                 <input name="last_name" onChange={handleChange} value={formData.last_name} type="text" className={inputStyle('last_name')} />
                             </div>
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="font-[14px] text-foreground">อีเมล์ *</label>
+                            <label className="font-[14px] text-foreground">อีเมล์ <span className="text-error">*</span></label>
                             <input name="email" onChange={handleChange} value={formData.email} type="text" className={inputStyle('email')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="font-[14px] text-foreground">เบอร์โทรศัพท์ *</label>
+                            <label className="font-[14px] text-foreground">เบอร์โทรศัพท์ <span className="text-error">*</span></label>
                             <input name="phone" onChange={handleChange} value={formData.phone} type="text" className={inputStyle('phone')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="font-[14px] text-foreground">รหัสผ่าน *</label>
+                            <label className="font-[14px] text-foreground">รหัสผ่าน <span className="text-error">*</span></label>
                             <input name="password" onChange={handleChange} value={formData.password} type="password" className={inputStyle('password')} />
+                            {(formData.password.length > 0 || errors.password) && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[10px] gap-y-[6px] mt-[4px] bg-muted/30 p-[12px] rounded-[8px] border border-border/50">
+                                    {[
+                                        { id: 1, text: "ตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว", valid: /[A-Z]/.test(formData.password) },
+                                        { id: 2, text: "พิมพ์เล็ก 1 ตัว", valid: /[a-z]/.test(formData.password) },
+                                        { id: 3, text: "ตัวเลข 1 ตัว", valid: /[0-9]/.test(formData.password) },
+                                        { id: 4, text: "อักษรพิเศษ 1 ตัว", valid: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(formData.password) },
+                                        { id: 5, text: "ไม่ต่ำกว่า 8 ตัว", valid: formData.password.length >= 8 }
+                                    ].map(item => (
+                                        <div key={item.id} className="flex items-center gap-[6px]">
+                                            {item.valid ? (
+                                                <CheckCircle size={14} className="text-green-500 shrink-0" />
+                                            ) : (
+                                                <Circle size={14} className={errors.password ? "text-error shrink-0" : "text-muted-foreground shrink-0"} />
+                                            )}
+                                            <span className={`text-[12px] leading-tight ${item.valid ? 'text-green-500' : (errors.password ? 'text-error' : 'text-muted-foreground')}`}>
+                                                {item.text}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="font-[14px] text-foreground">ยืนยันรหัสผ่าน *</label>
+                            <label className="font-[14px] text-foreground">ยืนยันรหัสผ่าน <span className="text-error">*</span></label>
                             <input name="confirmPassword" onChange={handleConfirmPasswordChange} value={confirmPassword} type="password" className={inputStyle('confirmPassword')} />
                         </div>
                         <div className="flex gap-[8px] items-center">
                             <input name="accept_terms" onChange={handleCheckboxChange} checked={formData.accept_terms} type="checkbox" className="w-[18px] h-[18px] accent-primary cursor-pointer" />
-                            <label className="text-muted-foreground text-[14px]">ฉันยอมรับ <Link to='/condition' className="underline text-foreground">ข้อกำหนดและเงื่อนไข</Link> ของ FlyUp</label>
+                            <label className="text-muted-foreground text-[14px]">ฉันยอมรับ <Link to='/condition' className="underline text-foreground hover:text-primary transition-all duration-200">ข้อกำหนดและเงื่อนไข</Link> ของ FlyUp</label>
                         </div>
                     </div>
                     <button disabled={isRegistering} type="submit" className="bg-primary text-white text-[14px] w-full flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300">
