@@ -80,7 +80,7 @@ const Register = () => {
         const isPasswordValid = /[A-Z]/.test(formData.password) &&
             /[a-z]/.test(formData.password) &&
             /[0-9]/.test(formData.password) &&
-            /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(formData.password) &&
+            /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+/.test(formData.password) &&
             formData.password.length >= 8;
 
         if (formData.password && !isPasswordValid) {
@@ -181,7 +181,7 @@ const Register = () => {
                                         { id: 1, text: "ตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว", valid: /[A-Z]/.test(formData.password) },
                                         { id: 2, text: "พิมพ์เล็ก 1 ตัว", valid: /[a-z]/.test(formData.password) },
                                         { id: 3, text: "ตัวเลข 1 ตัว", valid: /[0-9]/.test(formData.password) },
-                                        { id: 4, text: "อักษรพิเศษ 1 ตัว", valid: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(formData.password) },
+                                        { id: 4, text: "อักษรพิเศษ 1 ตัว", valid: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+/.test(formData.password) },
                                         { id: 5, text: "ไม่ต่ำกว่า 8 ตัว", valid: formData.password.length >= 8 }
                                     ].map(item => (
                                         <div key={item.id} className="flex items-center gap-[6px]">
