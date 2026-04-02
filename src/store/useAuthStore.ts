@@ -36,6 +36,7 @@ interface AuthStore {
     isLoggingIn: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
+    logout: () => Promise<void>;
     isSendingReset: boolean;
     isResetting: boolean;
     forgotPassword: (email: string) => Promise<boolean>;
@@ -102,6 +103,16 @@ export const useAuthStore = create<AuthStore>((set) => ({
             }
         } finally {
             set({ isLoggingIn: false })
+        }
+    },
+    logout: async () => {
+        try {
+            await api.post('/signout')
+            // console.log('sign out')
+        } catch {
+            // ignore
+        } finally {
+            set({ authUser: null })
         }
     },
     forgotPassword: async (email) => {
