@@ -3,6 +3,7 @@ import api from '../services/api';
 import { toast } from 'react-hot-toast';
 
 export interface ProjectMedia {
+    id?: number;    // backend media ID (มีเมื่อถูก save แล้ว)
     name: string;
     url: string;    // Blob URL สำหรับ Preview หรือ URL จริงจาก Server
     file?: File;    // ไฟล์จริงสำหรับส่งไป API
@@ -18,7 +19,7 @@ export interface Milestone {
     endDate: string;
     criteria: string[];
     files: ProjectMedia[];
-    video: ProjectMedia | null;
+    videos: ProjectMedia[];
 }
 
 export interface Project {
@@ -58,7 +59,9 @@ interface ProjectState {
     isLoading: boolean;
     isCreating: boolean;
     isSaving: boolean;
-    
+    saveStatus: 'idle' | 'saving' | 'saved';
+    setSaveStatus: (status: 'idle' | 'saving' | 'saved') => void;
+
     // Actions
     createProject: () => Promise<number | null>;
     loadCurrentProject: (id: number) => Promise<void>;
@@ -69,6 +72,7 @@ interface ProjectState {
     saveMilestonePhase: (projectId: number, phaseIndex: number) => Promise<void>;
     updateProjectInfo: (data: Partial<Project>) => void;
     updateMilestone: (index: number, data: Partial<Milestone>) => void;
+    updateProjectStatus: (projectId: number) => Promise<void>;
 }
 
 const initialProject: Project = {
@@ -95,9 +99,11 @@ const initialProject: Project = {
         endDate: '',
         criteria: [''],
         files: [],
-        video: null,
+        videos: [],
     })),
 };
+
+let _savingStory = false;
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
     projects: [],
@@ -105,6 +111,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     isLoading: false,
     isCreating: false,
     isSaving: false,
+    saveStatus: 'idle',
+    setSaveStatus: (status) => set({ saveStatus: status }),
 
     // ✅ Action สำหรับอัปเดตข้อมูลทั่วไป (Step 1: Basics, Step 2: Story/Risks)
     updateProjectInfo: (data) => {
@@ -121,7 +129,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         try {
             set((state) => {
                 const newMilestones = [...state.currentProject.milestones];
-                
+
                 if (index < 0 || index >= newMilestones.length) {
                     throw new Error('Index out of bounds');
                 }
@@ -152,14 +160,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             if (!d) return;
 
             // Map media
-            const media: { type: string; url: string; sort_order: number }[] = d.media ?? [];
+            const media: { id: number; type: string; url: string; sort_order: number }[] = d.media ?? [];
             const images = media
                 .filter((m) => m.type === 'image')
                 .sort((a, b) => a.sort_order - b.sort_order)
-                .map((m) => ({ name: m.url.split('/').pop() ?? 'image', url: m.url }));
+                .map((m) => ({ id: m.id, name: m.url.split('/').pop() ?? 'image', url: m.url }));
             const videoMedia = media.find((m) => m.type === 'video');
             const video = videoMedia
-                ? { name: videoMedia.url.split('/').pop() ?? 'video', url: videoMedia.url }
+                ? { id: videoMedia.id, name: videoMedia.url.split('/').pop() ?? 'video', url: videoMedia.url }
                 : null;
 
             // Map stories → join body HTML เข้า story field + เก็บ storyId
@@ -177,19 +185,51 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 categoryId = matched?.id ?? 0;
             } catch { /* ignore */ }
 
-            // Map milestones (เก็บ id ด้วย)
-            const bms: { id?: number; title?: string; description?: string }[] = d.milestones ?? [];
-            const milestones = Array.from({ length: 4 }, (_, i) => ({
-                id: bms[i]?.id,
-                title: bms[i]?.title ?? '',
-                description: bms[i]?.description ?? '',
-                amount: 0,
-                startDate: '',
-                endDate: '',
-                criteria: [''],
-                files: [],
-                video: null,
-            }));
+            // Load milestones แยกจาก project เพื่อให้ได้ id ครบ
+            let bms: {
+                id?: number;
+                title?: string;
+                description?: string;
+                acceptance_criteria?: string;
+                start_date?: string;
+                end_date?: string;
+                url?: string;
+                type?: string;
+                phase_no?: number;
+            }[] = [];
+            try {
+                const msRes = await api.get(`/pioneer/projects/${id}/milestones`);
+                const raw: typeof bms = msRes.data?.data ?? [];
+                // เรียงตาม phase_no (1-4) แล้ว map ลง index 0-3
+                bms = Array.from({ length: 4 }, (_, i) =>
+                    raw.find(m => m.phase_no === i + 1) ?? {}
+                );
+            } catch { /* ignore */ }
+
+            const milestones = Array.from({ length: 4 }, (_, i) => {
+                const bm = bms[i] ?? {};
+                const url = bm.url;
+                const type = bm.type;
+                const files: ProjectMedia[] = (url && type !== 'video')
+                    ? [{ name: url.split('/').pop() ?? 'file', url }]
+                    : [];
+                const videos: ProjectMedia[] = (url && type === 'video')
+                    ? [{ name: url.split('/').pop() ?? 'video', url }]
+                    : [];
+                return {
+                    id: bm.id,
+                    title: bm.title ?? '',
+                    description: bm.description ?? '',
+                    amount: 0,
+                    startDate: bm.start_date ? bm.start_date.split('T')[0] : '',
+                    endDate: bm.end_date ? bm.end_date.split('T')[0] : '',
+                    criteria: bm.acceptance_criteria
+                        ? bm.acceptance_criteria.split('\n').filter(Boolean)
+                        : [''],
+                    files,
+                    videos,
+                };
+            });
 
             set({
                 currentProject: {
@@ -198,9 +238,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     category: d.category ?? '',
                     categoryId,
                     fundingGoal: d.funding_goal ?? 0,
-                    projectDuration: d.duration_days ?? 0,
+                    projectDuration: d.duration_months ?? 0,
                     softCap: d.softcap ?? 0,
-                    campaignDuration: 0,
+                    campaignDuration: d.duration_days ?? 0,
                     revenueShare: d.profit_share_pct ?? 0,
                     minInvestAmount: d.min_invest_amount ?? 0,
                     maxInvestAmount: d.max_invest_amount ?? 0,
@@ -222,21 +262,31 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     updateProject: async (id, data) => {
         // map store field names → API field names
         const payload: Record<string, unknown> = {};
-        if (data.title           !== undefined) payload.title            = data.title;
-        if (data.description     !== undefined) payload.description      = data.description;
-        if (data.risks           !== undefined) payload.risk             = data.risks;
-        if (data.fundingGoal     !== undefined) payload.funding_goal     = data.fundingGoal;
-        if (data.softCap         !== undefined) payload.softcap          = data.softCap;
-        if (data.projectDuration !== undefined) payload.duration_days    = data.projectDuration;
-        if (data.revenueShare    !== undefined) payload.profit_share_pct = data.revenueShare;
+        if (data.title !== undefined) payload.title = data.title;
+        if (data.description !== undefined) payload.description = data.description;
+        if (data.risks !== undefined) payload.risk = data.risks;
+        if (data.fundingGoal !== undefined) payload.funding_goal = data.fundingGoal;
+        if (data.softCap !== undefined) payload.softcap = data.softCap;
+        if (data.projectDuration !== undefined) payload.duration_months = data.projectDuration;
+        if (data.campaignDuration !== undefined) payload.duration_days = data.campaignDuration;
+        if (data.revenueShare !== undefined) payload.profit_share_pct = data.revenueShare;
         if (data.categoryId !== undefined && data.categoryId > 0) payload.category_id = data.categoryId;
-        if (data.minInvestAmount   !== undefined) payload.min_invest_amount = data.minInvestAmount;
-        if (data.maxInvestAmount   !== undefined) payload.max_invest_amount = data.maxInvestAmount;
+        if (data.minInvestAmount !== undefined) payload.min_invest_amount = data.minInvestAmount;
+        if (data.maxInvestAmount !== undefined) payload.max_invest_amount = data.maxInvestAmount;
 
         if (Object.keys(payload).length === 0) return;
 
         try {
-            await api.patch(`/pioneer/projects/${id}`, payload);
+            const res = await api.patch(`/pioneer/projects/${id}`, payload);
+            const d = res.data?.data;
+            if (d?.min_invest_amount !== undefined) {
+                set((state) => ({
+                    currentProject: {
+                        ...state.currentProject,
+                        minInvestAmount: d.min_invest_amount,
+                    },
+                }));
+            }
         } catch (error) {
             console.error('updateProject:', error);
             toast.error('บันทึกไม่สำเร็จ');
@@ -294,14 +344,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             if (currentProject.storyId) {
                 await api.patch(`/pioneer/projects/stories/${currentProject.storyId}`, { body: content });
             } else {
-                const res = await api.post(`/pioneer/projects/${projectId}/stories`, {
-                    title: 'Story',
-                    body: content,
-                    sort_order: 1,
-                });
-                const newId = res.data?.data?.id;
-                if (newId) {
-                    set(state => ({ currentProject: { ...state.currentProject, storyId: newId } }));
+                if (_savingStory) return;
+                _savingStory = true;
+                try {
+                    const res = await api.post(`/pioneer/projects/${projectId}/stories`, {
+                        title: 'Story',
+                        body: content,
+                        sort_order: 1,
+                    });
+                    const newId = res.data?.data?.id;
+                    if (newId) {
+                        set(state => ({ currentProject: { ...state.currentProject, storyId: newId } }));
+                    }
+                } finally {
+                    _savingStory = false;
                 }
             }
         } catch (error) {
@@ -315,12 +371,33 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const m = currentProject.milestones[phaseIndex];
         if (!m?.title) return;
         const phasePercents = [15, 20, 30, 35];
+
+        const acceptanceCriteria = m.criteria.filter(c => c.trim()).join('\n') || undefined;
+        const startDate = m.startDate ? new Date(m.startDate).toISOString() : undefined;
+        const endDate = m.endDate ? new Date(m.endDate).toISOString() : undefined;
+
+        // หา URL จริง (ไม่ใช่ blob) จากวิดีโอหรือไฟล์แรกสำหรับบันทึกลง milestone
+        const videoUrl = m.videos?.find(v => v.url && !v.url.startsWith('blob:'))?.url;
+        const firstFileUrl = m.files?.find(f => f.url && !f.url.startsWith('blob:'))?.url;
+        const mURL = videoUrl || firstFileUrl || undefined;
+        let mType: string | undefined = undefined;
+        if (videoUrl) {
+            mType = 'video';
+        } else if (firstFileUrl) {
+            mType = firstFileUrl.match(/\.(xlsx?|pdf|docx?)$/i) ? 'raw' : 'image';
+        }
+
         try {
             if (m.id) {
                 await api.patch(`/pioneer/projects/milestones/${m.id}`, {
                     title: m.title,
                     description: m.description || undefined,
                     phase_no: phaseIndex + 1,
+                    acceptance_criteria: acceptanceCriteria,
+                    start_date: startDate,
+                    end_date: endDate,
+                    url: mURL ?? '',
+                    type: mType ?? '',
                 });
             } else {
                 const res = await api.post(`/pioneer/projects/${projectId}/milestones`, {
@@ -328,6 +405,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     title: m.title,
                     description: m.description || undefined,
                     percent_release: phasePercents[phaseIndex],
+                    acceptance_criteria: acceptanceCriteria,
+                    start_date: startDate,
+                    end_date: endDate,
+                    url: mURL ?? '',
+                    type: mType ?? '',
                 });
                 const newId = res.data?.data?.id;
                 if (newId) {
@@ -359,4 +441,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             set({ isCreating: false });
         }
     },
+
+    updateProjectStatus: async (projectId) => {
+        try {
+            await api.patch(`/pioneer/projects/${projectId}/cancel`);
+            toast.success('ยกเลิกโปรเจกต์แล้ว');
+        } catch (error) {
+            console.error(error);
+            toast.error('ไม่สามารถยกเลิกโปรเจกต์ได้');
+        }
+    }
 }))

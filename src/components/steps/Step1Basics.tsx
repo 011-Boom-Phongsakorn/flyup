@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router";
-import { ChevronDown, X, ImageIcon, Upload, FileImage, Video } from "lucide-react";
+import { ChevronDown, X, ImageIcon, Upload, FileImage, Video, Loader2 } from "lucide-react";
 import StepNavigation from "../StepNavigation";
 import { useProjectStore, type Project } from "../../store/useProjectStore";
 import toast from "react-hot-toast";
@@ -8,10 +8,9 @@ import api from "../../services/api";
 
 const Step1Basics = () => {
   const { projectId } = useParams();
-  const { currentProject, updateProjectInfo, updateProject } = useProjectStore()
+  const { currentProject, updateProjectInfo, updateProject, setSaveStatus } = useProjectStore()
 
   const [isOpen, setIsOpen] = useState(false)
-  const [showSavedTick, setShowSavedTick] = useState(false)
 
   const formatNum = (n: number) => n > 0 ? n.toLocaleString('th-TH') : '';
   const parseNum = (s: string) => Number(s.replace(/,/g, '')) || 0;
@@ -64,13 +63,10 @@ const Step1Basics = () => {
   const additionalImagesRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (showSavedTick) {
-      const timer = setTimeout(() => setShowSavedTick(false), 2000);
-      toast.success('บันทึก')
-      return () => clearTimeout(timer);
-    }
-  }, [showSavedTick]);
+  const triggerSaved = () => {
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2500);
+  };
 
   const handleAutoSave = async (field: keyof Project, newValue: string | number) => {
     const oldValue = currentProject?.[field as keyof typeof currentProject];
@@ -80,24 +76,37 @@ const Step1Basics = () => {
 
     if (isSame) return;
 
+    setSaveStatus('saving');
     updateProjectInfo({ [field]: newValue });
 
     if (projectId) {
       await updateProject(Number(projectId), { [field]: newValue });
     }
 
-    setShowSavedTick(true);
+    triggerSaved();
   };
 
-  const uploadMediaToServer = async (file: File): Promise<string | null> => {
+  const uploadMediaToServer = async (file: File): Promise<{ url: string; mediaId?: number } | null> => {
     if (!projectId) return null;
     try {
+      // Step 1: upload file to Cloudinary via /upload
       const formData = new FormData();
       formData.append('file', file);
-      const res = await api.post(`/pioneer/projects/${projectId}/media`, formData, {
+      const uploadRes = await api.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
       });
-      return res.data?.data?.url ?? null;
+      const { url, type } = uploadRes.data?.data ?? {};
+      if (!url || !type) return null;
+
+      // Step 2: attach uploaded URL to project
+      await api.post(`/pioneer/projects/${projectId}/media`, { url, type });
+
+      // Step 3: fetch media list to get the DB id of the newly attached item
+      const mediaRes = await api.get(`/pioneer/projects/${projectId}/media`);
+      const mediaList: { id: number; url: string }[] = mediaRes.data?.data ?? [];
+      const matched = mediaList.find((m) => m.url === url);
+      return { url, mediaId: matched?.id };
     } catch (error) {
       console.error('upload media failed:', error);
       return null;
@@ -135,23 +144,23 @@ const Step1Basics = () => {
 
     // Upload ทีละไฟล์แล้วแทนที่ blob URL ด้วย server URL
     for (let i = 0; i < filesToUpload.length; i++) {
-      const serverUrl = await uploadMediaToServer(filesToUpload[i]);
-      if (serverUrl) {
-        set_replaceFileUrl(previews[i].url, serverUrl, filesToUpload[i].name);
+      const result = await uploadMediaToServer(filesToUpload[i]);
+      if (result) {
+        set_replaceFileUrl(previews[i].url, result.url, filesToUpload[i].name, result.mediaId);
       }
     }
 
-    setShowSavedTick(true);
+    triggerSaved();
     if (additionalImagesRef.current) additionalImagesRef.current.value = "";
   };
 
-  const set_replaceFileUrl = (blobUrl: string, serverUrl: string, name: string) => {
+  const set_replaceFileUrl = (blobUrl: string, serverUrl: string, name: string, mediaId?: number) => {
     URL.revokeObjectURL(blobUrl);
     useProjectStore.setState((state) => ({
       currentProject: {
         ...state.currentProject,
         files: state.currentProject.files.map(f =>
-          f.url === blobUrl ? { name, url: serverUrl } : f
+          f.url === blobUrl ? { id: mediaId, name, url: serverUrl } : f
         ),
       },
     }));
@@ -162,48 +171,60 @@ const Step1Basics = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error("วิดีโอต้องมีขนาดไม่เกิน 20MB");
+    const supportedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+    if (!supportedVideoTypes.includes(file.type)) {
+      toast.error("รองรับเฉพาะไฟล์ MP4, WebM, OGG, MOV เท่านั้น");
+      if (videoInputRef.current) videoInputRef.current.value = "";
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("วิดีโอต้องมีขนาดไม่เกิน 50MB");
       return;
     }
 
     const blobUrl = URL.createObjectURL(file);
     updateProjectInfo({ video: { name: file.name, url: blobUrl, file } });
 
-    const serverUrl = await uploadMediaToServer(file);
-    if (serverUrl) {
+    const result = await uploadMediaToServer(file);
+    if (result) {
       URL.revokeObjectURL(blobUrl);
       useProjectStore.setState((state) => ({
-        currentProject: { ...state.currentProject, video: { name: file.name, url: serverUrl } },
+        currentProject: { ...state.currentProject, video: { id: result.mediaId, name: file.name, url: result.url } },
       }));
+      triggerSaved();
+    } else {
+      // upload failed — remove local preview
+      URL.revokeObjectURL(blobUrl);
+      updateProjectInfo({ video: null });
+      if (videoInputRef.current) videoInputRef.current.value = "";
+      toast.error("อัปโหลดวิดีโอไม่สำเร็จ กรุณาลองใหม่");
     }
-
-    setShowSavedTick(true);
   };
 
-  // ✅ แก้ไขฟังก์ชันลบรูปภาพ
-  const removeImage = (index: number) => {
+  const removeImage = async (index: number) => {
     const currentImages = currentProject?.files || [];
-
     const targetImage = currentImages[index];
+    if (!targetImage) return;
 
-    // คืนค่าหน่วยความจำ
-    if (targetImage?.url) URL.revokeObjectURL(targetImage.url);
+    if (targetImage.url) URL.revokeObjectURL(targetImage.url);
+    updateProjectInfo({ files: currentImages.filter((_, i) => i !== index) });
 
-    const updatedImages = currentImages.filter((_, i) => i !== index);
-    updateProjectInfo({ files: updatedImages });
-    setShowSavedTick(true); // <--- เพิ่มบรรทัดนี้เพื่อให้ขึ้น "บันทึกแล้ว"
+    if (targetImage.id) {
+      await api.delete(`/pioneer/projects/media/${targetImage.id}`).catch(console.error);
+    }
+    triggerSaved();
   };
 
-  // ✅ เพิ่มฟังก์ชันลบวิดีโอ (เพื่อให้เรียกใช้ง่ายขึ้น)
-  const removeVideo = () => {
+  const removeVideo = async () => {
+    const vid = currentProject?.video;
     updateProjectInfo({ video: null });
+    if (videoInputRef.current) videoInputRef.current.value = "";
 
-    if (videoInputRef.current) {
-      videoInputRef.current.value = "";
+    if (vid?.id) {
+      await api.delete(`/pioneer/projects/media/${vid.id}`).catch(console.error);
     }
-
-    setShowSavedTick(true); // <--- เพิ่มบรรทัดนี้เพื่อให้ขึ้น "บันทึกแล้ว"
+    triggerSaved();
   };
 
   return (
@@ -278,8 +299,23 @@ const Step1Basics = () => {
             <input
               type="text"
               value={formatNum(localData.fundingGoal)}
-              onChange={(e) => setLocalData({ ...localData, fundingGoal: parseNum(e.target.value) })}
-              onBlur={() => handleAutoSave('fundingGoal', localData.fundingGoal)}
+              onChange={(e) => {
+                const newGoal = parseNum(e.target.value);
+                const autoSoftCap = Math.ceil(newGoal * 0.7);
+                const autoMinInvest = Math.ceil(newGoal * 0.01);
+                setLocalData({ ...localData, fundingGoal: newGoal, softCap: autoSoftCap, minInvestAmount: autoMinInvest });
+              }}
+              onBlur={async () => {
+                const goalChanged = localData.fundingGoal !== currentProject.fundingGoal;
+                const capChanged = localData.softCap !== currentProject.softCap;
+                if (!goalChanged && !capChanged) return;
+                setSaveStatus('saving');
+                updateProjectInfo({ fundingGoal: localData.fundingGoal, softCap: localData.softCap });
+                if (projectId) {
+                  await updateProject(Number(projectId), { fundingGoal: localData.fundingGoal, softCap: localData.softCap });
+                }
+                triggerSaved();
+              }}
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
           <div className="flex flex-col gap-[4px]">
@@ -340,7 +376,7 @@ const Step1Basics = () => {
               />
             </div>
           </div>
-          <p className="text-[12px] text-muted-foreground">*ระบุเป้าหมายเงินทุนและระยะเวลา ให้ชัดเจน พร้อมกำหนดเงื่อนไขการรับเงินทั้งแบบ Soft Cap และ Hard Cap รวมถึงสัดส่วนผลตอบแทนที่แน่นอน เพื่อใช้เป็นข้อตกลงในการระดมทุน*</p>
+          <p className="text-[12px] text-muted-foreground"><span className="text-error">*</span> ระบุเป้าหมายเงินทุนและระยะเวลา ให้ชัดเจน พร้อมกำหนดเงื่อนไขการรับเงินทั้งแบบ Soft Cap รวมถึงสัดส่วนผลตอบแทนที่แน่นอน เพื่อใช้เป็นข้อตกลงในการระดมทุน*</p>
         </form>
       </div>
 
@@ -373,20 +409,29 @@ const Step1Basics = () => {
             <p className="flex items-center gap-[10px] text-[14px] text-foreground"><ImageIcon size={14} /> รูปภาพเพิ่มเติม (สูงสุด 5 รูป)</p>
             {/* Chip แสดงไฟล์ */}
             <div className="flex flex-wrap gap-2">
-              {currentProject?.files?.map((f, i) => (
-                <div key={i} className="flex items-center gap-[10px] px-3 py-1.5 rounded-full text-xs">
-                  <img src={f.url} alt={f.name} className="w-[50px] h-[50px] object-cover" />
-                  <span className="max-w-[150px] truncate">{f.name}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeImage(i)
-                    }}
-                    className="ml-2 hover:text-error cursor-pointer">
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+              {currentProject?.files?.map((f, i) => {
+                const uploading = f.url.startsWith('blob:');
+                return (
+                  <div key={i} className="flex items-center gap-[10px] px-3 py-1.5 rounded-full text-xs">
+                    <div className="relative w-[50px] h-[50px]">
+                      <img src={f.url} alt={f.name} className="w-[50px] h-[50px] object-cover" />
+                      {uploading && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded">
+                          <Loader2 size={18} className="text-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <span className={`max-w-[150px] truncate ${uploading ? 'text-muted-foreground' : ''}`}>{f.name}</span>
+                    {!uploading && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeImage(i); }}
+                        className="ml-2 hover:text-error cursor-pointer">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -411,31 +456,43 @@ const Step1Basics = () => {
                 <p>MP4 (สูงสุด 50MB)</p>
               </div>
             </div>
-            {currentProject.video && (
-              <div className="flex items-center gap-[10px] text-foreground px-4 py-2 text-xs w-fit">
-                <video
-                  src={currentProject.video.url}
-                  className="h-[50px] w-[50px] object-cover"
-                  preload="metadata"
-                  muted
-                />
-                <span>{currentProject.video.name}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeVideo()
-                  }}
-                  className="ml-2 cursor-pointer hover:text-error">
-                  <X size={14} />
-                </button>
-              </div>
-            )}
+            {currentProject.video && (() => {
+              const videoUploading = currentProject.video!.url.startsWith('blob:');
+              return (
+                <div className="flex items-center gap-[10px] text-foreground px-4 py-2 text-xs w-fit">
+                  <div className="relative h-[50px] w-[50px]">
+                    <video
+                      src={currentProject.video!.url}
+                      className="h-[50px] w-[50px] object-cover"
+                      preload="metadata"
+                      muted
+                    />
+                    {videoUploading && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded">
+                        <Loader2 size={18} className="text-white animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  <span className={videoUploading ? 'text-muted-foreground' : ''}>{currentProject.video!.name}</span>
+                  {!videoUploading && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeVideo(); }}
+                      className="ml-2 cursor-pointer hover:text-error">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
 
-      <StepNavigation />
+      <StepNavigation disableNext={
+        currentProject?.files?.some(f => f.url.startsWith('blob:')) ||
+        !!currentProject?.video?.url.startsWith('blob:')
+      } />
     </div>
   );
 };
