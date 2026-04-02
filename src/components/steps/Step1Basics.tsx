@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router";
-import { ChevronDown, X, ImageIcon, Upload, FileImage, Video } from "lucide-react";
+import { ChevronDown, X, ImageIcon, Upload, FileImage, Video, Loader2 } from "lucide-react";
 import StepNavigation from "../StepNavigation";
 import { useProjectStore, type Project } from "../../store/useProjectStore";
 import toast from "react-hot-toast";
@@ -55,10 +55,6 @@ const Step1Basics = () => {
   }, [currentProject]);
 
   useEffect(() => {
-    setLocalData(prev => ({ ...prev, minInvestAmount: currentProject.minInvestAmount }));
-  }, [currentProject.minInvestAmount]);
-
-  useEffect(() => {
     api.get('/categories').then(res => {
       setAllCategories(res.data?.data ?? []);
     }).catch(() => {});
@@ -98,6 +94,7 @@ const Step1Basics = () => {
       formData.append('file', file);
       const uploadRes = await api.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
       });
       const { url, type } = uploadRes.data?.data ?? {};
       if (!url || !type) return null;
@@ -308,10 +305,16 @@ const Step1Basics = () => {
                 const autoMinInvest = Math.ceil(newGoal * 0.01);
                 setLocalData({ ...localData, fundingGoal: newGoal, softCap: autoSoftCap, minInvestAmount: autoMinInvest });
               }}
-              onBlur={() => {
-                handleAutoSave('fundingGoal', localData.fundingGoal);
-                handleAutoSave('softCap', localData.softCap);
-                handleAutoSave('minInvestAmount', localData.minInvestAmount);
+              onBlur={async () => {
+                const goalChanged = localData.fundingGoal !== currentProject.fundingGoal;
+                const capChanged = localData.softCap !== currentProject.softCap;
+                if (!goalChanged && !capChanged) return;
+                setSaveStatus('saving');
+                updateProjectInfo({ fundingGoal: localData.fundingGoal, softCap: localData.softCap });
+                if (projectId) {
+                  await updateProject(Number(projectId), { fundingGoal: localData.fundingGoal, softCap: localData.softCap });
+                }
+                triggerSaved();
               }}
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
@@ -406,20 +409,29 @@ const Step1Basics = () => {
             <p className="flex items-center gap-[10px] text-[14px] text-foreground"><ImageIcon size={14} /> รูปภาพเพิ่มเติม (สูงสุด 5 รูป)</p>
             {/* Chip แสดงไฟล์ */}
             <div className="flex flex-wrap gap-2">
-              {currentProject?.files?.map((f, i) => (
-                <div key={i} className="flex items-center gap-[10px] px-3 py-1.5 rounded-full text-xs">
-                  <img src={f.url} alt={f.name} className="w-[50px] h-[50px] object-cover" />
-                  <span className="max-w-[150px] truncate">{f.name}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeImage(i)
-                    }}
-                    className="ml-2 hover:text-error cursor-pointer">
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+              {currentProject?.files?.map((f, i) => {
+                const uploading = f.url.startsWith('blob:');
+                return (
+                  <div key={i} className="flex items-center gap-[10px] px-3 py-1.5 rounded-full text-xs">
+                    <div className="relative w-[50px] h-[50px]">
+                      <img src={f.url} alt={f.name} className="w-[50px] h-[50px] object-cover" />
+                      {uploading && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded">
+                          <Loader2 size={18} className="text-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <span className={`max-w-[150px] truncate ${uploading ? 'text-muted-foreground' : ''}`}>{f.name}</span>
+                    {!uploading && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeImage(i); }}
+                        className="ml-2 hover:text-error cursor-pointer">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -444,31 +456,43 @@ const Step1Basics = () => {
                 <p>MP4 (สูงสุด 50MB)</p>
               </div>
             </div>
-            {currentProject.video && (
-              <div className="flex items-center gap-[10px] text-foreground px-4 py-2 text-xs w-fit">
-                <video
-                  src={currentProject.video.url}
-                  className="h-[50px] w-[50px] object-cover"
-                  preload="metadata"
-                  muted
-                />
-                <span>{currentProject.video.name}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeVideo()
-                  }}
-                  className="ml-2 cursor-pointer hover:text-error">
-                  <X size={14} />
-                </button>
-              </div>
-            )}
+            {currentProject.video && (() => {
+              const videoUploading = currentProject.video!.url.startsWith('blob:');
+              return (
+                <div className="flex items-center gap-[10px] text-foreground px-4 py-2 text-xs w-fit">
+                  <div className="relative h-[50px] w-[50px]">
+                    <video
+                      src={currentProject.video!.url}
+                      className="h-[50px] w-[50px] object-cover"
+                      preload="metadata"
+                      muted
+                    />
+                    {videoUploading && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded">
+                        <Loader2 size={18} className="text-white animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  <span className={videoUploading ? 'text-muted-foreground' : ''}>{currentProject.video!.name}</span>
+                  {!videoUploading && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeVideo(); }}
+                      className="ml-2 cursor-pointer hover:text-error">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
 
-      <StepNavigation />
+      <StepNavigation disableNext={
+        currentProject?.files?.some(f => f.url.startsWith('blob:')) ||
+        !!currentProject?.video?.url.startsWith('blob:')
+      } />
     </div>
   );
 };

@@ -64,7 +64,6 @@ const Router = () => {
                         <Route path='/verify' element={<VerifyEmail />} />
                         <Route path='/projects/:id' element={<ProjectDetail />} />
                         <Route path='/projects/:id/invest' element={<Investment />} />
-                        <Route path='/preview/:projectId' element={<Preview />} />
                     </Route>
 
                     <Route element={<PioneerGuard />}>
@@ -74,6 +73,7 @@ const Router = () => {
                             <Route path='/pioneer/profile' element={<Profile />} />
                         </Route>
                         <Route element={<MainLayout />}>
+                            <Route path='/preview/:projectId' element={<Preview />} />
                             <Route path='/project/overview/:projectId' element={<ProjectOverview />} />
                             <Route path='/project/overview/:projectId/step' element={<ProjectStageLayout />}>
                                 <Route index element={<Navigate to="1" replace />} />

@@ -247,6 +247,7 @@ const Step2Story = () => {
       formData.append('file', file)
       const res = await api.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
       })
       const { url: serverUrl } = res.data?.data ?? {}
       if (serverUrl) {

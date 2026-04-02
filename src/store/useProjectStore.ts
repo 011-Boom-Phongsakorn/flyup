@@ -19,7 +19,7 @@ export interface Milestone {
     endDate: string;
     criteria: string[];
     files: ProjectMedia[];
-    video: ProjectMedia | null;
+    videos: ProjectMedia[];
 }
 
 export interface Project {
@@ -72,6 +72,7 @@ interface ProjectState {
     saveMilestonePhase: (projectId: number, phaseIndex: number) => Promise<void>;
     updateProjectInfo: (data: Partial<Project>) => void;
     updateMilestone: (index: number, data: Partial<Milestone>) => void;
+    updateProjectStatus: (projectId: number) => Promise<void>;
 }
 
 const initialProject: Project = {
@@ -98,9 +99,11 @@ const initialProject: Project = {
         endDate: '',
         criteria: [''],
         files: [],
-        video: null,
+        videos: [],
     })),
 };
+
+let _savingStory = false;
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
     projects: [],
@@ -126,7 +129,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         try {
             set((state) => {
                 const newMilestones = [...state.currentProject.milestones];
-                
+
                 if (index < 0 || index >= newMilestones.length) {
                     throw new Error('Index out of bounds');
                 }
@@ -182,8 +185,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 categoryId = matched?.id ?? 0;
             } catch { /* ignore */ }
 
-            // Map milestones (เก็บ id ด้วย)
-            const bms: {
+            // Load milestones แยกจาก project เพื่อให้ได้ id ครบ
+            let bms: {
                 id?: number;
                 title?: string;
                 description?: string;
@@ -192,22 +195,41 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 end_date?: string;
                 url?: string;
                 type?: string;
-            }[] = d.milestones ?? [];
-            const milestones = Array.from({ length: 4 }, (_, i) => ({
-                id: bms[i]?.id,
-                title: bms[i]?.title ?? '',
-                description: bms[i]?.description ?? '',
-                amount: 0,
-                startDate: bms[i]?.start_date ? bms[i].start_date!.split('T')[0] : '',
-                endDate: bms[i]?.end_date ? bms[i].end_date!.split('T')[0] : '',
-                criteria: bms[i]?.acceptance_criteria
-                    ? bms[i].acceptance_criteria!.split('\n').filter(Boolean)
-                    : [''],
-                files: bms[i]?.url && bms[i]?.type === 'raw'
-                    ? [{ name: bms[i].url!.split('/').pop() ?? 'file', url: '' }]
-                    : [],
-                video: null,
-            }));
+                phase_no?: number;
+            }[] = [];
+            try {
+                const msRes = await api.get(`/pioneer/projects/${id}/milestones`);
+                const raw: typeof bms = msRes.data?.data ?? [];
+                // เรียงตาม phase_no (1-4) แล้ว map ลง index 0-3
+                bms = Array.from({ length: 4 }, (_, i) =>
+                    raw.find(m => m.phase_no === i + 1) ?? {}
+                );
+            } catch { /* ignore */ }
+
+            const milestones = Array.from({ length: 4 }, (_, i) => {
+                const bm = bms[i] ?? {};
+                const url = bm.url;
+                const type = bm.type;
+                const files: ProjectMedia[] = (url && type !== 'video')
+                    ? [{ name: url.split('/').pop() ?? 'file', url }]
+                    : [];
+                const videos: ProjectMedia[] = (url && type === 'video')
+                    ? [{ name: url.split('/').pop() ?? 'video', url }]
+                    : [];
+                return {
+                    id: bm.id,
+                    title: bm.title ?? '',
+                    description: bm.description ?? '',
+                    amount: 0,
+                    startDate: bm.start_date ? bm.start_date.split('T')[0] : '',
+                    endDate: bm.end_date ? bm.end_date.split('T')[0] : '',
+                    criteria: bm.acceptance_criteria
+                        ? bm.acceptance_criteria.split('\n').filter(Boolean)
+                        : [''],
+                    files,
+                    videos,
+                };
+            });
 
             set({
                 currentProject: {
@@ -240,17 +262,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     updateProject: async (id, data) => {
         // map store field names → API field names
         const payload: Record<string, unknown> = {};
-        if (data.title           !== undefined) payload.title            = data.title;
-        if (data.description     !== undefined) payload.description      = data.description;
-        if (data.risks           !== undefined) payload.risk             = data.risks;
-        if (data.fundingGoal     !== undefined) payload.funding_goal     = data.fundingGoal;
-        if (data.softCap         !== undefined) payload.softcap          = data.softCap;
-        if (data.projectDuration  !== undefined) payload.duration_months  = data.projectDuration;
-        if (data.campaignDuration !== undefined) payload.duration_days    = data.campaignDuration;
-        if (data.revenueShare    !== undefined) payload.profit_share_pct = data.revenueShare;
+        if (data.title !== undefined) payload.title = data.title;
+        if (data.description !== undefined) payload.description = data.description;
+        if (data.risks !== undefined) payload.risk = data.risks;
+        if (data.fundingGoal !== undefined) payload.funding_goal = data.fundingGoal;
+        if (data.softCap !== undefined) payload.softcap = data.softCap;
+        if (data.projectDuration !== undefined) payload.duration_months = data.projectDuration;
+        if (data.campaignDuration !== undefined) payload.duration_days = data.campaignDuration;
+        if (data.revenueShare !== undefined) payload.profit_share_pct = data.revenueShare;
         if (data.categoryId !== undefined && data.categoryId > 0) payload.category_id = data.categoryId;
-        if (data.minInvestAmount   !== undefined) payload.min_invest_amount = data.minInvestAmount;
-        if (data.maxInvestAmount   !== undefined) payload.max_invest_amount = data.maxInvestAmount;
+        if (data.minInvestAmount !== undefined) payload.min_invest_amount = data.minInvestAmount;
+        if (data.maxInvestAmount !== undefined) payload.max_invest_amount = data.maxInvestAmount;
 
         if (Object.keys(payload).length === 0) return;
 
@@ -322,14 +344,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             if (currentProject.storyId) {
                 await api.patch(`/pioneer/projects/stories/${currentProject.storyId}`, { body: content });
             } else {
-                const res = await api.post(`/pioneer/projects/${projectId}/stories`, {
-                    title: 'Story',
-                    body: content,
-                    sort_order: 1,
-                });
-                const newId = res.data?.data?.id;
-                if (newId) {
-                    set(state => ({ currentProject: { ...state.currentProject, storyId: newId } }));
+                if (_savingStory) return;
+                _savingStory = true;
+                try {
+                    const res = await api.post(`/pioneer/projects/${projectId}/stories`, {
+                        title: 'Story',
+                        body: content,
+                        sort_order: 1,
+                    });
+                    const newId = res.data?.data?.id;
+                    if (newId) {
+                        set(state => ({ currentProject: { ...state.currentProject, storyId: newId } }));
+                    }
+                } finally {
+                    _savingStory = false;
                 }
             }
         } catch (error) {
@@ -348,6 +376,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const startDate = m.startDate ? new Date(m.startDate).toISOString() : undefined;
         const endDate = m.endDate ? new Date(m.endDate).toISOString() : undefined;
 
+        // หา URL จริง (ไม่ใช่ blob) จากวิดีโอหรือไฟล์แรกสำหรับบันทึกลง milestone
+        const videoUrl = m.videos?.find(v => v.url && !v.url.startsWith('blob:'))?.url;
+        const firstFileUrl = m.files?.find(f => f.url && !f.url.startsWith('blob:'))?.url;
+        const mURL = videoUrl || firstFileUrl || undefined;
+        let mType: string | undefined = undefined;
+        if (videoUrl) {
+            mType = 'video';
+        } else if (firstFileUrl) {
+            mType = firstFileUrl.match(/\.(xlsx?|pdf|docx?)$/i) ? 'raw' : 'image';
+        }
+
         try {
             if (m.id) {
                 await api.patch(`/pioneer/projects/milestones/${m.id}`, {
@@ -357,6 +396,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     acceptance_criteria: acceptanceCriteria,
                     start_date: startDate,
                     end_date: endDate,
+                    url: mURL ?? '',
+                    type: mType ?? '',
                 });
             } else {
                 const res = await api.post(`/pioneer/projects/${projectId}/milestones`, {
@@ -367,6 +408,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     acceptance_criteria: acceptanceCriteria,
                     start_date: startDate,
                     end_date: endDate,
+                    url: mURL ?? '',
+                    type: mType ?? '',
                 });
                 const newId = res.data?.data?.id;
                 if (newId) {
@@ -398,4 +441,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             set({ isCreating: false });
         }
     },
+
+    updateProjectStatus: async (projectId) => {
+        try {
+            await api.patch(`/pioneer/projects/${projectId}/cancel`);
+            toast.success('ยกเลิกโปรเจกต์แล้ว');
+        } catch (error) {
+            console.error(error);
+            toast.error('ไม่สามารถยกเลิกโปรเจกต์ได้');
+        }
+    }
 }))

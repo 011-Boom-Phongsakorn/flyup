@@ -4,9 +4,10 @@ import { ChevronLeft, ChevronRight, Send } from 'lucide-react';
 interface StepNavigationProps {
   onSubmit?: () => void;
   disableSubmit?: boolean;
+  disableNext?: boolean;
 }
 
-const StepNavigation = ({ onSubmit, disableSubmit }: StepNavigationProps = {}) => {
+const StepNavigation = ({ onSubmit, disableSubmit, disableNext }: StepNavigationProps = {}) => {
   const { projectId } = useParams();
   const location = useLocation();
   
@@ -40,13 +41,23 @@ const StepNavigation = ({ onSubmit, disableSubmit }: StepNavigationProps = {}) =
 
       {/* --- ปุ่มถัดไป หรือ ปุ่มบันทึก (หน้าสุดท้าย) --- */}
       {!isLastStep ? (
-        <Link 
-          to={nextUrl} 
+        disableNext ? (
+          <button
+            disabled
+            className="w-[129px] h-[38px] bg-gray-300 text-gray-500 cursor-not-allowed flex items-center justify-center gap-[4px] rounded-[12px]"
+          >
+            <span className="text-[14px]">ถัดไป</span>
+            <ChevronRight size={16} />
+          </button>
+        ) : (
+        <Link
+          to={nextUrl}
           className="w-[129px] h-[38px] bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-[4px] rounded-[12px] transition-all duration-200"
         >
           <span className="text-[14px]">ถัดไป</span>
           <ChevronRight size={16} />
         </Link>
+        )
       ) : (
         // ถ้าเป็น Step สุดท้าย เปลี่ยนเป็นปุ่ม Button แทน Link เพื่อเอาไว้ Submit ฟอร์ม
         <button 

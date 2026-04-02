@@ -3,37 +3,36 @@ import { useNavigate } from "react-router";
 import { Search, Plus, SlidersHorizontal, ChevronDown, Eye, Edit3, Trash2, Loader2, ChevronLeft, ChevronRight, XCircle } from "lucide-react";
 import { useProjectStore } from "../../store/useProjectStore";
 import Swal from "sweetalert2";
-import api from "../../services/api";
 
 type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled";
 
 const stateLabels: { type: StateType | "all"; label: string }[] = [
-  { type: "funding",        label: "กำลังระดมทุน" },
+  { type: "funding", label: "กำลังระดมทุน" },
   { type: "pending_review", label: "รอการตรวจสอบ" },
-  { type: "draft",          label: "แบบร่าง" },
-  { type: "closed",         label: "เสร็จสิ้น" },
-  { type: "cancelled",      label: "ถูกยกเลิก" },
+  { type: "draft", label: "แบบร่าง" },
+  { type: "closed", label: "เสร็จสิ้น" },
+  { type: "cancelled", label: "ถูกยกเลิก" },
 ];
 
 const stateTextMap: Record<StateType, string> = {
-  funding:        "กำลังระดมทุน",
+  funding: "กำลังระดมทุน",
   pending_review: "รอการตรวจสอบ",
-  draft:          "แบบร่าง",
-  closed:         "เสร็จสิ้น",
-  cancelled:      "ถูกยกเลิก",
+  draft: "แบบร่าง",
+  closed: "เสร็จสิ้น",
+  cancelled: "ถูกยกเลิก",
 };
 
 const stateBadgeClass: Record<StateType, string> = {
-  funding:        "bg-[#8B5CF6] text-white",
-  closed:         "bg-[#8B5CF6] text-white",
+  funding: "bg-[#8B5CF6] text-white",
+  closed: "bg-[#8B5CF6] text-white",
   pending_review: "bg-[#F1F3F5] text-[#495057]",
-  draft:          "bg-white border border-border text-[#495057]",
-  cancelled:      "bg-[#EF4444] text-white",
+  draft: "bg-white border border-border text-[#495057]",
+  cancelled: "bg-[#EF4444] text-white",
 };
 
 const MyProjects = () => {
   const navigate = useNavigate();
-  const { projects, isLoading, fetchMyProjects, createProject, isCreating, deleteProject } = useProjectStore();
+  const { projects, isLoading, fetchMyProjects, createProject, isCreating, deleteProject, updateProjectStatus } = useProjectStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<StateType | "all">("all");
@@ -89,7 +88,7 @@ const MyProjects = () => {
     });
     if (result.isConfirmed) {
       try {
-        await api.patch(`/admin/projects/${id}/status`, { status: 'draft' });
+        await updateProjectStatus(id);
         await fetchMyProjects();
       } catch {
         Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถยกเลิกได้ กรุณาลองใหม่', confirmButtonColor: '#8B5CF6' });
@@ -117,254 +116,253 @@ const MyProjects = () => {
   return (
     <div>
 
-        {/* Header */}
-        <div className="flex justify-between items-center mb-[24px]">
-          <h1 className="text-[24px] font-bold text-foreground">โปรเจกต์ของฉัน</h1>
-          <button
-            onClick={handleCreate}
-            disabled={isCreating}
-            className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white px-[16px] py-[10px] rounded-[8px] flex items-center gap-[8px] text-[14px] font-medium transition-colors"
-          >
-            {isCreating ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-            สร้างโปรเจกต์ใหม่
+      {/* Header */}
+      <div className="flex justify-between items-center mb-[24px]">
+        <h1 className="text-[24px] font-bold text-foreground">โปรเจกต์ของฉัน</h1>
+        <button
+          onClick={handleCreate}
+          disabled={isCreating}
+          className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white px-[16px] py-[10px] rounded-[8px] flex items-center gap-[8px] text-[14px] font-medium transition-colors"
+        >
+          {isCreating ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+          สร้างโปรเจกต์ใหม่
+        </button>
+      </div>
+
+      {/* Search & Filter */}
+      <div className="flex flex-col md:flex-row gap-[16px] mb-[24px]">
+        <div className="flex-1 relative">
+          <div className="absolute inset-y-0 left-[16px] flex items-center pointer-events-none text-muted-foreground">
+            <Search size={18} />
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            placeholder="ค้นหาชื่อโปรเจกต์..."
+            className="w-full pl-[44px] pr-[16px] py-[10px] bg-white border border-border rounded-[100px] text-[14px] outline-none focus:border-primary transition-colors h-[44px]"
+          />
+        </div>
+        <div className="relative group">
+          <button className="flex items-center justify-between gap-[16px] bg-white border border-border px-[16px] py-[10px] rounded-[100px] text-[14px] font-medium text-foreground hover:bg-gray-50 h-[44px] min-w-[160px]">
+            <div className="flex items-center gap-[8px]">
+              <SlidersHorizontal size={16} />
+              <span>{activeFilter === "all" ? "ทั้งหมด" : stateLabels.find(s => s.type === activeFilter)?.label}</span>
+            </div>
+            <ChevronDown size={16} />
           </button>
-        </div>
-
-        {/* Search & Filter */}
-        <div className="flex flex-col md:flex-row gap-[16px] mb-[24px]">
-          <div className="flex-1 relative">
-            <div className="absolute inset-y-0 left-[16px] flex items-center pointer-events-none text-muted-foreground">
-              <Search size={18} />
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-              placeholder="ค้นหาชื่อโปรเจกต์..."
-              className="w-full pl-[44px] pr-[16px] py-[10px] bg-white border border-border rounded-[100px] text-[14px] outline-none focus:border-primary transition-colors h-[44px]"
-            />
-          </div>
-          <div className="relative group">
-            <button className="flex items-center justify-between gap-[16px] bg-white border border-border px-[16px] py-[10px] rounded-[100px] text-[14px] font-medium text-foreground hover:bg-gray-50 h-[44px] min-w-[160px]">
-              <div className="flex items-center gap-[8px]">
-                <SlidersHorizontal size={16} />
-                <span>{activeFilter === "all" ? "ทั้งหมด" : stateLabels.find(s => s.type === activeFilter)?.label}</span>
-              </div>
-              <ChevronDown size={16} />
+          <div className="absolute top-[48px] right-0 bg-white border border-border rounded-[12px] shadow-lg z-50 min-w-[180px] py-[4px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+            <button
+              onClick={() => { setActiveFilter("all"); setPage(1); }}
+              className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors ${activeFilter === "all" ? "text-primary font-semibold" : "text-foreground"}`}
+            >
+              ทั้งหมด
             </button>
-            <div className="absolute top-[48px] right-0 bg-white border border-border rounded-[12px] shadow-lg z-50 min-w-[180px] py-[4px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+            {stateLabels.map(s => (
               <button
-                onClick={() => { setActiveFilter("all"); setPage(1); }}
-                className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors ${activeFilter === "all" ? "text-primary font-semibold" : "text-foreground"}`}
+                key={s.type}
+                onClick={() => { setActiveFilter(s.type as StateType); setPage(1); }}
+                className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors ${activeFilter === s.type ? "text-primary font-semibold" : "text-foreground"}`}
               >
-                ทั้งหมด
+                {s.label}
               </button>
-              {stateLabels.map(s => (
-                <button
-                  key={s.type}
-                  onClick={() => { setActiveFilter(s.type as StateType); setPage(1); }}
-                  className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors ${activeFilter === s.type ? "text-primary font-semibold" : "text-foreground"}`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-[16px] mb-[32px]">
-          {stateLabels.map((stat) => {
-            const isActive = activeFilter === stat.type;
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-[16px] mb-[32px]">
+        {stateLabels.map((stat) => {
+          const isActive = activeFilter === stat.type;
+          return (
+            <button
+              key={stat.type}
+              onClick={() => { setActiveFilter(isActive ? "all" : stat.type as StateType); setPage(1); }}
+              className={`bg-white border rounded-[12px] p-[16px] flex flex-col items-center justify-center text-center shadow-sm cursor-pointer transition-all hover:shadow-md ${isActive ? "border-primary ring-2 ring-primary/20" : "border-border"}`}
+            >
+              <span className={`text-[24px] font-bold leading-none mb-[4px] ${isActive ? "text-primary" : "text-foreground"}`}>
+                {stateCounts[stat.type as StateType]}
+              </span>
+              <span className={`text-[13px] font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                {stat.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Project List */}
+      {isLoading ? (
+        <div className="flex justify-center py-[60px]">
+          <Loader2 size={32} className="animate-spin text-primary" />
+        </div>
+      ) : filteredProjects.length === 0 ? (
+        <div className="text-center py-[60px] bg-white rounded-[16px] border border-dashed border-border">
+          <p className="text-muted-foreground text-[14px]">
+            {searchQuery ? `ไม่พบโปรเจกต์ที่ตรงกับ "${searchQuery}"` : "ไม่มีโปรเจกต์ในหมวดหมู่นี้"}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-[16px]">
+          {pagedProjects.map((project) => {
+            const hasEdit = project.state === 'draft' || project.state === 'funding';
+            const hasMilestone = project.state === 'funding';
+            const hasDelete = project.state === 'draft';
+            const hasCancel = project.state === 'pending_review';
+            const progress = project.funding_goal > 0
+              ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
+              : 0;
+
             return (
-              <button
-                key={stat.type}
-                onClick={() => { setActiveFilter(isActive ? "all" : stat.type as StateType); setPage(1); }}
-                className={`bg-white border rounded-[12px] p-[16px] flex flex-col items-center justify-center text-center shadow-sm cursor-pointer transition-all hover:shadow-md ${isActive ? "border-primary ring-2 ring-primary/20" : "border-border"}`}
+              <div
+                key={project.id}
+                className="bg-white border border-border rounded-[16px] p-[20px] flex gap-[20px] shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleView(project.id)}
               >
-                <span className={`text-[24px] font-bold leading-none mb-[4px] ${isActive ? "text-primary" : "text-foreground"}`}>
-                  {stateCounts[stat.type as StateType]}
-                </span>
-                <span className={`text-[13px] font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-                  {stat.label}
-                </span>
-              </button>
+                {/* Thumbnail */}
+                <div className="w-[64px] h-[64px] bg-[#E1E4E8] rounded-[12px] shrink-0 mt-[4px] overflow-hidden">
+                  {project.thumbnail_url && (
+                    <img src={project.thumbnail_url} alt={project.title} className="w-full h-full object-cover" />
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 flex flex-col">
+                  <div className="flex flex-col lg:flex-row justify-between items-start gap-[16px]">
+
+                    {/* Left Info */}
+                    <div className="flex flex-col gap-[8px] flex-1">
+                      <div className="flex items-center gap-[8px] flex-wrap">
+                        <h3 className="text-[16px] font-bold text-foreground">{project.title}</h3>
+                        <span className={`px-[10px] py-[2px] rounded-full text-[11px] font-medium ${stateBadgeClass[project.state]}`}>
+                          {stateTextMap[project.state]}
+                        </span>
+                        {project.category?.name && (
+                          <span className="px-[10px] py-[2px] rounded-full text-[11px] font-medium bg-white border border-border text-[#495057]">
+                            {project.category.name}
+                          </span>
+                        )}
+                      </div>
+
+                      {project.description && (
+                        <p className="text-[13px] text-muted-foreground line-clamp-2 lg:line-clamp-1">
+                          {project.description}
+                        </p>
+                      )}
+
+                      {/* Funding Progress */}
+                      {project.state === 'funding' && project.funding_goal > 0 && (
+                        <div className="flex flex-col gap-[6px] mt-[4px] max-w-[400px]">
+                          <div className="flex items-center gap-[16px] text-[12px] font-medium text-muted-foreground">
+                            <span>฿{project.current_funding.toLocaleString()} / ฿{project.funding_goal.toLocaleString()}</span>
+                            <span>{progress}%</span>
+                          </div>
+                          <div className="h-[6px] w-full bg-[#E9D5FF] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#8B5CF6] rounded-full" style={{ width: `${progress}%` }} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Cancelled warning */}
+                      {project.state === 'cancelled' && (
+                        <div className="flex items-center gap-[6px] mt-[4px]">
+                          <div className="text-[#F59E0B] shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                          </div>
+                          <span className="text-[12px] text-[#EF4444] font-medium">โปรเจกต์ถูกยกเลิก กรุณาติดต่อทีมสนับสนุน</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Actions */}
+                    <div className="flex items-center gap-[8px] shrink-0 mt-[10px] lg:mt-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleView(project.id); }}
+                        className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] transition-colors rounded-[8px] text-[13px] font-medium text-foreground cursor-pointer"
+                      >
+                        <Eye size={16} /> ดู
+                      </button>
+
+                      {hasEdit && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEdit(project.id); }}
+                          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] transition-colors rounded-[8px] text-[13px] font-medium text-foreground cursor-pointer"
+                        >
+                          <Edit3 size={16} /> แก้ไข
+                        </button>
+                      )}
+
+                      {hasMilestone && (
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#8B5CF6] hover:bg-[#7C3AED] transition-colors rounded-[8px] text-[13px] font-medium text-white shadow-sm"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                          Milestone
+                        </button>
+                      )}
+
+                      {hasCancel && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleCancel(project.id, project.title); }}
+                          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-red-50 hover:bg-red-100 transition-colors rounded-[8px] text-[13px] font-medium text-[#EF4444] cursor-pointer"
+                        >
+                          <XCircle size={16} /> ยกเลิกคำขอ
+                        </button>
+                      )}
+
+                      {hasDelete && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(project.id, project.title); }}
+                          className="flex flex-col items-center justify-center w-[36px] h-[36px] text-[#EF4444] hover:bg-red-50 rounded-[8px] transition-colors ml-[4px] cursor-pointer"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+
+                  </div>
+                </div>
+              </div>
             );
           })}
         </div>
+      )}
 
-        {/* Project List */}
-        {isLoading ? (
-          <div className="flex justify-center py-[60px]">
-            <Loader2 size={32} className="animate-spin text-primary" />
-          </div>
-        ) : filteredProjects.length === 0 ? (
-          <div className="text-center py-[60px] bg-white rounded-[16px] border border-dashed border-border">
-            <p className="text-muted-foreground text-[14px]">
-              {searchQuery ? `ไม่พบโปรเจกต์ที่ตรงกับ "${searchQuery}"` : "ไม่มีโปรเจกต์ในหมวดหมู่นี้"}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-[16px]">
-            {pagedProjects.map((project) => {
-              const hasEdit = project.state === 'draft' || project.state === 'funding';
-              const hasMilestone = project.state === 'funding';
-              const hasDelete = project.state === 'draft';
-              const hasCancel = project.state === 'pending_review';
-              const progress = project.funding_goal > 0
-                ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
-                : 0;
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-[8px] mt-[24px]">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="w-[36px] h-[36px] flex items-center justify-center rounded-[8px] border border-border bg-white text-foreground hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft size={16} />
+          </button>
 
-              return (
-                <div
-                  key={project.id}
-                  className="bg-white border border-border rounded-[16px] p-[20px] flex gap-[20px] shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleView(project.id)}
-                >
-                  {/* Thumbnail */}
-                  <div className="w-[64px] h-[64px] bg-[#E1E4E8] rounded-[12px] shrink-0 mt-[4px] overflow-hidden">
-                    {project.thumbnail_url && (
-                      <img src={project.thumbnail_url} alt={project.title} className="w-full h-full object-cover" />
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 flex flex-col">
-                    <div className="flex flex-col lg:flex-row justify-between items-start gap-[16px]">
-
-                      {/* Left Info */}
-                      <div className="flex flex-col gap-[8px] flex-1">
-                        <div className="flex items-center gap-[8px] flex-wrap">
-                          <h3 className="text-[16px] font-bold text-foreground">{project.title}</h3>
-                          <span className={`px-[10px] py-[2px] rounded-full text-[11px] font-medium ${stateBadgeClass[project.state]}`}>
-                            {stateTextMap[project.state]}
-                          </span>
-                          {project.category?.name && (
-                            <span className="px-[10px] py-[2px] rounded-full text-[11px] font-medium bg-white border border-border text-[#495057]">
-                              {project.category.name}
-                            </span>
-                          )}
-                        </div>
-
-                        {project.description && (
-                          <p className="text-[13px] text-muted-foreground line-clamp-2 lg:line-clamp-1">
-                            {project.description}
-                          </p>
-                        )}
-
-                        {/* Funding Progress */}
-                        {project.state === 'funding' && project.funding_goal > 0 && (
-                          <div className="flex flex-col gap-[6px] mt-[4px] max-w-[400px]">
-                            <div className="flex items-center gap-[16px] text-[12px] font-medium text-muted-foreground">
-                              <span>฿{project.current_funding.toLocaleString()} / ฿{project.funding_goal.toLocaleString()}</span>
-                              <span>{progress}%</span>
-                            </div>
-                            <div className="h-[6px] w-full bg-[#E9D5FF] rounded-full overflow-hidden">
-                              <div className="h-full bg-[#8B5CF6] rounded-full" style={{ width: `${progress}%` }} />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Cancelled warning */}
-                        {project.state === 'cancelled' && (
-                          <div className="flex items-center gap-[6px] mt-[4px]">
-                            <div className="text-[#F59E0B] shrink-0">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                            </div>
-                            <span className="text-[12px] text-[#EF4444] font-medium">โปรเจกต์ถูกยกเลิก กรุณาติดต่อทีมสนับสนุน</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right Actions */}
-                      <div className="flex items-center gap-[8px] shrink-0 mt-[10px] lg:mt-0">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleView(project.id); }}
-                          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] transition-colors rounded-[8px] text-[13px] font-medium text-foreground cursor-pointer"
-                        >
-                          <Eye size={16} /> ดู
-                        </button>
-
-                        {hasEdit && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleEdit(project.id); }}
-                            className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] transition-colors rounded-[8px] text-[13px] font-medium text-foreground cursor-pointer"
-                          >
-                            <Edit3 size={16} /> แก้ไข
-                          </button>
-                        )}
-
-                        {hasMilestone && (
-                          <button
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#8B5CF6] hover:bg-[#7C3AED] transition-colors rounded-[8px] text-[13px] font-medium text-white shadow-sm"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            Milestone
-                          </button>
-                        )}
-
-                        {hasCancel && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleCancel(project.id, project.title); }}
-                            className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-red-50 hover:bg-red-100 transition-colors rounded-[8px] text-[13px] font-medium text-[#EF4444] cursor-pointer"
-                          >
-                            <XCircle size={16} /> ยกเลิกคำขอ
-                          </button>
-                        )}
-
-                        {hasDelete && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(project.id, project.title); }}
-                            className="flex flex-col items-center justify-center w-[36px] h-[36px] text-[#EF4444] hover:bg-red-50 rounded-[8px] transition-colors ml-[4px] cursor-pointer"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                      </div>
-
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-[8px] mt-[24px]">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
             <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="w-[36px] h-[36px] flex items-center justify-center rounded-[8px] border border-border bg-white text-foreground hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-              <button
-                key={n}
-                onClick={() => setPage(n)}
-                className={`w-[36px] h-[36px] flex items-center justify-center rounded-[8px] text-[14px] font-medium transition-colors ${
-                  n === page
-                    ? 'bg-primary text-white border border-primary'
-                    : 'bg-white border border-border text-foreground hover:bg-gray-50'
+              key={n}
+              onClick={() => setPage(n)}
+              className={`w-[36px] h-[36px] flex items-center justify-center rounded-[8px] text-[14px] font-medium transition-colors ${n === page
+                ? 'bg-primary text-white border border-primary'
+                : 'bg-white border border-border text-foreground hover:bg-gray-50'
                 }`}
-              >
-                {n}
-              </button>
-            ))}
-
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="w-[36px] h-[36px] flex items-center justify-center rounded-[8px] border border-border bg-white text-foreground hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronRight size={16} />
+              {n}
             </button>
-          </div>
-        )}
+          ))}
+
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="w-[36px] h-[36px] flex items-center justify-center rounded-[8px] border border-border bg-white text-foreground hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
