@@ -1,4 +1,4 @@
-import { NavLink, Link, useNavigate } from "react-router"
+import { NavLink, useNavigate } from "react-router"
 import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files } from 'lucide-react'
 import { useAuthStore } from '../store/useAuthStore'
 
