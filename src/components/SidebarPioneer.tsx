@@ -1,5 +1,6 @@
-import { NavLink, Link } from "react-router"
+import { NavLink, useNavigate } from "react-router"
 import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files } from 'lucide-react'
+import { useAuthStore } from '../store/useAuthStore'
 
 const menu = [
     { icon: <HomeIcon size={20} />, title: 'หน้าหลัก', path: '/' },
@@ -10,6 +11,13 @@ const menu = [
 ]
 
 const SidebarPioneer = () => {
+    const navigate = useNavigate();
+    const { logout } = useAuthStore();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    }
     return (
         <aside className="bg-sidebar w-[230px] min-w-[230px] h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent">
             <div className="w-full flex flex-col items-center gap-[10px] pb-4">
@@ -28,9 +36,9 @@ const SidebarPioneer = () => {
             </ul>
 
             <div className="w-full p-[10px] border-t border-sidebar-accent">
-                <Link to='/' className="flex p-[10px] gap-[12px] text-[14px] items-center hover:text-error hover:bg-sidebar-accent hover:rounded-[12px] transition-all duration-200">
+                <button onClick={handleLogout} className="flex w-full p-[10px] gap-[12px] text-[14px] items-center hover:text-error hover:bg-sidebar-accent hover:rounded-[12px] transition-all duration-200 cursor-pointer">
                     <LogOut size={20} /> ออกจากระบบ
-                </Link>
+                </button>
             </div>
         </aside>
     )

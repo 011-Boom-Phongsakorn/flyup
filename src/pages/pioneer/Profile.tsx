@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Lock, User, ShieldCheck, Upload, Eye, EyeOff } from "lucide-react";
+import { Bell, Lock, ShieldCheck, Upload, Eye, EyeOff, Camera, Phone, Briefcase, Link, FileBraces, Mail } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
 import api from "../../services/api";
@@ -15,14 +15,14 @@ const tabs: { key: Tab; label: string }[] = [
 
 // ─── Profile Tab ────────────────────────────────────────────────────────────
 const ProfileTab = () => {
-  const { authUser } = useAuthStore();
+  const { authUser, checkAuth } = useAuthStore();
   const [form, setForm] = useState({
-    first_name: authUser?.name?.split(" ")[0] ?? "",
-    last_name: authUser?.name?.split(" ")[1] ?? "",
-    phone: "",
-    bio: "",
-    portfolio_url: "",
-    expertise: "",
+    first_name: (authUser?.first_name as string) ?? "",
+    last_name: (authUser?.last_name as string) ?? "",
+    phone: (authUser?.phone as string) ?? "",
+    bio: (authUser?.bio as string) ?? "",
+    portfolio: (authUser?.portfolio as string) ?? "",
+    skills: (authUser?.skills as string) ?? "",
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -35,14 +35,15 @@ const ProfileTab = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await api.patch("/user/me", {
+      await api.patch("/user/profile", {
         first_name: form.first_name,
         last_name: form.last_name,
         phone: form.phone,
-        bio: form.bio,
-        portfolio_url: form.portfolio_url,
-        expertise: form.expertise,
+        bio: form.bio || undefined,
+        portfolio: form.portfolio || undefined,
+        skills: form.skills || undefined,
       });
+      await checkAuth();
       toast.success("บันทึกสำเร็จ");
     } catch {
       toast.error("บันทึกไม่สำเร็จ");
@@ -64,12 +65,12 @@ const ProfileTab = () => {
             </div>
           )}
           <button className="absolute bottom-0 right-0 w-[22px] h-[22px] bg-primary rounded-full flex items-center justify-center">
-            <User size={12} className="text-white" />
+            <Camera size={12} className="text-white" />
           </button>
         </div>
         <div>
-          <p className="font-semibold text-foreground">{authUser?.name ?? "—"}</p>
-          <p className="text-[13px] text-muted-foreground">{authUser?.email ?? "—"}</p>
+          <p className="font-semibold text-foreground">{authUser?.first_name} {authUser?.last_name}</p>
+          <p className="text-[13px] text-muted-foreground">{authUser?.email}</p>
         </div>
       </div>
 
@@ -79,22 +80,20 @@ const ProfileTab = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
           <div className="flex flex-col gap-[6px]">
-            <label className="text-[13px] font-medium text-foreground">ชื่อ *</label>
+            <label className="text-[13px] font-medium text-foreground">ชื่อ <span className="text-error">*</span></label>
             <input
               name="first_name"
               value={form.first_name}
               onChange={handleChange}
-              placeholder="สบชาย"
               className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
             />
           </div>
           <div className="flex flex-col gap-[6px]">
-            <label className="text-[13px] font-medium text-foreground">นามสกุล *</label>
+            <label className="text-[13px] font-medium text-foreground">นามสกุล <span className="text-error">*</span></label>
             <input
               name="last_name"
               value={form.last_name}
               onChange={handleChange}
-              placeholder="สบชาย"
               className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
             />
           </div>
@@ -102,7 +101,7 @@ const ProfileTab = () => {
 
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground flex items-center gap-[6px]">
-            <span>✉</span> อีเมล
+            <span><Mail size={14} /></span> อีเมล
           </label>
           <input
             value={authUser?.email ?? ""}
@@ -113,13 +112,12 @@ const ProfileTab = () => {
 
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground flex items-center gap-[6px]">
-            <span>📞</span> เบอร์โทรศัพท์
+            <span><Phone size={14} /></span> เบอร์โทรศัพท์
           </label>
           <input
             name="phone"
             value={form.phone}
             onChange={handleChange}
-            placeholder="081-234-5678"
             className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
           />
         </div>
@@ -134,13 +132,12 @@ const ProfileTab = () => {
 
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground flex items-center gap-[6px]">
-            <span>📋</span> ประวัติส่วนตัว (Bio)
+            <span><Briefcase size={14} /></span> ประวัติส่วนตัว (Bio)
           </label>
           <textarea
             name="bio"
             value={form.bio}
             onChange={handleChange}
-            placeholder="เล่าเกี่ยวกับคุณ"
             rows={4}
             className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors resize-none"
           />
@@ -148,26 +145,24 @@ const ProfileTab = () => {
 
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground flex items-center gap-[6px]">
-            <span>🔗</span> ลิงก์พอร์ตโฟลิโอ
+            <span><Link size={14} /></span> ลิงก์พอร์ตโฟลิโอ
           </label>
           <input
-            name="portfolio_url"
-            value={form.portfolio_url}
+            name="portfolio"
+            value={form.portfolio}
             onChange={handleChange}
-            placeholder="https://portfolio.com"
             className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
           />
         </div>
 
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground flex items-center gap-[6px]">
-            <span>🎯</span> ทักษะ/ความชำนาญ
+            <span><FileBraces size={14} /></span> ทักษะ/ความชำนาญ
           </label>
           <input
-            name="expertise"
-            value={form.expertise}
+            name="skills"
+            value={form.skills}
             onChange={handleChange}
-            placeholder="081-234-5678"
             className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
           />
         </div>
@@ -176,7 +171,7 @@ const ProfileTab = () => {
       <button
         onClick={handleSave}
         disabled={isSaving}
-        className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-[8px]"
+        className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-[8px] cursor-pointer"
       >
         <ShieldCheck size={16} />
         {isSaving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
@@ -318,36 +313,43 @@ const PasswordTab = () => {
 
 // ─── Verify Tab ──────────────────────────────────────────────────────────────
 const VerifyTab = () => {
+  const { authUser } = useAuthStore();
   const [studentForm, setStudentForm] = useState({
-    university: "",
-    faculty: "",
-    student_id: "",
-  });
-  const [bankForm, setBankForm] = useState({
-    bank_name: "",
-    account_name: "",
-    account_number: "",
+    university: (authUser?.university as string) ?? "",
+    faculty: (authUser?.faculty as string) ?? "",
+    student_id: (authUser?.student_id as string) ?? "",
   });
   const [studentFile, setStudentFile] = useState<File | null>(null);
+  const [bankForm, setBankForm] = useState({
+    bank_name: (authUser?.bank_name as string) ?? "",
+    bank_account_name: (authUser?.bank_account_name as string) ?? "",
+    bank_account_no: (authUser?.bank_account_no as string) ?? "",
+  });
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptAccuracy, setAcceptAccuracy] = useState(false);
   const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [isSavingBank, setIsSavingBank] = useState(false);
 
+  const baseRequired = {
+    first_name: (authUser?.first_name as string) ?? "",
+    last_name: (authUser?.last_name as string) ?? "",
+    phone: (authUser?.phone as string) ?? "",
+  };
+
   const handleStudentSubmit = async () => {
+    if (!baseRequired.first_name || !baseRequired.last_name || !baseRequired.phone) {
+      toast.error("กรุณากรอกข้อมูลส่วนตัว (ชื่อ นามสกุล เบอร์โทร) ในแท็บโปรไฟล์ก่อน");
+      return;
+    }
     if (!acceptTerms || !acceptAccuracy) {
       toast.error("กรุณายอมรับข้อตกลงก่อน");
       return;
     }
     setIsSavingStudent(true);
     try {
-      const formData = new FormData();
-      formData.append("university", studentForm.university);
-      formData.append("faculty", studentForm.faculty);
-      formData.append("student_id", studentForm.student_id);
-      if (studentFile) formData.append("file", studentFile);
-      await api.post("/user/me/verify/student", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      await api.patch("/user/profile", {
+        ...baseRequired,
+        faculty: studentForm.faculty || undefined,
       });
       toast.success("ส่งข้อมูลยืนยันตัวตนแล้ว");
     } catch {
@@ -358,9 +360,18 @@ const VerifyTab = () => {
   };
 
   const handleBankSubmit = async () => {
+    if (!baseRequired.first_name || !baseRequired.last_name || !baseRequired.phone) {
+      toast.error("กรุณากรอกข้อมูลส่วนตัว (ชื่อ นามสกุล เบอร์โทร) ในแท็บโปรไฟล์ก่อน");
+      return;
+    }
     setIsSavingBank(true);
     try {
-      await api.post("/user/me/verify/bank", bankForm);
+      await api.patch("/user/profile", {
+        ...baseRequired,
+        bank_name: bankForm.bank_name || undefined,
+        bank_account_name: bankForm.bank_account_name || undefined,
+        bank_account_no: bankForm.bank_account_no || undefined,
+      });
       toast.success("ส่งข้อมูลบัญชีแล้ว");
     } catch {
       toast.error("เกิดข้อผิดพลาด");
@@ -379,16 +390,15 @@ const VerifyTab = () => {
         </div>
 
         {[
-          { key: "university", label: "มหาวิทยาลัย", placeholder: "มหาวิทยาลัยราชภัฏนครปฐม" },
-          { key: "faculty", label: "คณะ", placeholder: "วิทยาศาสตร์เทคโนโลยี" },
-          { key: "student_id", label: "รหัสนักศึกษา", placeholder: "66425901" },
-        ].map(({ key, label, placeholder }) => (
+          { key: "university", label: "มหาวิทยาลัย" },
+          { key: "faculty", label: "คณะ" },
+          { key: "student_id", label: "รหัสนักศึกษา" },
+        ].map(({ key, label }) => (
           <div key={key} className="flex flex-col gap-[6px]">
             <label className="text-[13px] font-medium text-foreground">{label}</label>
             <input
               value={studentForm[key as keyof typeof studentForm]}
               onChange={(e) => setStudentForm((prev) => ({ ...prev, [key]: e.target.value }))}
-              placeholder={placeholder}
               className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
             />
           </div>
@@ -396,8 +406,8 @@ const VerifyTab = () => {
 
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground">อัปโหลดบัตรนักศึกษา</label>
-          <label className="border-2 border-dashed border-border rounded-[12px] p-[32px] flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
-            <Upload size={24} className="text-muted-foreground mb-[8px]" />
+          <label className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
+            <Upload size={24} className="text-muted-foreground mb-2" />
             {studentFile ? (
               <span className="text-[13px] text-primary font-medium">{studentFile.name}</span>
             ) : (
@@ -446,16 +456,15 @@ const VerifyTab = () => {
         </div>
 
         {[
-          { key: "bank_name", label: "ธนาคาร", placeholder: "" },
-          { key: "account_name", label: "ชื่อบัญชี", placeholder: "" },
-          { key: "account_number", label: "เลขบัญชี", placeholder: "" },
-        ].map(({ key, label, placeholder }) => (
+          { key: "bank_name", label: "ธนาคาร" },
+          { key: "bank_account_name", label: "ชื่อบัญชี" },
+          { key: "bank_account_no", label: "เลขบัญชี" },
+        ].map(({ key, label }) => (
           <div key={key} className="flex flex-col gap-[6px]">
             <label className="text-[13px] font-medium text-foreground">{label}</label>
             <input
               value={bankForm[key as keyof typeof bankForm]}
               onChange={(e) => setBankForm((prev) => ({ ...prev, [key]: e.target.value }))}
-              placeholder={placeholder}
               className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
             />
           </div>
@@ -487,7 +496,7 @@ const Profile = () => {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-[16px] py-[8px] rounded-[8px] text-[14px] font-medium transition-colors ${
+            className={`px-[16px] py-[8px] rounded-[8px] text-[14px] font-medium transition-colors cursor-pointer ${
               activeTab === tab.key
                 ? "bg-primary text-white"
                 : "text-muted-foreground hover:text-foreground hover:bg-[#F1F3F5]"
