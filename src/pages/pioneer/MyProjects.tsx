@@ -255,7 +255,7 @@ const MyProjects = () => {
                       {project.state === 'funding' && project.funding_goal > 0 && (
                         <div className="flex flex-col gap-[6px] mt-[4px] max-w-[400px]">
                           <div className="flex items-center gap-[16px] text-[12px] font-medium text-muted-foreground">
-                            <span>฿{project.current_funding.toLocaleString()} / ฿{project.funding_goal.toLocaleString()}</span>
+                            <span>฿{project?.current_funding.toLocaleString()} / ฿{project?.funding_goal.toLocaleString()}</span>
                             <span>{progress}%</span>
                           </div>
                           <div className="h-[6px] w-full bg-[#E9D5FF] rounded-full overflow-hidden">
