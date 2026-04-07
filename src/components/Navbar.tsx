@@ -209,8 +209,8 @@ const Navbar = () => {
                             </div>
                         ) : (
                             <div className="flex flex-col gap-3 pt-2 border-t border-border">
-                                <Link to='/login' className="w-full bg-primary hover:bg-primary-hover text-white text-center py-3 rounded-xl text-[15px] font-medium transition-all shadow-sm" onClick={closeMenu}>เข้าสู่ระบบ</Link>
-                                <Link to='/register' className="w-full bg-background border border-border text-center py-3 rounded-xl text-[15px] font-medium text-foreground hover:bg-muted transition-all" onClick={closeMenu}>สมัครสมาชิก</Link>
+                                <Link to='/login' className="w-full bg-primary hover:bg-primary-hover text-white text-center py-3 rounded-xl text-[15px] font-medium transition-all shadow-sm" onClick={closeMenu}>เริ่มต้น</Link>
+                                <Link to='/register' className="w-full bg-background border border-border text-center py-3 rounded-xl text-[15px] font-medium text-foreground hover:bg-muted transition-all" onClick={closeMenu}>สมัคร</Link>
                             </div>
                         )}
                     </div>

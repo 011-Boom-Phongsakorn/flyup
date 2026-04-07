@@ -75,6 +75,7 @@ function ProjectDetail() {
   const handleInvest = () => {
     if (!isLoggedIn) {
       toast.error("กรุณาเข้าสู่ระบบก่อนลงทุน", {
+        id: "login-required",
         position: "top-right",
         duration: 3000,
         style: {
@@ -109,7 +110,10 @@ function ProjectDetail() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden w-full mt-[100px]">
-      <Toaster />
+      <Toaster
+        toastOptions={{ duration: 3000 }}
+        containerStyle={{ top: 20 }}
+      />
 
       {/* ── Main Content ── */}
       <div className="max-w-[1340px] mx-auto px-4 sm:px-6 pt-6 md:pt-8 pb-16">
