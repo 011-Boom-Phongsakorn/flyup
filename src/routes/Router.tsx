@@ -32,6 +32,10 @@ import Step3Milestone from '../components/steps/Step3Milestone';
 import Step4Agreement from '../components/steps/Step4Agreement';
 import Preview from '../pages/pioneer/Preview';
 
+// Admin
+import AdminLayout from '../layouts/AdminLayout';
+import AdminDashboard from '../pages/admin/AdminDashboard';
+
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
     if (!authUser) return <Navigate to='/login' replace />
@@ -87,6 +91,12 @@ const Router = () => {
                                 <Route path='4' element={<Step4Agreement />} />
                             </Route>
                             <Route path='/preview/:projectId' element={<Preview />} />
+                        </Route>
+                    </Route>
+
+                    <Route>
+                        <Route element={<AdminLayout />}>
+                            <Route path='/admin/dashboard' element={<AdminDashboard />} />
                         </Route>
                     </Route>
                 </Routes>
