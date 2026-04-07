@@ -43,7 +43,7 @@ const Dashboard = () => {
         <div className='flex flex-col justify-between gap-[24px]'>
           {
             activities.map((act, idx) => (
-              <div className='h-[52px] bg-card flex justify-between items-center rounded-[12px] px-[10px] w-full'>
+              <div key={idx} className='h-[52px] bg-card flex justify-between items-center rounded-[12px] px-[10px] w-full'>
                 <span>{act.title}</span>
                 <span>{act.time}</span>
               </div>
