@@ -64,9 +64,10 @@ function ProjectDetail() {
   const targetAmount = project?.funding_goal ?? 0;
   const fundedPercent = targetAmount > 0 ? Math.min(Math.round((fundedAmount / targetAmount) * 100), 100) : 0;
 
+  const [now] = useState(() => Date.now());
   const daysLeft = (() => {
     if (!project?.end_date) return project?.duration_days ?? 0;
-    const diff = new Date(project.end_date).getTime() - Date.now();
+    const diff = new Date(project.end_date).getTime() - now;
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   })();
 

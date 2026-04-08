@@ -21,7 +21,7 @@ const Preview = () => {
             loadCurrentProject(Number(projectId));
             fetchAll(Number(projectId));
         }
-    }, [projectId]);
+    }, [projectId, loadCurrentProject, fetchAll]);
 
     const formatCurrency = (amount: number) => new Intl.NumberFormat("th-TH").format(amount);
 

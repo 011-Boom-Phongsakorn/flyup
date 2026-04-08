@@ -18,6 +18,13 @@ export interface InvestmentData {
   title: string;
 }
 
+export interface InvestmentStatusResponse {
+  data?: {
+    investment?: { status: string };
+    status?: string;
+  };
+}
+
 // ─── Store Interface ─────────────────────────────────────────────────────────
 
 interface InvestmentStoreState {
@@ -25,7 +32,7 @@ interface InvestmentStoreState {
   investmentData: InvestmentData | null;
 
   createInvestment: (data: CreateInvestmentData) => Promise<boolean>;
-  getInvestmentById: (id: number) => Promise<unknown>;
+  getInvestmentById: (id: number) => Promise<InvestmentStatusResponse>;
   clearInvestmentData: () => void;
 }
 
@@ -51,10 +58,10 @@ export const useInvestmentStore = create<InvestmentStoreState>((set) => ({
     }
   },
 
-  getInvestmentById: async (id: number) => {
+  getInvestmentById: async (id: number): Promise<InvestmentStatusResponse> => {
     try {
       const response = await api.get(`/investments/${id}`);
-      return response.data;
+      return response.data as InvestmentStatusResponse;
     } catch (error) {
       console.error(`Error fetching investment ${id}:`, error);
       throw error;

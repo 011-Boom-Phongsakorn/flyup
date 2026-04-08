@@ -89,7 +89,7 @@ const Projects = () => {
     return result;
   }, [publicProjects, activeCategory, searchQuery, sortOrder]);
 
-  const now = useMemo(() => Date.now(), []);
+  const [now] = useState(() => Date.now());
 
   const getProgress = (p: PublicProject) => {
     if (!p.funding_goal || p.funding_goal === 0) return 0;

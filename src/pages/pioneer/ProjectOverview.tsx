@@ -53,7 +53,7 @@ const ProjectOverview = () => {
 
   useEffect(() => {
     if (projectId) loadCurrentProject(Number(projectId));
-  }, [projectId]);
+  }, [projectId, loadCurrentProject]);
 
   const canSubmit = step.every(s => s.isComplete(currentProject, projectId))
 
