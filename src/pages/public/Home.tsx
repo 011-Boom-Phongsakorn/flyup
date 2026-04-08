@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import {
   ChevronRight,
@@ -84,9 +84,10 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 
 // ─── Home Page ──────────────────────────────────────────────────────────────
 
+const NOW = Date.now();
+
 const Home = () => {
   const { publicProjects, isLoading, fetchPublicProjects } = usePublicProjectStore();
-  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     fetchPublicProjects();
@@ -104,7 +105,7 @@ const Home = () => {
     // New = created within 14 days
     const twoWeeks = 14 * 24 * 60 * 60 * 1000;
     const recent = sorted
-      .filter(p => (now - new Date(p.created_at).getTime()) < twoWeeks)
+      .filter(p => (NOW - new Date(p.created_at).getTime()) < twoWeeks)
       .filter(p => !hot.find(h => h.id === p.id))
       .slice(0, 3)
       .map(p => ({ ...p, isNew: true }));
