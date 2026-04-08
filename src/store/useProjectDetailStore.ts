@@ -3,21 +3,22 @@ import api from '../services/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export interface Update {
-  date: string;
-  title: string;
-  description: string;
-}
-
-export interface Comment {
+export interface ProjectUpdate {
   id: number;
-  user: string;
-  badge: string;
-  time: string;
-  text: string;
+  title: string;
+  content: string;
+  created_at: string;
 }
 
-export interface Question {
+export interface ProjectThread {
+  id: number;
+  title: string;
+  body: string;
+  user_name: string;
+  created_at: string;
+}
+
+export interface ProjectFAQ {
   id: number;
   question: string;
   answer: string;
@@ -26,34 +27,66 @@ export interface Question {
 // ─── Store Interface ─────────────────────────────────────────────────────────
 
 interface ProjectDetailState {
-  updates: Update[];
-  comments: Comment[];
-  questions: Question[];
+  updates: ProjectUpdate[];
+  threads: ProjectThread[];
+  faqs: ProjectFAQ[];
   isLoading: boolean;
-  fetchProjectDetail: (id: number) => Promise<void>;
+  fetchUpdates: (id: number) => Promise<void>;
+  fetchThreads: (id: number) => Promise<void>;
+  fetchFAQs: (id: number) => Promise<void>;
+  fetchAll: (id: number) => Promise<void>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
 
 export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
   updates: [],
-  comments: [],
-  questions: [],
+  threads: [],
+  faqs: [],
   isLoading: false,
 
-  fetchProjectDetail: async (id) => {
+  fetchUpdates: async (id: number) => {
+    try {
+      const res = await api.get(`/projects/${id}/updates`);
+      set({ updates: res.data?.data ?? [] });
+    } catch (error) {
+      console.warn('fetchUpdates:', error);
+    }
+  },
+
+  fetchThreads: async (id: number) => {
+    try {
+      const res = await api.get(`/projects/${id}/threads`);
+      set({ threads: res.data?.data ?? [] });
+    } catch (error) {
+      console.warn('fetchThreads:', error);
+    }
+  },
+
+  fetchFAQs: async (id: number) => {
+    try {
+      const res = await api.get(`/projects/${id}/faqs`);
+      set({ faqs: res.data?.data ?? [] });
+    } catch (error) {
+      console.warn('fetchFAQs:', error);
+    }
+  },
+
+  fetchAll: async (id: number) => {
     set({ isLoading: true });
     try {
-      const res = await api.get(`/pioneer/projects/${id}`);
-      const data = res.data?.data ?? {};
+      const [updatesRes, threadsRes, faqsRes] = await Promise.allSettled([
+        api.get(`/projects/${id}/updates`),
+        api.get(`/projects/${id}/threads`),
+        api.get(`/projects/${id}/faqs`),
+      ]);
       set({
-        updates: data.updates ?? [],
-        comments: data.comments ?? [],
-        questions: data.questions ?? [],
+        updates: updatesRes.status === 'fulfilled' ? updatesRes.value.data?.data ?? [] : [],
+        threads: threadsRes.status === 'fulfilled' ? threadsRes.value.data?.data ?? [] : [],
+        faqs: faqsRes.status === 'fulfilled' ? faqsRes.value.data?.data ?? [] : [],
       });
     } catch (error) {
-      // 401/404 expected for draft projects — silently ignore
-      console.warn('fetchProjectDetail:', error);
+      console.warn('fetchAll:', error);
     } finally {
       set({ isLoading: false });
     }

@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import {
   ChevronRight,
@@ -10,178 +11,119 @@ import {
   Clock,
   TrendingUp,
   Users,
-  ShieldCheck
+  ShieldCheck,
+  Loader2
 } from 'lucide-react';
+import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
 
-const recommendedMain = {
-  id: 1,
-  title: 'UniTrack',
-  description: 'แอปนำทางในมหาวิทยาลัยอัจฉริยะ',
-  image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=1200',
-  category: 'แอปมือถือ',
-  progress: 72,
-  raised: 36000,
-  daysLeft: 30,
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const getProgress = (p: PublicProject) => {
+  if (!p.funding_goal || p.funding_goal === 0) return 0;
+  return Math.min(Math.round((p.current_funding / p.funding_goal) * 100), 100);
 };
 
-const recommendedList = [
-  { 
-    id: 2, 
-    title: 'radar of B2', 
-    description: 'software เรดาร์สำหรับ B2 Bomber', 
-    image: 'https://images.unsplash.com/photo-1540962351504-03099e0a754b?auto=format&fit=crop&q=80&w=400',
-    progress: 82, 
-    raised: 56000, 
-    daysLeft: 10 
-  },
-  { 
-    id: 3, 
-    title: 'หมวกนักบิน F35', 
-    description: 'หมวกนักบินอัจฉริยะ', 
-    image: 'https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&q=80&w=400',
-    progress: 72, 
-    raised: 36000, 
-    daysLeft: 30 
-  },
-  { 
-    id: 4, 
-    title: 'CodeReview AI', 
-    description: 'เครื่องมือรีวิว code โดย AI', 
-    image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400',
-    progress: 24, 
-    raised: 24000, 
-    daysLeft: 25 
-  },
-];
+const getDaysLeft = (p: PublicProject) => {
+  if (!p.end_date) return p.duration_days || 0;
+  const diff = new Date(p.end_date).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+};
 
-const hotProjects = [
-  { 
-    id: 5, 
-    title: 'Terminator T-X', 
-    description: 'หุ่นยนต์ตามหนังของ terminator สร้างเพื่อยึดครองโลก', 
-    image: 'https://images.unsplash.com/photo-1535378917042-10a22c95931a?auto=format&fit=crop&q=80&w=800',
-    category: 'IOT', 
-    progress: 83, 
-    raised: 30000, 
-    daysLeft: 15, 
-    isHot: true 
-  },
-  { 
-    id: 6, 
-    title: 'Toi-Nee Human droid', 
-    description: 'หุ่นยนต์สั่งอาหาร ร้องลิเก version human droid', 
-    image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800',
-    category: 'IOT', 
-    progress: 72, 
-    raised: 50000, 
-    daysLeft: 25, 
-    isHot: true 
-  },
-  { 
-    id: 7, 
-    title: 'Cybersecurity EdTech', 
-    description: 'เรียนรู้การป้องกันภัยไซเบอร์ผ่านการจำลองสถานการณ์จริง', 
-    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=800',
-    category: 'Cybersecurity', 
-    progress: 92, 
-    raised: 10000, 
-    daysLeft: 10, 
-    isHot: true 
-  },
-];
+const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800';
 
-const newProjects = [
-  { 
-    id: 8, 
-    title: 'UniTrack', 
-    description: 'แอปนำทางในมหาวิทยาลัยอัจฉริยะสำหรับนักศึกษา', 
-    image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
-    category: 'แอปมือถือ', 
-    progress: 10,
-    raised: 5000, 
-    daysLeft: 55, 
-    isNew: true 
-  },
-  { 
-    id: 9, 
-    title: 'Arduino Drone', 
-    description: 'Drone FPV DIY ซื้อง่าย งานไว', 
-    image: 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&q=80&w=800',
-    category: 'IOT', 
-    progress: 15, 
-    raised: 7000, 
-    daysLeft: 25, 
-    isNew: true 
-  },
-  { 
-    id: 10, 
-    title: 'Nightingale', 
-    description: 'เป็นเกมแนว PVE Open-world Survival Crafting', 
-    image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=800',
-    category: 'Game', 
-    progress: 5, 
-    raised: 8000, 
-    daysLeft: 20, 
-    isNew: true 
-  },
-];
+// ─── Project Card ───────────────────────────────────────────────────────────
 
-interface Project {
-  id?: number | string;
-  title: string;
-  image: string;
-  category?: string;
-  description?: string;
-  author?: string;
-  progress: number;
-  raised: number;
-  daysLeft: number;
-  isHot?: boolean;
-  isNew?: boolean;
-  [key: string]: unknown;
-}
+const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; isNew?: boolean } }) => {
+  const progress = getProgress(project);
+  const daysLeft = getDaysLeft(project);
 
-const ProjectCard = ({ project }: { project: Project }) => (
-  <Link 
-    to={`/projects/${project.id}`} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group flex flex-col">
-    <div className="relative h-48 w-full overflow-hidden bg-gray-100">
-      <img src={project.image} alt={project.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-      <div className="absolute top-3 right-3 flex gap-2">
-        {project.isHot && (
-          <div className="bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-md">
-            <Flame size={14} fill="currentColor" /> {project.progress}%
-          </div>
-        )}
-        {project.isNew && (
-          <div className="bg-purple-500 text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-md">
-            <Sparkles size={14} fill="currentColor" /> ใหม่
-          </div>
-        )}
+  return (
+    <Link
+      to={`/projects/${project.id}`}
+      className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group flex flex-col"
+    >
+      <div className="relative h-48 w-full overflow-hidden bg-gray-100">
+        <img src={project.thumbnail_url || PLACEHOLDER_IMG} alt={project.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <div className="absolute top-3 right-3 flex gap-2">
+          {project.isHot && (
+            <div className="bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-md">
+              <Flame size={14} fill="currentColor" /> {progress}%
+            </div>
+          )}
+          {project.isNew && !project.isHot && (
+            <div className="bg-purple-500 text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-md">
+              <Sparkles size={14} fill="currentColor" /> ใหม่
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-    <div className="p-4 flex flex-col flex-1">
-      <div className="flex justify-between items-start gap-2 mb-1">
-        <h3 className="text-lg font-bold line-clamp-1 flex-1">{project.title}</h3>
-        <span className="text-[10px] font-medium px-2.5 py-0.5 bg-white border border-gray-200 rounded-full text-gray-400 whitespace-nowrap">
-          {project.category}
-        </span>
-      </div>
-      
-      <p className="text-xs text-gray-500 line-clamp-1 mb-4">{project.description}</p>
+      <div className="p-4 flex flex-col flex-1">
+        <div className="flex justify-between items-start gap-2 mb-1">
+          <h3 className="text-lg font-bold line-clamp-1 flex-1">{project.title}</h3>
+          {project.category && (
+            <span className="text-[10px] font-medium px-2.5 py-0.5 bg-white border border-gray-200 rounded-full text-gray-400 whitespace-nowrap">
+              {project.category}
+            </span>
+          )}
+        </div>
 
-      <div className="w-full h-1.5 bg-gray-100 rounded-full mb-3 overflow-hidden mt-auto">
-        <div className="h-full bg-purple-600 rounded-full" style={{ width: `${project.progress}%` }}></div>
+        <p className="text-xs text-gray-500 line-clamp-1 mb-4">{project.description || 'ยังไม่มีรายละเอียด'}</p>
+
+        <div className="w-full h-1.5 bg-gray-100 rounded-full mb-3 overflow-hidden mt-auto">
+          <div className="h-full bg-purple-600 rounded-full" style={{ width: `${progress}%` }}></div>
+        </div>
+
+        <div className="flex justify-between items-center pt-1">
+          <span className="text-sm font-bold">{project.current_funding.toLocaleString()} ฿</span>
+          <span className="text-xs text-gray-500">{daysLeft} วัน</span>
+        </div>
       </div>
-      
-      <div className="flex justify-between items-center pt-1">
-        <span className="text-sm font-bold">{project.raised.toLocaleString()} ฿</span>
-        <span className="text-xs text-gray-500">{project.daysLeft} วัน</span>
-      </div>
-    </div>
-  </Link>
-);
+    </Link>
+  );
+};
+
+// ─── Home Page ──────────────────────────────────────────────────────────────
 
 const Home = () => {
+  const { publicProjects, isLoading, fetchPublicProjects } = usePublicProjectStore();
+
+  useEffect(() => {
+    fetchPublicProjects();
+  }, [fetchPublicProjects]);
+
+  const { recommendedMain, recommendedList, hotProjects, newProjects } = useMemo(() => {
+    const sorted = [...publicProjects].sort((a, b) => b.id - a.id);
+
+    // Hot = progress >= 60%
+    const hot = sorted
+      .filter(p => getProgress(p) >= 60)
+      .slice(0, 3)
+      .map(p => ({ ...p, isHot: true }));
+
+    // New = created within 14 days
+    const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+    const recent = sorted
+      .filter(p => (Date.now() - new Date(p.created_at).getTime()) < twoWeeks)
+      .filter(p => !hot.find(h => h.id === p.id))
+      .slice(0, 3)
+      .map(p => ({ ...p, isNew: true }));
+
+    // Recommended = first available project for hero, next 3 for sidebar
+    const hotIds = new Set(hot.map(h => h.id));
+    const newIds = new Set(recent.map(n => n.id));
+    const remaining = sorted.filter(p => !hotIds.has(p.id) && !newIds.has(p.id));
+
+    const main = remaining[0] || sorted[0] || null;
+    const list = remaining.slice(1, 4).length > 0 ? remaining.slice(1, 4) : sorted.slice(1, 4);
+
+    return {
+      recommendedMain: main,
+      recommendedList: list,
+      hotProjects: hot.length > 0 ? hot : sorted.slice(0, 3).map(p => ({ ...p, isHot: true })),
+      newProjects: recent.length > 0 ? recent : sorted.slice(0, 3).map(p => ({ ...p, isNew: true })),
+    };
+  }, [publicProjects]);
+
   return (
     <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900 pb-20">
       <section className="relative pt-24 pb-32 lg:pt-32 lg:pb-40 overflow-hidden">
@@ -196,17 +138,17 @@ const Home = () => {
 
         <div className="container mx-auto px-4 md:px-8 max-w-7xl relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-            
+
             <div className="max-w-xl">
               <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium text-purple-600 mb-6 border border-white/50 shadow-sm">
                 <Sparkles size={16} /> ผลงานพัฒนาระบบซอฟต์แวร์ของนักศึกษา
               </div>
-              
+
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 text-foreground">
                 ลงทุนโปรเจกต์ที่ใช่ <br />
                 กับ <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">FlyUp</span>
               </h1>
-              
+
               <p className="text-gray-500 text-lg mb-8 leading-relaxed font-medium">
                 เปิดตัวไอเดียของคุณ สร้างโปรเจกต์ซอฟต์แวร์ที่มีพลัง<br/>
                 บนแพลตฟอร์มระดมทุนสำหรับนักศึกษา
@@ -216,7 +158,7 @@ const Home = () => {
                 <button className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
                   สร้างโปรเจกต์ <ChevronRight size={18} />
                 </button>
-                
+
                 <Link to="/projects" className="bg-background hover:bg-muted text-foreground px-8 py-3 rounded-full font-medium transition-colors border border-border shadow-sm inline-block">
                   ค้นหาโครงการ
                 </Link>
@@ -227,7 +169,7 @@ const Home = () => {
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] opacity-50 z-0"
                 style={{ background: "radial-gradient(circle, rgba(168,85,247,0.15) 0%, transparent 70%)" }}
               ></div>
-              
+
               <img
                 src="/flyup-mascot.png"
                 alt="FlyUp Mascot"
@@ -239,6 +181,7 @@ const Home = () => {
         </div>
       </section>
 
+      {/* ── Recommended Section ── */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4 md:px-8 max-w-7xl">
           <div className="flex justify-between items-end mb-8">
@@ -251,65 +194,79 @@ const Home = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Link to={`/projects/${recommendedMain.id}`} className="lg:col-span-2 cursor-pointer group">
-              <div className="bg-gray-100 rounded-3xl overflow-hidden relative h-[300px] md:h-[400px] mb-4">
-                <img src={recommendedMain.image} alt={recommendedMain.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-              </div>
-              <h3 className="text-2xl font-bold mb-2">{recommendedMain.title}</h3>
-              <p className="text-gray-500 mb-4">{recommendedMain.description}</p>
-
-              <div className="w-full h-2 bg-gray-100 rounded-full mb-3">
-                <div className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full" style={{ width: `${recommendedMain.progress}%` }}></div>
-              </div>
-
-              <div className="flex gap-6 items-center text-sm">
-                <span className="font-bold text-lg">฿{recommendedMain.raised.toLocaleString()}</span>
-                <span className="text-gray-500">ระดมทุนแล้ว {recommendedMain.progress}%</span>
-                <span className="text-gray-500 flex items-center gap-1.5">
-                  <Clock size={16} className="text-gray-400" /> {recommendedMain.daysLeft} วัน
-                </span>
-              </div>
-            </Link>
-
-            <div className="flex flex-col gap-4">
-              {recommendedList.map(item => (
-                <Link
-                  key={item.id}
-                  to={`/projects/${item.id}`}
-                  className="flex gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-100"
-                >
-                  <img src={item.image} alt={item.title} className="w-24 h-24 rounded-xl object-cover" />
-                  <div className="flex-1 py-1">
-                    <h4 className="font-bold mb-1">{item.title}</h4>
-                    <p className="text-xs text-gray-500 mb-3">{item.description}</p>
-                    <div className="flex justify-between items-center text-xs font-medium">
-                      <span>฿{item.raised.toLocaleString()}</span>
-                      <span className="text-gray-500">{item.progress}%</span>
-                      <span className="text-gray-500 flex items-center gap-1">
-                        <Clock size={14} className="text-gray-400" /> {item.daysLeft} วัน
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 size={32} className="animate-spin text-primary" />
             </div>
-          </div>
+          ) : recommendedMain ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <Link to={`/projects/${recommendedMain.id}`} className="lg:col-span-2 cursor-pointer group">
+                <div className="bg-gray-100 rounded-3xl overflow-hidden relative h-[300px] md:h-[400px] mb-4">
+                  <img src={recommendedMain.thumbnail_url || PLACEHOLDER_IMG} alt={recommendedMain.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">{recommendedMain.title}</h3>
+                <p className="text-gray-500 mb-4">{recommendedMain.description || 'ยังไม่มีรายละเอียด'}</p>
+
+                <div className="w-full h-2 bg-gray-100 rounded-full mb-3">
+                  <div className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full" style={{ width: `${getProgress(recommendedMain)}%` }}></div>
+                </div>
+
+                <div className="flex gap-6 items-center text-sm">
+                  <span className="font-bold text-lg">฿{recommendedMain.current_funding.toLocaleString()}</span>
+                  <span className="text-gray-500">ระดมทุนแล้ว {getProgress(recommendedMain)}%</span>
+                  <span className="text-gray-500 flex items-center gap-1.5">
+                    <Clock size={16} className="text-gray-400" /> {getDaysLeft(recommendedMain)} วัน
+                  </span>
+                </div>
+              </Link>
+
+              <div className="flex flex-col gap-4">
+                {recommendedList.map(item => (
+                  <Link
+                    key={item.id}
+                    to={`/projects/${item.id}`}
+                    className="flex gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-100"
+                  >
+                    <img src={item.thumbnail_url || PLACEHOLDER_IMG} alt={item.title} className="w-24 h-24 rounded-xl object-cover" />
+                    <div className="flex-1 py-1">
+                      <h4 className="font-bold mb-1">{item.title}</h4>
+                      <p className="text-xs text-gray-500 mb-3">{item.description || 'ยังไม่มีรายละเอียด'}</p>
+                      <div className="flex justify-between items-center text-xs font-medium">
+                        <span>฿{item.current_funding.toLocaleString()}</span>
+                        <span className="text-gray-500">{getProgress(item)}%</span>
+                        <span className="text-gray-500 flex items-center gap-1">
+                          <Clock size={14} className="text-gray-400" /> {getDaysLeft(item)} วัน
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-12">ยังไม่มีโปรเจกต์</p>
+          )}
         </div>
       </section>
 
+      {/* ── Hot Projects ── */}
       <section className="py-16">
         <div className="container mx-auto px-4 md:px-8 max-w-7xl">
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">ใกล้สำเร็จแล้ว! <Flame className="text-orange-500" /></h2>
             <p className="text-sm text-gray-500">โปรเจกต์เหล่านี้เกือบถึงเป้าหมายระดมทุนแล้ว อย่าพลาด!</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {hotProjects.map(project => <ProjectCard key={project.id} project={project} />)}
-          </div>
+          {hotProjects.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {hotProjects.map(project => <ProjectCard key={project.id} project={project} />)}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">ยังไม่มีโปรเจกต์ที่ใกล้สำเร็จ</p>
+          )}
         </div>
       </section>
 
+      {/* ── New Projects ── */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4 md:px-8 max-w-7xl">
           <div className="flex justify-between items-end mb-8">
@@ -318,30 +275,32 @@ const Home = () => {
               ดูทั้งหมด <ChevronRight size={16} />
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {newProjects.map(project => <ProjectCard key={project.id} project={project} />)}
-          </div>
+          {newProjects.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {newProjects.map(project => <ProjectCard key={project.id} project={project} />)}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">ยังไม่มีโปรเจกต์ใหม่</p>
+          )}
         </div>
       </section>
 
+      {/* ── Stats ── */}
       <section className="py-20 bg-card">
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { icon: Rocket, label: 'โปรเจกต์ที่ได้รับทุน', value: '120+' },
-              { icon: TrendingUp, label: 'ยอดระดมทุนรวม', value: '฿2.4M' },
-              { icon: Users, label: 'ผู้สนับสนุนที่ใช้งาน', value: '3,200+' },
-              { icon: ShieldCheck, label: 'Milestone ที่ผ่าน', value: '480+' },
+              { icon: Rocket, label: 'โปรเจกต์ที่ได้รับทุน', value: `${publicProjects.length}+` },
+              { icon: TrendingUp, label: 'ยอดระดมทุนรวม', value: `฿${publicProjects.reduce((sum, p) => sum + p.current_funding, 0).toLocaleString()}` },
+              { icon: Users, label: 'ผู้สนับสนุนที่ใช้งาน', value: '—' },
+              { icon: ShieldCheck, label: 'Milestone ที่ผ่าน', value: '—' },
             ].map((stat, i) => {
               const Icon = stat.icon;
-              
               return (
                 <div key={i} className="flex flex-col items-center group cursor-pointer">
-                  
                   <div className="bg-primary-light p-4 rounded-2xl text-primary mb-4 transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:shadow-lg">
                     <Icon size={28} strokeWidth={1.5} className="transition-transform duration-300 group-hover:scale-110" />
                   </div>
-                  
                   <h3 className="text-3xl font-black mb-2 text-foreground tracking-tight">{stat.value}</h3>
                   <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
                 </div>
@@ -351,7 +310,8 @@ const Home = () => {
         </div>
       </section>
 
-<section className="py-24 bg-card">
+      {/* ── How It Works ── */}
+      <section className="py-24 bg-card">
         <div className="container mx-auto px-4 md:px-8 max-w-6xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
             <div className="text-center md:text-left">
@@ -359,7 +319,7 @@ const Home = () => {
                 FLYUP<br />ทำงานอย่างไร
               </h2>
             </div>
-            
+
             <div className="flex flex-col gap-10">
               <div className="flex gap-6 items-start group cursor-pointer">
                 <div className="text-foreground bg-background p-4 rounded-2xl transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:bg-primary-light group-hover:shadow-md">

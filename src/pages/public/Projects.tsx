@@ -1,111 +1,47 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import type { ElementType } from 'react';
 import {
   Search, ChevronDown, Flame, Sparkles,
   LayoutGrid, Laptop, Smartphone, Bot, Briefcase,
-  Rocket, BookOpen, ShieldCheck, Wifi, Gamepad2
+  Rocket, BookOpen, ShieldCheck, Wifi, Gamepad2, Loader2
 } from 'lucide-react';
+import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
 
-interface Project {
-  id: number;
-  title: string;
-  description: string;
-  image: string;
-  category: string;
-  progress: number;
-  raised: number;
-  daysLeft: number;
-  isHot?: boolean;
-  isNew?: boolean;
+// ─── Category icon mapping ──────────────────────────────────────────────────
+
+const categoryIconMap: Record<string, ElementType> = {
+  'Technology': Laptop,
+  'AI': Bot,
+  'FinTech': Briefcase,
+  'EdTech': BookOpen,
+  'HealthTech': Rocket,
+  'Gaming': Gamepad2,
+  'Environment': Wifi,
+  'Social Impact': ShieldCheck,
+  'Education': BookOpen,
+  'Others': LayoutGrid,
+  // legacy
+  'Web App': Laptop,
+  'Mobile App': Smartphone,
+  'AI/ML': Bot,
+  'Business': Briefcase,
+  'Fintech / Blockchain': Rocket,
+  'Cybersecurity': ShieldCheck,
+  'IoT': Wifi,
+  'Game': Gamepad2,
+};
+
+function getCategoryIcon(name: string | null): ElementType {
+  if (!name) return LayoutGrid;
+  return categoryIconMap[name] || LayoutGrid;
 }
 
-interface CategoryConfig {
-  name: string;
-  icon: ElementType;
-}
-
-const categoriesMap: CategoryConfig[] = [
-  { name: 'ทั้งหมด', icon: LayoutGrid },
-  { name: 'Web App', icon: Laptop },
-  { name: 'Mobile App', icon: Smartphone },
-  { name: 'AI/ML', icon: Bot },
-  { name: 'Business', icon: Briefcase },
-  { name: 'Fintech / Blockchain', icon: Rocket },
-  { name: 'Education', icon: BookOpen },
-  { name: 'Cybersecurity', icon: ShieldCheck },
-  { name: 'IoT', icon: Wifi },
-  { name: 'Game', icon: Gamepad2 }
-];
-
-const mockProjects: Project[] = [
-  {
-    id: 6,
-    title: 'DormMate',
-    description: 'แอปหาเพื่อนร่วมหอพักมหาวิทยาลัย ฟีเจอร์ใหม่เพียบ',
-    image: 'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&q=80&w=800',
-    category: 'Mobile App',
-    progress: 72,
-    raised: 21000,
-    daysLeft: 15,
-    isHot: true,
-  },
-  {
-    id: 5,
-    title: 'UniTrack',
-    description: 'แอปนำทางในมหาวิทยาลัยอัจฉริยะสำหรับนักศึกษา',
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800',
-    category: 'Mobile App',
-    progress: 15,
-    raised: 1000,
-    daysLeft: 55,
-    isNew: true,
-  },
-  {
-    id: 4,
-    title: 'Smart Farm IoT',
-    description: 'ระบบจัดการฟาร์มอัจฉริยะสำหรับเกษตรกรยุคใหม่',
-    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800',
-    category: 'IoT',
-    progress: 45,
-    raised: 15000,
-    daysLeft: 30,
-  },
-  {
-    id: 3,
-    title: 'Crypto Learn',
-    description: 'แพลตฟอร์มเรียนรู้การลงทุน Blockchain สำหรับมือใหม่',
-    image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&q=80&w=800',
-    category: 'Fintech / Blockchain',
-    progress: 90,
-    raised: 45000,
-    daysLeft: 5,
-    isHot: true,
-  },
-  {
-    id: 2,
-    title: 'EduQuest',
-    description: 'เกมการศึกษา RPG สำหรับเด็กประถม',
-    image: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80&w=800',
-    category: 'Game',
-    progress: 20,
-    raised: 5000,
-    daysLeft: 40,
-    isNew: true,
-  },
-  {
-    id: 1,
-    title: 'CyberShield',
-    description: 'เว็บแอปตรวจสอบช่องโหว่เว็บไซต์เบื้องต้น',
-    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=800',
-    category: 'Cybersecurity',
-    progress: 100,
-    raised: 50000,
-    daysLeft: 0,
-  }
-];
+// ─── Component ───────────────────────────────────────────────────────────────
 
 const Projects = () => {
+  const { publicProjects, categories, isLoading, fetchPublicProjects, fetchCategories } = usePublicProjectStore();
+
   const [activeCategory, setActiveCategory] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('category') || 'ทั้งหมด';
@@ -114,18 +50,31 @@ const Projects = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('q') || '';
   });
-
   const [sortOrder, setSortOrder] = useState<'latest' | 'oldest'>('latest');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
 
+  useEffect(() => {
+    fetchPublicProjects();
+    fetchCategories();
+  }, [fetchPublicProjects, fetchCategories]);
+
+  const categoryList = useMemo(() => {
+    const allOption = { name: 'ทั้งหมด', icon: LayoutGrid };
+    const apiCategories = categories.map(c => ({
+      name: c.name,
+      icon: getCategoryIcon(c.name),
+    }));
+    return [allOption, ...apiCategories];
+  }, [categories]);
+
   const filteredProjects = useMemo(() => {
-    let result = [...mockProjects];
+    let result = [...publicProjects];
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(project =>
         project.title.toLowerCase().includes(query) ||
-        project.description.toLowerCase().includes(query)
+        (project.description || '').toLowerCase().includes(query)
       );
     }
 
@@ -138,7 +87,18 @@ const Projects = () => {
     });
 
     return result;
-  }, [activeCategory, searchQuery, sortOrder]);
+  }, [publicProjects, activeCategory, searchQuery, sortOrder]);
+
+  const getProgress = (p: PublicProject) => {
+    if (!p.funding_goal || p.funding_goal === 0) return 0;
+    return Math.min(Math.round((p.current_funding / p.funding_goal) * 100), 100);
+  };
+
+  const getDaysLeft = (p: PublicProject) => {
+    if (!p.end_date) return p.duration_days || 0;
+    const diff = new Date(p.end_date).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
 
   return (
     <div className="bg-background min-h-screen pb-20 font-sans text-foreground mt-[100px]">
@@ -194,7 +154,7 @@ const Projects = () => {
         </div>
 
         <div className="flex overflow-x-auto gap-2.5 pb-3 mb-6 md:mb-8 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-          {categoriesMap.map((category) => {
+          {categoryList.map((category) => {
             const Icon = category.icon;
             const isActive = activeCategory === category.name;
             return (
@@ -213,11 +173,19 @@ const Projects = () => {
           })}
         </div>
 
-        {filteredProjects.length > 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16 md:py-20">
+            <Loader2 size={32} className="animate-spin text-primary mb-4" />
+            <p className="text-sm text-muted-foreground">กำลังโหลดโปรเจกต์...</p>
+          </div>
+        ) : filteredProjects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             {filteredProjects.map((project) => {
-              const categoryConfig = categoriesMap.find(category => category.name === project.category);
-              const ProjectCategoryIcon = categoryConfig ? categoryConfig.icon : LayoutGrid;
+              const ProjectCategoryIcon = getCategoryIcon(project.category);
+              const progress = getProgress(project);
+              const daysLeft = getDaysLeft(project);
+              const isHot = progress >= 70;
+              const isNew = (Date.now() - new Date(project.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
 
               return (
                 <Link
@@ -227,18 +195,18 @@ const Projects = () => {
                 >
                   <div className="relative h-48 w-full overflow-hidden bg-muted">
                     <img
-                      src={project.image}
+                      src={project.thumbnail_url || `https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800`}
                       alt={project.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-3 right-3 flex gap-2">
-                      {project.isHot && (
+                      {isHot && (
                         <div className="bg-error text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-md">
                           <Flame size={14} fill="currentColor" />
-                          {project.progress}%
+                          {progress}%
                         </div>
                       )}
-                      {project.isNew && (
+                      {isNew && !isHot && (
                         <div className="bg-[image:var(--gradient-primary)] text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-md">
                           <Sparkles size={14} fill="currentColor" />
                           ใหม่
@@ -250,31 +218,33 @@ const Projects = () => {
                   <div className="p-4 md:p-5 flex flex-col flex-1">
                     <div className="flex justify-between items-start mb-2 gap-2">
                       <h3 className="text-base md:text-lg font-bold line-clamp-1 flex-1">{project.title}</h3>
-                      <span className="flex items-center gap-1 text-xs font-medium text-primary bg-primary-light border border-primary/20 px-2 py-1 rounded-full whitespace-nowrap">
-                        <ProjectCategoryIcon size={12} />
-                        {project.category}
-                      </span>
+                      {project.category && (
+                        <span className="flex items-center gap-1 text-xs font-medium text-primary bg-primary-light border border-primary/20 px-2 py-1 rounded-full whitespace-nowrap">
+                          <ProjectCategoryIcon size={12} />
+                          {project.category}
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-4 h-10">
-                      {project.description}
+                      {project.description || 'ยังไม่มีรายละเอียด'}
                     </p>
 
                     <div className="w-full h-1.5 bg-muted rounded-full mb-3 overflow-hidden mt-auto">
                       <div
                         className="h-full bg-primary rounded-full transition-all duration-500"
-                        style={{ width: `${project.progress}%` }}
+                        style={{ width: `${progress}%` }}
                       ></div>
                     </div>
 
                     <div className="flex justify-between items-center pt-2 border-t border-dashed border-border">
                       <div>
                         <p className="text-xs text-muted-foreground mb-0.5">ระดมทุนแล้ว</p>
-                        <span className="text-sm md:text-base font-bold text-primary">{project.raised.toLocaleString()} ฿</span>
+                        <span className="text-sm md:text-base font-bold text-primary">{project.current_funding.toLocaleString()} ฿</span>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground mb-0.5">เหลือเวลา</p>
-                        <span className="text-sm font-medium text-foreground">{project.daysLeft} วัน</span>
+                        <span className="text-sm font-medium text-foreground">{daysLeft} วัน</span>
                       </div>
                     </div>
                   </div>
