@@ -10,8 +10,18 @@ const Step4Agreement = () => {
   const { projectId } = useParams();
   const { currentProject } = useProjectStore();
 
-  // State สำหรับเก็บค่าการยอมรับข้อตกลงและเงื่อนไข
-  const [isAgreed, setIsAgreed] = useState(false);
+  const allMilestonesComplete = currentProject.milestones?.length === 4 &&
+    currentProject.milestones.every(m => !!m.title && !!m.description && !!m.startDate && !!m.endDate);
+
+  // State สำหรับเก็บค่าการยอมรับข้อตกลงและเงื่อนไข — sync กับ localStorage
+  const [isAgreed, setIsAgreed] = useState(() =>
+    projectId ? localStorage.getItem(`agreed_${projectId}`) === 'true' : false
+  );
+
+  const handleAgreedChange = (checked: boolean) => {
+    setIsAgreed(checked);
+    if (projectId) localStorage.setItem(`agreed_${projectId}`, String(checked));
+  };
 
   // State สำหรับเปิด/ปิด Modal ยืนยันการส่งโปรเจกต์
   const [showModal, setShowModal] = useState(false);
@@ -63,9 +73,6 @@ const Step4Agreement = () => {
               <div className="flex flex-col gap-[8px]">
                 <span className="text-[14px] text-foreground font-semibold">เป้าหมาย:<span className="font-normal ml-2">{currentProject.fundingGoal ? `${formatCurrency(currentProject.fundingGoal)} บาท` : '-'}</span></span>
               </div>
-              <div className="flex flex-col gap-[8px]">
-                <span className="text-[14px] text-foreground font-semibold">รูปแบบ:<span className="font-normal ml-2">-</span></span>
-              </div>
 
               <div className="flex flex-col gap-[8px]">
                 <span className="text-[14px] text-foreground font-semibold">ระยะเวลา:<span className="font-normal ml-2">{currentProject.projectDuration ? `${currentProject.projectDuration} เดือน` : '-'}</span></span>
@@ -73,18 +80,9 @@ const Step4Agreement = () => {
               <div className="flex flex-col gap-[8px]">
                 <span className="text-[14px] text-foreground font-semibold">ส่วนแบ่งกำไร:<span className="font-normal ml-2">{currentProject.revenueShare ? `${currentProject.revenueShare}%` : '-'}</span></span>
               </div>
-            </div>
-
-            {/* เส้นคั่นส่วนข้อมูล Milestone */}
-            <hr className="border-border my-[10px]" />
-
-            <div className="flex flex-col gap-[8px]">
-              <span className="text-[14px] text-foreground font-semibold">Milestone:
-                <span className="font-normal ml-2">
-                  {/* นับจำนวน Milestone ที่มีการตั้งชื่อไว้ หรือแสดง 0 ถ้ายิ่งไม่มี */}
-                  {currentProject.milestones?.filter(m => m.title).length || 0} ระยะ
-                </span>
-              </span>
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[14px] text-foreground font-semibold">Milestone:<span className="font-normal ml-2">{currentProject.milestones?.filter(m => m.title).length || 0} ระยะ</span></span>
+              </div>
             </div>
           </div>
         </div>
@@ -116,7 +114,7 @@ const Step4Agreement = () => {
                 <input
                   type="checkbox"
                   checked={isAgreed}
-                  onChange={(e) => setIsAgreed(e.target.checked)}
+                  onChange={(e) => handleAgreedChange(e.target.checked)}
                   className="w-5 h-5 accent-primary rounded cursor-pointer"
                 />
                 <span className="text-[14px] text-foreground font-medium">
@@ -133,7 +131,7 @@ const Step4Agreement = () => {
             ========================================= */}
         <StepNavigation
           onSubmit={() => setShowModal(true)}
-          disableSubmit={!isAgreed}
+          disableSubmit={!isAgreed || !allMilestonesComplete}
         />
       </div>
 
