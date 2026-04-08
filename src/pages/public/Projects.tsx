@@ -89,6 +89,8 @@ const Projects = () => {
     return result;
   }, [publicProjects, activeCategory, searchQuery, sortOrder]);
 
+  const now = useMemo(() => Date.now(), []);
+
   const getProgress = (p: PublicProject) => {
     if (!p.funding_goal || p.funding_goal === 0) return 0;
     return Math.min(Math.round((p.current_funding / p.funding_goal) * 100), 100);
@@ -96,7 +98,7 @@ const Projects = () => {
 
   const getDaysLeft = (p: PublicProject) => {
     if (!p.end_date) return p.duration_days || 0;
-    const diff = new Date(p.end_date).getTime() - Date.now();
+    const diff = new Date(p.end_date).getTime() - now;
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   };
 
@@ -185,7 +187,7 @@ const Projects = () => {
               const progress = getProgress(project);
               const daysLeft = getDaysLeft(project);
               const isHot = progress >= 70;
-              const isNew = (Date.now() - new Date(project.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
+              const isNew = (now - new Date(project.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
 
               return (
                 <Link

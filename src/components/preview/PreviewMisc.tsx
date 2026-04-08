@@ -1,7 +1,7 @@
-import type { Update, Question, Comment } from '../../store/useProjectDetailStore';
+import type { ProjectUpdate, ProjectFAQ, ProjectThread } from '../../store/useProjectDetailStore';
 
 interface PreviewUpdateProps {
-  updates: Update[];
+  updates: ProjectUpdate[];
 }
 
 export const PreviewUpdate = ({ updates }: PreviewUpdateProps) => {
@@ -19,10 +19,10 @@ export const PreviewUpdate = ({ updates }: PreviewUpdateProps) => {
         <div key={idx} className="bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[12px]">
           <div className="flex items-center gap-[6px] text-muted-foreground text-[13px]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-            {u.date}
+            {u.created_at}
           </div>
           <h3 className="text-[18px] font-bold text-foreground">{u.title}</h3>
-          <p className="text-[14px] text-muted-foreground">{u.description}</p>
+          <p className="text-[14px] text-muted-foreground">{u.content}</p>
         </div>
       ))}
     </div>
@@ -30,7 +30,7 @@ export const PreviewUpdate = ({ updates }: PreviewUpdateProps) => {
 };
 
 interface PreviewQuestionProps {
-  questions: Question[];
+  questions: ProjectFAQ[];
 }
 
 export const PreviewQuestion = ({ questions }: PreviewQuestionProps) => {
@@ -62,7 +62,7 @@ export const PreviewQuestion = ({ questions }: PreviewQuestionProps) => {
 };
 
 interface PreviewCommentProps {
-  comments: Comment[];
+  comments: ProjectThread[];
 }
 
 export const PreviewComment = ({ comments }: PreviewCommentProps) => {
@@ -80,19 +80,14 @@ export const PreviewComment = ({ comments }: PreviewCommentProps) => {
         <div key={c.id} className="bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[12px]">
           <div className="flex items-center gap-[10px]">
             <div className="w-[36px] h-[36px] rounded-full bg-gray-200 flex items-center justify-center text-foreground font-bold text-[14px]">
-              {c.user?.[0] ?? '?'}
+              {c.user_name?.[0] ?? '?'}
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-[8px]">
-                <span className="text-[14px] font-bold text-foreground">{c.user}</span>
-                {c.badge && (
-                  <span className="px-[8px] py-[2px] rounded-full bg-primary/10 text-primary text-[11px] font-medium">{c.badge}</span>
-                )}
-              </div>
-              <span className="text-[12px] text-muted-foreground">{c.time}</span>
+              <span className="text-[14px] font-bold text-foreground">{c.user_name}</span>
+              <span className="text-[12px] text-muted-foreground">{c.created_at}</span>
             </div>
           </div>
-          <p className="text-[14px] text-muted-foreground">{c.text}</p>
+          <p className="text-[14px] text-muted-foreground">{c.body}</p>
         </div>
       ))}
     </div>

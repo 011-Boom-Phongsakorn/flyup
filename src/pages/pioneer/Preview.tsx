@@ -12,14 +12,14 @@ const Preview = () => {
     const navigate = useNavigate();
     const { projectId } = useParams();
     const { currentProject, loadCurrentProject } = useProjectStore();
-    const { updates, questions, comments, fetchProjectDetail } = useProjectDetailStore();
+    const { updates, faqs, threads, fetchAll } = useProjectDetailStore();
     const { authUser } = useAuthStore();
     const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
 
     useEffect(() => {
         if (projectId) {
             loadCurrentProject(Number(projectId));
-            fetchProjectDetail(Number(projectId));
+            fetchAll(Number(projectId));
         }
     }, [projectId]);
 
@@ -141,13 +141,13 @@ const Preview = () => {
                                 onClick={() => setActiveTab('comment')}
                                 className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'comment' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
-                                ความคิดเห็น ({comments.length})
+                                ความคิดเห็น ({threads.length})
                             </button>
                             <button
                                 onClick={() => setActiveTab('question')}
                                 className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'question' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
-                                คำถาม ({questions.length})
+                                คำถาม ({faqs.length})
                             </button>
                         </div>
 
@@ -156,8 +156,8 @@ const Preview = () => {
                             {activeTab === 'story' && <PreviewStory story={currentProject.story} risks={currentProject.risks} />}
                             {activeTab === 'milestone' && <PreviewMilestone milestones={currentProject.milestones ?? []} />}
                             {activeTab === 'update' && <PreviewUpdate updates={updates} />}
-                            {activeTab === 'comment' && <PreviewComment comments={comments} />}
-                            {activeTab === 'question' && <PreviewQuestion questions={questions} />}
+                            {activeTab === 'comment' && <PreviewComment comments={threads} />}
+                            {activeTab === 'question' && <PreviewQuestion questions={faqs} />}
                         </div>
                     </div>
 

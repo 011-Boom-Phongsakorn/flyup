@@ -25,7 +25,7 @@ interface InvestmentStoreState {
   investmentData: InvestmentData | null;
 
   createInvestment: (data: CreateInvestmentData) => Promise<boolean>;
-  getInvestmentById: (id: number) => Promise<any>;
+  getInvestmentById: (id: number) => Promise<unknown>;
   clearInvestmentData: () => void;
 }
 
@@ -42,10 +42,11 @@ export const useInvestmentStore = create<InvestmentStoreState>((set) => ({
       const resData = response.data?.data;
       set({ isSubmitting: false, investmentData: resData });
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({ isSubmitting: false });
       console.error('Error creating investment:', error);
-      toast.error(error.response?.data?.message || 'เกิดข้อผิดพลาดในการสร้างรายการลงทุน');
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'เกิดข้อผิดพลาดในการสร้างรายการลงทุน');
       return false;
     }
   },
