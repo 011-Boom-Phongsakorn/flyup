@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Menu, X, LayoutDashboard, ChevronDown, Settings, LogOut } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuthStore } from '../store/useAuthStore';
 import { usePublicProjectStore } from '../store/usePublicProjectStore';
 
@@ -12,8 +12,15 @@ const Navbar = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const { authUser, logout } = useAuthStore();
+    const { publicProjects, fetchPublicProjects } = usePublicProjectStore();
     const navigate = useNavigate();
     const location = useLocation();
+
+    const suggestions = publicProjects.filter((p) =>
+        searchQuery.trim() &&
+        (p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+    ).slice(0, 5);
     const suggestionRef = useRef<HTMLDivElement>(null);
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -261,7 +268,7 @@ const Navbar = () => {
                                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-all text-left"
                                     >
                                         <div className="w-9 h-9 flex-shrink-0 rounded-lg overflow-hidden border border-border">
-                                            <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                                            <img src={item.thumbnail_url || PLACEHOLDER_IMG} alt={item.title} className="w-full h-full object-cover" />
                                         </div>
                                         <div className="flex flex-col min-w-0">
                                             <span className="text-[13px] font-semibold text-foreground truncate">{item.title}</span>
