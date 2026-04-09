@@ -45,14 +45,14 @@ const Router = () => {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
         const token = params.get('token')
-        if (token) {
+        const isVerifyPage = window.location.pathname === '/verify'
+        if (token && !isVerifyPage) {
             loginWithGoogleToken(token)
             params.delete('token')
             const newSearch = params.toString()
             window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)
-        } else {
-            checkAuth()
         }
+        checkAuth()
     }, [checkAuth, loginWithGoogleToken])
 
     if (isCheckingAuth && !authUser) {

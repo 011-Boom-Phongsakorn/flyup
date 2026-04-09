@@ -54,7 +54,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
     checkAuth: async () => {
         try {
             const response = await api.get('/user/me')
-            console.log(response?.data)
             set({ authUser: response?.data?.data })
         } catch {
             set({ authUser: null })
@@ -87,7 +86,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     },
     loginWithGoogleToken: (token) => {
         const decoded = jwtDecode(token) as DecodedUser
-        set({ authUser: decoded, isCheckingAuth: false })
+        set({ authUser: decoded })
     },
     login: async (data) => {
         set({ isLoggingIn: true })
@@ -113,7 +112,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
     logout: async () => {
         try {
             await api.post('/signout')
-            // console.log('sign out')
         } catch {
             // ignore
         } finally {
