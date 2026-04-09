@@ -111,7 +111,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     },
     logout: async () => {
         try {
-            await api.post('/signout')
+            await api.post('/user/signout')
         } catch {
             // ignore
         } finally {
