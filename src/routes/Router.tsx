@@ -34,6 +34,12 @@ import Preview from '../pages/pioneer/Preview'
 import MilestonePage from '../pages/pioneer/MilestonePage'
 import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
 
+// Admin
+import AdminLayout from '../layouts/AdminLayout';
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import ProjectApproval from '@/pages/admin/ProjectApproval';
+import AdminProjectDetail from '@/pages/admin/AdminProjectDetail';
+
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
     if (!authUser) return <Navigate to='/login' replace />
@@ -100,6 +106,14 @@ const Router = () => {
                                 <Route path='4' element={<Step4Agreement />} />
                             </Route>
                             <Route path='/preview/:projectId' element={<Preview />} />
+                        </Route>
+                    </Route>
+
+                    <Route>
+                        <Route element={<AdminLayout />}>
+                            <Route path='/admin/dashboard' element={<AdminDashboard />} />
+                            <Route path='/admin/projects-approval' element={<ProjectApproval />} />
+                            <Route path='/admin/projects/:id' element={<AdminProjectDetail />} />
                         </Route>
                     </Route>
                 </Routes>
