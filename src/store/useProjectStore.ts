@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 export interface ProjectMedia {
     id?: number;    // backend media ID (มีเมื่อถูก save แล้ว)
@@ -433,9 +434,31 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             const projectId = res.data?.data?.id ?? res.data?.id;
             set({ currentProject: { ...initialProject } });
             return projectId;
-        } catch (error) {
-            console.error(error);
-            toast.error('ไม่สามารถสร้างโปรเจกต์ได้');
+        } catch (error: any) {
+            const msg: string = error?.response?.data?.message ?? error?.message ?? '';
+            const isNotVerified =
+                msg.includes('not verified') ||
+                msg.includes('id card not verified') ||
+                msg.includes('student card not verified');
+
+            if (isNotVerified) {
+                const result = await Swal.fire({
+                    icon: 'warning',
+                    title: 'ยังไม่ได้ยืนยันตัวตน',
+                    text: 'กรุณายืนยันตัวตนก่อนสร้างโปรเจกต์',
+                    confirmButtonText: 'ไปยืนยันตัวตน',
+                    confirmButtonColor: '#8B5CF6',
+                    showCancelButton: true,
+                    cancelButtonText: 'ยกเลิก',
+                    cancelButtonColor: '#6B7280',
+                    reverseButtons: true,
+                });
+                if (result.isConfirmed) {
+                    window.location.href = '/pioneer/profile?tab=verify';
+                }
+            } else {
+                toast.error('ไม่สามารถสร้างโปรเจกต์ได้');
+            }
             return null;
         } finally {
             set({ isCreating: false });
