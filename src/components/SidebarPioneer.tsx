@@ -13,16 +13,25 @@ const menu = [
 
 const SidebarPioneer = () => {
     const navigate = useNavigate();
-    const { logout } = useAuthStore();
+    const { logout, authUser } = useAuthStore();
 
     const handleLogout = () => {
         logout();
         navigate('/');
     }
+
+    const initials = `${(authUser?.first_name as string)?.[0] ?? ""}${(authUser?.last_name as string)?.[0] ?? ""}`.toUpperCase() || "?";
+
     return (
         <aside className="bg-sidebar w-[230px] min-w-[230px] h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent">
             <div className="w-full flex flex-col items-center gap-[10px] pb-4">
-                <img src="/flyup-logo.png" alt="FlyUp" className="h-[48px] w-[48px] rounded-full border border-background" />
+                {authUser?.picture ? (
+                    <img src={authUser.picture as string} alt="Profile" className="h-[48px] w-[48px] rounded-full object-cover border border-background" />
+                ) : (
+                    <div className="h-[48px] w-[48px] rounded-full bg-sidebar-primary/20 border border-background flex items-center justify-center text-sidebar-primary text-[16px] font-bold">
+                        {initials}
+                    </div>
+                )}
                 <span className="text-sidebar-primary text-[14px] px-[8px] py-[2px] rounded-[20px] bg-sidebar-primary/20 font-medium">Pioneer</span>
             </div>
 

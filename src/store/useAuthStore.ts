@@ -4,13 +4,41 @@ import toast from 'react-hot-toast'
 import { jwtDecode } from 'jwt-decode'
 import { AxiosError } from 'axios'
 
+interface University {
+    id?: number;
+    name_th?: string;
+    name_en?: string;
+    province?: string;
+}
+
+interface StudentProfile {
+    bio?: string;
+    portfolio?: string;
+    skills?: string;
+    faculty?: string;
+    major?: string;
+    student_code?: string;
+    university_id?: number;
+    university?: University;
+}
+
+interface BankAccount {
+    id?: number;
+    bank_name?: string;
+    account_name?: string;
+    account_number?: string;
+}
+
 interface DecodedUser extends Record<string, unknown> {
     role?: string;
     email?: string;
     name?: string;
     first_name?: string;
     last_name?: string;
-    profile_url?: string;
+    phone?: string;
+    picture?: string;
+    student_profile?: StudentProfile;
+    bank_account?: BankAccount;
 }
 
 interface RegisterData {
