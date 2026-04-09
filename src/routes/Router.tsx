@@ -40,11 +40,19 @@ const PioneerGuard = () => {
 }
 
 const Router = () => {
-    const { authUser, checkAuth, isCheckingAuth } = useAuthStore()
+    const { authUser, checkAuth, isCheckingAuth, loginWithGoogleToken } = useAuthStore()
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const token = params.get('token')
+        if (token) {
+            loginWithGoogleToken(token)
+            params.delete('token')
+            const newSearch = params.toString()
+            window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)
+        }
         checkAuth()
-    }, [checkAuth])
+    }, [checkAuth, loginWithGoogleToken])
 
     if (isCheckingAuth && !authUser) {
         return (

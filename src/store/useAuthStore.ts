@@ -36,6 +36,7 @@ interface AuthStore {
     isLoggingIn: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
+    loginWithGoogleToken: (token: string) => void;
     logout: () => Promise<void>;
     isSendingReset: boolean;
     isResetting: boolean;
@@ -83,6 +84,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
         } finally {
             set({ isRegistering: false })
         }
+    },
+    loginWithGoogleToken: (token) => {
+        const decoded = jwtDecode(token) as DecodedUser
+        set({ authUser: decoded })
     },
     login: async (data) => {
         set({ isLoggingIn: true })
