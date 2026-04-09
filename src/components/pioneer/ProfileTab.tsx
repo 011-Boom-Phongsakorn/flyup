@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ShieldCheck, Camera, Phone, Briefcase, Link, FileBraces, Mail } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
@@ -10,13 +10,25 @@ const ProfileTab = () => {
     first_name: (authUser?.first_name as string) ?? "",
     last_name: (authUser?.last_name as string) ?? "",
     phone: (authUser?.phone as string) ?? "",
-    bio: (authUser?.bio as string) ?? "",
-    portfolio: (authUser?.portfolio as string) ?? "",
-    skills: (authUser?.skills as string) ?? "",
+    bio: authUser?.student_profile?.bio ?? "",
+    portfolio: authUser?.student_profile?.portfolio ?? "",
+    skills: authUser?.student_profile?.skills ?? "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // sync form เมื่อ authUser เปลี่ยน (หลัง checkAuth)
+  useEffect(() => {
+    setForm({
+      first_name: (authUser?.first_name as string) ?? "",
+      last_name: (authUser?.last_name as string) ?? "",
+      phone: (authUser?.phone as string) ?? "",
+      bio: authUser?.student_profile?.bio ?? "",
+      portfolio: authUser?.student_profile?.portfolio ?? "",
+      skills: authUser?.student_profile?.skills ?? "",
+    });
+  }, [authUser]);
 
   const initials = `${form.first_name[0] ?? ""}${form.last_name[0] ?? ""}`.toUpperCase() || "?";
 
@@ -71,8 +83,8 @@ const ProfileTab = () => {
       {/* Avatar */}
       <div className="bg-white border border-border rounded-[16px] p-[24px] flex items-center gap-[16px]">
         <div className="relative">
-          {authUser?.profile_url ? (
-            <img src={authUser.profile_url} alt="avatar" className="w-[72px] h-[72px] rounded-full object-cover" />
+          {authUser?.picture ? (
+            <img src={authUser.picture} alt="avatar" className="w-[72px] h-[72px] rounded-full object-cover" />
           ) : (
             <div className="w-[72px] h-[72px] rounded-full bg-primary/20 flex items-center justify-center text-primary text-[22px] font-bold">
               {initials}
@@ -94,8 +106,8 @@ const ProfileTab = () => {
           />
         </div>
         <div>
-          <p className="font-semibold text-foreground">{authUser?.first_name} {authUser?.last_name}</p>
-          <p className="text-[13px] text-muted-foreground">{authUser?.email}</p>
+          <p className="font-semibold text-foreground">{authUser?.first_name as string} {authUser?.last_name as string}</p>
+          <p className="text-[13px] text-muted-foreground">{authUser?.email as string}</p>
         </div>
       </div>
 
@@ -129,7 +141,7 @@ const ProfileTab = () => {
             <span><Mail size={14} /></span> อีเมล
           </label>
           <input
-            value={authUser?.email ?? ""}
+            value={(authUser?.email as string) ?? ""}
             disabled
             className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] bg-[#F8F9FA] text-muted-foreground cursor-not-allowed"
           />

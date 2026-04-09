@@ -1,27 +1,64 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Lock, Upload } from "lucide-react";
+
+const THAI_BANKS = [
+  "ธนาคารกรุงเทพ (BBL)",
+  "ธนาคารกสิกรไทย (KBANK)",
+  "ธนาคารกรุงไทย (KTB)",
+  "ธนาคารไทยพาณิชย์ (SCB)",
+  "ธนาคารกรุงศรีอยุธยา (BAY)",
+  "ธนาคารทหารไทยธนชาต (TTB)",
+  "ธนาคารออมสิน",
+  "ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร (ธ.ก.ส.)",
+  "ธนาคารอาคารสงเคราะห์ (GHB)",
+  "ธนาคารซีไอเอ็มบีไทย (CIMB)",
+  "ธนาคารแลนด์ แอนด์ เฮ้าส์ (LH Bank)",
+  "ธนาคารยูโอบี (UOB)",
+];
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 
 const VerifyTab = () => {
-  const { authUser } = useAuthStore();
+  const { authUser, checkAuth } = useAuthStore();
+
+  // ดึง student_code จาก student_profile หรือ derive จาก email prefix
+  const derivedStudentCode =
+    authUser?.student_profile?.student_code ??
+    (authUser?.email as string)?.split("@")[0] ??
+    "";
+
+  const universityName =
+    authUser?.student_profile?.university?.name_th ??
+    authUser?.student_profile?.university?.name_en ??
+    "";
+
   const [studentForm, setStudentForm] = useState({
-    university: (authUser?.university as string) ?? "",
-    faculty: (authUser?.faculty as string) ?? "",
-    student_id: (authUser?.student_id as string) ?? "",
+    faculty: authUser?.student_profile?.faculty ?? "",
   });
   const [studentFile, setStudentFile] = useState<File | null>(null);
   const [idCardFile, setIdCardFile] = useState<File | null>(null);
   const [bankForm, setBankForm] = useState({
-    bank_name: (authUser?.bank_name as string) ?? "",
-    account_name: (authUser?.bank_account_name as string) ?? "",
-    account_number: (authUser?.bank_account_no as string) ?? "",
+    bank_name: authUser?.bank_account?.bank_name ?? "",
+    account_name: authUser?.bank_account?.account_name ?? "",
+    account_number: authUser?.bank_account?.account_number ?? "",
   });
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptAccuracy, setAcceptAccuracy] = useState(false);
   const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [isSavingBank, setIsSavingBank] = useState(false);
+
+  // sync เมื่อ authUser เปลี่ยน (หลัง checkAuth)
+  useEffect(() => {
+    setStudentForm({
+      faculty: authUser?.student_profile?.faculty ?? "",
+    });
+    setBankForm({
+      bank_name: authUser?.bank_account?.bank_name ?? "",
+      account_name: authUser?.bank_account?.account_name ?? "",
+      account_number: authUser?.bank_account?.account_number ?? "",
+    });
+  }, [authUser]);
 
   const baseRequired = {
     first_name: (authUser?.first_name as string) ?? "",
@@ -64,7 +101,7 @@ const VerifyTab = () => {
       });
       const idCardUrl: string = idUploadRes.data.data.url;
 
-      // 3) บันทึก faculty ที่ profile
+      // 3) บันทึก faculty ถ้ากรอก
       if (studentForm.faculty) {
         await api.patch("/user/profile", { faculty: studentForm.faculty });
       }
@@ -79,10 +116,11 @@ const VerifyTab = () => {
       // 5) ส่งคำขอยืนยันบัตรประชาชน
       await api.post("/user/id-verify", {
         id_card_url: idCardUrl,
-        selfie_url: idCardUrl, // selfie แยกต่างหากถ้ามี
+        selfie_url: idCardUrl,
         declare_truth: acceptAccuracy,
       });
 
+      await checkAuth();
       toast.success("ส่งข้อมูลยืนยันตัวตนแล้ว รอ admin อนุมัติ");
     } catch {
       toast.error("เกิดข้อผิดพลาด");
@@ -98,12 +136,23 @@ const VerifyTab = () => {
     }
     setIsSavingBank(true);
     try {
-      await api.post("/user/add-bank", {
-        bank_name: bankForm.bank_name || undefined,
-        account_name: bankForm.account_name || undefined,
-        account_number: bankForm.account_number || undefined,
-      });
-      toast.success("ส่งข้อมูลบัญชีแล้ว");
+      if (authUser?.bank_account?.id) {
+        // มีบัญชีแล้ว → update
+        await api.patch(`/user/update-bank/${authUser.bank_account.id}`, {
+          bank_name: bankForm.bank_name || undefined,
+          account_name: bankForm.account_name || undefined,
+          account_number: bankForm.account_number || undefined,
+        });
+      } else {
+        // ยังไม่มีบัญชี → add
+        await api.post("/user/add-bank", {
+          bank_name: bankForm.bank_name || undefined,
+          account_name: bankForm.account_name || undefined,
+          account_number: bankForm.account_number || undefined,
+        });
+      }
+      await checkAuth();
+      toast.success("บันทึกข้อมูลบัญชีสำเร็จ");
     } catch {
       toast.error("เกิดข้อผิดพลาด");
     } finally {
@@ -120,29 +169,51 @@ const VerifyTab = () => {
           <h2 className="font-semibold text-foreground">ยืนยันตัวตนนักศึกษา</h2>
         </div>
 
-        {[
-          { key: "university", label: "มหาวิทยาลัย" },
-          { key: "faculty", label: "คณะ" },
-          { key: "student_id", label: "รหัสนักศึกษา" },
-        ].map(({ key, label }) => (
-          <div key={key} className="flex flex-col gap-[6px]">
-            <label className="text-[13px] font-medium text-foreground">{label}</label>
-            <input
-              value={studentForm[key as keyof typeof studentForm]}
-              onChange={(e) => setStudentForm((prev) => ({ ...prev, [key]: e.target.value }))}
-              className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
-            />
-          </div>
-        ))}
+        {/* มหาวิทยาลัย — read-only */}
+        <div className="flex flex-col gap-[6px]">
+          <label className="text-[13px] font-medium text-foreground">มหาวิทยาลัย</label>
+          <input
+            value={universityName}
+            disabled
+            className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] bg-[#F8F9FA] text-muted-foreground cursor-not-allowed"
+          />
+        </div>
+
+        {/* รหัสนักศึกษา — read-only */}
+        <div className="flex flex-col gap-[6px]">
+          <label className="text-[13px] font-medium text-foreground">รหัสนักศึกษา</label>
+          <input
+            value={derivedStudentCode}
+            disabled
+            className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] bg-[#F8F9FA] text-muted-foreground cursor-not-allowed"
+          />
+        </div>
+
+        {/* คณะ — แก้ไขได้ */}
+        <div className="flex flex-col gap-[6px]">
+          <label className="text-[13px] font-medium text-foreground">คณะ</label>
+          <input
+            value={studentForm.faculty}
+            onChange={(e) => setStudentForm((prev) => ({ ...prev, faculty: e.target.value }))}
+            placeholder="เช่น คณะวิทยาศาสตร์และเทคโนโลยี"
+            className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
+          />
+        </div>
 
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground">อัปโหลดบัตรนักศึกษา <span className="text-error">*</span></label>
-          <label className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
-            <Upload size={24} className="text-muted-foreground mb-2" />
+          <label className="border-2 border-dashed border-border rounded-xl overflow-hidden cursor-pointer hover:border-primary transition-colors">
             {studentFile ? (
-              <span className="text-[13px] text-primary font-medium">{studentFile.name}</span>
+              <img
+                src={URL.createObjectURL(studentFile)}
+                alt="บัตรนักศึกษา"
+                className="w-full max-h-[200px] object-contain"
+              />
             ) : (
-              <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+              <div className="p-8 flex flex-col items-center justify-center">
+                <Upload size={24} className="text-muted-foreground mb-2" />
+                <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+              </div>
             )}
             <input
               type="file"
@@ -155,12 +226,18 @@ const VerifyTab = () => {
 
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground">อัปโหลดบัตรประชาชน <span className="text-error">*</span></label>
-          <label className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
-            <Upload size={24} className="text-muted-foreground mb-2" />
+          <label className="border-2 border-dashed border-border rounded-xl overflow-hidden cursor-pointer hover:border-primary transition-colors">
             {idCardFile ? (
-              <span className="text-[13px] text-primary font-medium">{idCardFile.name}</span>
+              <img
+                src={URL.createObjectURL(idCardFile)}
+                alt="บัตรประชาชน"
+                className="w-full max-h-[200px] object-contain"
+              />
             ) : (
-              <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+              <div className="p-8 flex flex-col items-center justify-center">
+                <Upload size={24} className="text-muted-foreground mb-2" />
+                <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+              </div>
             )}
             <input
               type="file"
@@ -191,7 +268,7 @@ const VerifyTab = () => {
         <button
           onClick={handleStudentSubmit}
           disabled={isSavingStudent}
-          className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50"
+          className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50 cursor-pointer"
         >
           {isSavingStudent ? "กำลังส่ง..." : "ยืนยันตัวตน"}
         </button>
@@ -202,10 +279,26 @@ const VerifyTab = () => {
         <div className="flex items-center gap-[8px]">
           <Lock size={18} className="text-foreground" />
           <h2 className="font-semibold text-foreground">ยืนยันบัญชี</h2>
+          {authUser?.bank_account?.id && (
+            <span className="ml-auto text-[12px] text-muted-foreground bg-muted px-[8px] py-[2px] rounded-full">มีบัญชีอยู่แล้ว</span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-[6px]">
+          <label className="text-[13px] font-medium text-foreground">ธนาคาร</label>
+          <select
+            value={bankForm.bank_name}
+            onChange={(e) => setBankForm((prev) => ({ ...prev, bank_name: e.target.value }))}
+            className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer"
+          >
+            <option value="">-- เลือกธนาคาร --</option>
+            {THAI_BANKS.map((bank) => (
+              <option key={bank} value={bank}>{bank}</option>
+            ))}
+          </select>
         </div>
 
         {[
-          { key: "bank_name", label: "ธนาคาร" },
           { key: "account_name", label: "ชื่อบัญชี" },
           { key: "account_number", label: "เลขบัญชี" },
         ].map(({ key, label }) => (
@@ -222,9 +315,9 @@ const VerifyTab = () => {
         <button
           onClick={handleBankSubmit}
           disabled={isSavingBank}
-          className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50"
+          className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50 cursor-pointer"
         >
-          {isSavingBank ? "กำลังส่ง..." : "ยืนยันตัวตน"}
+          {isSavingBank ? "กำลังบันทึก..." : authUser?.bank_account?.id ? "อัปเดตบัญชี" : "เพิ่มบัญชี"}
         </button>
       </div>
     </div>
