@@ -434,8 +434,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             const projectId = res.data?.data?.id ?? res.data?.id;
             set({ currentProject: { ...initialProject } });
             return projectId;
-        } catch (error: any) {
-            const msg: string = error?.response?.data?.message ?? error?.message ?? '';
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } }; message?: string };
+            const msg: string = err?.response?.data?.message ?? err?.message ?? '';
             const isNotVerified =
                 msg.includes('not verified') ||
                 msg.includes('id card not verified') ||
