@@ -87,7 +87,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     },
     loginWithGoogleToken: (token) => {
         const decoded = jwtDecode(token) as DecodedUser
-        set({ authUser: decoded })
+        set({ authUser: decoded, isCheckingAuth: false })
     },
     login: async (data) => {
         set({ isLoggingIn: true })

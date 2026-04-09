@@ -50,8 +50,9 @@ const Router = () => {
             params.delete('token')
             const newSearch = params.toString()
             window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)
+        } else {
+            checkAuth()
         }
-        checkAuth()
     }, [checkAuth, loginWithGoogleToken])
 
     if (isCheckingAuth && !authUser) {
