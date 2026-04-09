@@ -56,10 +56,10 @@ const Navbar = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         setShowProfileMenu(false);
-        // navigate('/');
+        navigate('/');
     };
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
