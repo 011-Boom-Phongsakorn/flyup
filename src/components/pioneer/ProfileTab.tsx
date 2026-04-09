@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ShieldCheck, Camera, Phone, Briefcase, Link, FileBraces, Mail } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
@@ -15,11 +15,35 @@ const ProfileTab = () => {
     skills: (authUser?.skills as string) ?? "",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPicture, setIsUploadingPicture] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const initials = `${form.first_name[0] ?? ""}${form.last_name[0] ?? ""}`.toUpperCase() || "?";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handlePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingPicture(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const pictureUrl: string = uploadRes.data.data.url;
+      await api.patch("/user/profile", { picture: pictureUrl });
+      await checkAuth();
+      toast.success("เปลี่ยนรูปโปรไฟล์สำเร็จ");
+    } catch {
+      toast.error("อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setIsUploadingPicture(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleSave = async () => {
@@ -54,9 +78,20 @@ const ProfileTab = () => {
               {initials}
             </div>
           )}
-          <button className="absolute bottom-0 right-0 w-[22px] h-[22px] bg-primary rounded-full flex items-center justify-center">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingPicture}
+            className="absolute bottom-0 right-0 w-[22px] h-[22px] bg-primary rounded-full flex items-center justify-center disabled:opacity-60 cursor-pointer"
+          >
             <Camera size={12} className="text-white" />
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePictureChange}
+          />
         </div>
         <div>
           <p className="font-semibold text-foreground">{authUser?.first_name} {authUser?.last_name}</p>
