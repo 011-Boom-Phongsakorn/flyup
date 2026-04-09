@@ -30,7 +30,9 @@ import Step1Basics from '../components/steps/Step1Basics';
 import Step2Story from '../components/steps/Step2Story';
 import Step3Milestone from '../components/steps/Step3Milestone';
 import Step4Agreement from '../components/steps/Step4Agreement';
-import Preview from '../pages/pioneer/Preview';
+import Preview from '../pages/pioneer/Preview'
+import MilestonePage from '../pages/pioneer/MilestonePage'
+import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
 
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
@@ -83,6 +85,8 @@ const Router = () => {
                         <Route element={<PioneerLayout />}>
                             <Route path='/pioneer/dashboard' element={<Dashboard />} />
                             <Route path='/pioneer/dashboard/projects' element={<MyProjects />} />
+                            <Route path='/pioneer/dashboard/milestones' element={<MilestoneListPage />} />
+                            <Route path='/pioneer/dashboard/projects/:projectId/milestones' element={<MilestonePage />} />
                             <Route path='/pioneer/profile' element={<Profile />} />
                         </Route>
                         <Route element={<MainLayout />}>
