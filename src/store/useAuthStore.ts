@@ -22,6 +22,14 @@ interface StudentProfile {
     university?: University;
 }
 
+interface CardVerification {
+    id?: number;
+    document?: string;
+    selfie_url?: string;
+    status?: string;
+    verified_at?: string;
+}
+
 interface BankAccount {
     id?: number;
     bank_name?: string;
@@ -39,6 +47,8 @@ interface DecodedUser extends Record<string, unknown> {
     picture?: string;
     student_profile?: StudentProfile;
     bank_account?: BankAccount;
+    student_card_verification?: CardVerification;
+    id_card_verification?: CardVerification;
 }
 
 interface RegisterData {
