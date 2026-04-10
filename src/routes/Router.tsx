@@ -39,6 +39,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import ProjectApproval from '@/pages/admin/ProjectApproval';
 import AdminProjectDetail from '@/pages/admin/AdminProjectDetail';
+import VerificationApproval from '@/pages/admin/VerificationApproval';
 
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
@@ -114,6 +115,7 @@ const Router = () => {
                             <Route path='/admin/dashboard' element={<AdminDashboard />} />
                             <Route path='/admin/projects-approval' element={<ProjectApproval />} />
                             <Route path='/admin/projects/:id' element={<AdminProjectDetail />} />
+                            <Route path='/admin/verifications' element={<VerificationApproval />} />
                         </Route>
                     </Route>
                 </Routes>
