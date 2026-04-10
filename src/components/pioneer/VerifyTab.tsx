@@ -32,21 +32,13 @@ const VerifyTab = () => {
     authUser?.student_profile?.university?.name_en ??
     "";
 
-  const LS_KEY = `verify_${authUser?.email}`;
-
-  const getLocalVerify = () => {
-    try { return JSON.parse(localStorage.getItem(LS_KEY) ?? "{}"); } catch { return {}; }
-  };
-
-  // prefer backend data (after backend fix), fallback to localStorage
   const studentCardVerify = authUser?.student_card_verification;
   const idCardVerify = authUser?.id_card_verification;
-  const local = getLocalVerify();
 
-  const storedStudentCardUrl: string = studentCardVerify?.document ?? local.student_card_url ?? "";
-  const storedIdCardUrl: string = idCardVerify?.document ?? local.id_card_url ?? "";
-  const storedSelfieUrl: string = idCardVerify?.selfie_url ?? local.selfie_url ?? "";
-  const verifyStatus = studentCardVerify?.status ?? local.verify_status ?? "";
+  const storedStudentCardUrl: string = studentCardVerify?.document ?? "";
+  const storedIdCardUrl: string = idCardVerify?.document ?? "";
+  const storedSelfieUrl: string = idCardVerify?.selfie_url ?? "";
+  const verifyStatus = studentCardVerify?.status ?? "";
 
   const isVerified = verifyStatus === "approved";
   const isPending = verifyStatus === "pending";
@@ -85,8 +77,7 @@ const VerifyTab = () => {
       account_name: authUser?.bank_account?.account_name ?? "",
       account_number: authUser?.bank_account?.account_number ?? "",
     });
-    const lv = (() => { try { return JSON.parse(localStorage.getItem(`verify_${authUser?.email}`) ?? "{}"); } catch { return {}; } })();
-    const submitted = !!authUser?.student_card_verification?.document || authUser?.student_card_verification?.status === "approved" || !!lv.student_card_url;
+    const submitted = !!authUser?.student_card_verification?.document || authUser?.student_card_verification?.status === "approved";
     if (submitted) {
       setAcceptTerms(true);
       setAcceptAccuracy(true);
@@ -169,14 +160,6 @@ const VerifyTab = () => {
         selfie_url: selfieUrl,
         declare_truth: acceptAccuracy,
       });
-
-      // เก็บ URL และสถานะไว้ใน localStorage (fallback จนกว่า backend จะ preload verification records)
-      localStorage.setItem(LS_KEY, JSON.stringify({
-        student_card_url: studentCardUrl,
-        id_card_url: idCardUrl,
-        selfie_url: selfieUrl,
-        verify_status: "pending",
-      }));
 
       await checkAuth();
       toast.success("ส่งข้อมูลยืนยันตัวตนแล้ว รอ admin อนุมัติ");
