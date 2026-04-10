@@ -56,10 +56,10 @@ const Navbar = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         setShowProfileMenu(false);
-        // navigate('/');
+        navigate('/');
     };
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,7 +172,7 @@ const Navbar = () => {
                                         className="relative flex items-center justify-center focus:outline-none hover:opacity-90 transition-opacity"
                                     >
                                         <img
-                                            src={authUser.profile_url || "https://ui-avatars.com/api/?name=" + (authUser.email)}
+                                            src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
                                             alt="Profile"
                                             className="w-11 h-11 rounded-full object-cover border-2 border-transparent shadow-sm"
                                         />
@@ -185,7 +185,7 @@ const Navbar = () => {
                                         <div className="absolute top-[56px] right-0 w-[260px] bg-card border border-border rounded-[20px] shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[60]">
                                             <div className="flex items-center gap-3 px-5 py-4">
                                                 <img
-                                                    src={authUser.profile_url || "https://ui-avatars.com/api/?name=" + (authUser.email)}
+                                                    src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
                                                     alt="Profile"
                                                     className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                                                 />
@@ -250,7 +250,7 @@ const Navbar = () => {
                                     className="flex-shrink-0 w-[48px] h-[48px] rounded-full overflow-hidden border-2 border-transparent focus:outline-none"
                                 >
                                     <img
-                                        src={authUser.profile_url || "https://ui-avatars.com/api/?name=" + (authUser.email)}
+                                        src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
                                         alt="Profile"
                                         className="w-full h-full object-cover"
                                     />
@@ -284,7 +284,7 @@ const Navbar = () => {
                             <div className="border-t border-border pt-3 flex flex-col gap-1">
                                 <div className="flex items-center gap-3 px-2 py-2 mb-1">
                                     <img
-                                        src={authUser.profile_url || "https://ui-avatars.com/api/?name=" + (authUser.email)}
+                                        src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
                                         alt="Profile"
                                         className="w-9 h-9 rounded-full object-cover flex-shrink-0"
                                     />

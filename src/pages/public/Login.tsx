@@ -71,7 +71,7 @@ const Login = () => {
                         <img src="./flyup-logo.png" alt="flyup-logo.png" />
                         <h1 className="text-foreground text-[24px] font-semibold">ยินดีต้อนรับกลับ</h1>
                         <p className="text-muted-foreground text-[14px] font-medium">เข้าสู่ระบบบัญชี FlyUp ของคุณ</p>
-                        <Link to='/' className="flex items-center gap-[8px] mt-[24px] mb-[8px] h-[40px] bg-background border border-border rounded-[12px] justify-center w-full"><FcGoogle size={32} />เข้าสู่ระบบด้วย Google</Link>
+                        <a href={`${import.meta.env.VITE_BASE_URL}/auth/google?role=booster`} className="flex items-center gap-[8px] mt-[24px] mb-[8px] h-[40px] bg-background border border-border rounded-[12px] justify-center w-full"><FcGoogle size={32} />เข้าสู่ระบบด้วย Google</a>
                         <div className="flex items-center w-full gap-4 mb-[6px]">
                             <div className="flex-grow h-px bg-border"></div>
                             <span className="text-muted-foreground text-sm font-medium">หรือ</span>

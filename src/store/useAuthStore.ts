@@ -4,13 +4,51 @@ import toast from 'react-hot-toast'
 import { jwtDecode } from 'jwt-decode'
 import { AxiosError } from 'axios'
 
+interface University {
+    id?: number;
+    name_th?: string;
+    name_en?: string;
+    province?: string;
+}
+
+interface StudentProfile {
+    bio?: string;
+    portfolio?: string;
+    skills?: string;
+    faculty?: string;
+    major?: string;
+    student_code?: string;
+    university_id?: number;
+    university?: University;
+}
+
+interface CardVerification {
+    id?: number;
+    document?: string;
+    selfie_url?: string;
+    status?: string;
+    verified_at?: string;
+}
+
+interface BankAccount {
+    id?: number;
+    bank_name?: string;
+    account_name?: string;
+    account_number?: string;
+}
+
 interface DecodedUser extends Record<string, unknown> {
     role?: string;
     email?: string;
     name?: string;
     first_name?: string;
     last_name?: string;
-    profile_url?: string;
+    phone?: string;
+    picture?: string;
+    student_profile?: StudentProfile;
+    bank_account?: BankAccount;
+    student_card_verification?: CardVerification;
+    id_card_verification?: CardVerification;
 }
 
 interface RegisterData {
@@ -36,6 +74,7 @@ interface AuthStore {
     isLoggingIn: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
+    loginWithGoogleToken: (token: string) => void;
     logout: () => Promise<void>;
     isSendingReset: boolean;
     isResetting: boolean;
@@ -53,7 +92,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
     checkAuth: async () => {
         try {
             const response = await api.get('/user/me')
-            console.log(response?.data)
             set({ authUser: response?.data?.data })
         } catch {
             set({ authUser: null })
@@ -84,13 +122,16 @@ export const useAuthStore = create<AuthStore>((set) => ({
             set({ isRegistering: false })
         }
     },
+    loginWithGoogleToken: (token) => {
+        const decoded = jwtDecode(token) as DecodedUser
+        set({ authUser: decoded })
+    },
     login: async (data) => {
         set({ isLoggingIn: true })
         try {
-            const response = await api.post('/signin', data)
-            const token = response.data.token;
-            const decodeUser = jwtDecode(token) as DecodedUser
-            set({ authUser: decodeUser })
+            await api.post('/signin', data)
+            const meRes = await api.get('/user/me')
+            set({ authUser: meRes.data.data })
         } catch (error: unknown) {
             console.log(error)
             const err = error instanceof AxiosError ? error : null;
@@ -107,8 +148,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     },
     logout: async () => {
         try {
-            await api.post('/signout')
-            // console.log('sign out')
+            await api.post('/user/signout')
         } catch {
             // ignore
         } finally {

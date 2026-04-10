@@ -1,5 +1,6 @@
-import { BellIcon, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { useAuthStore } from '../store/useAuthStore'
+import NotificationBell from './NotificationBell'
 
 interface NavbarProps {
     onOpenSidebar: () => void;
@@ -21,10 +22,7 @@ const NavbarDashboard = ({ onOpenSidebar }: NavbarProps) => {
                 </button>
             </div>
             <div className="flex items-center gap-2 lg:gap-[17px]">
-                <div className="p-2 text-foreground hover:bg-background rounded-full transition-colors relative cursor-pointer">
-                    <BellIcon size={20} />
-                    {/* <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-white"></span> */}
-                </div>
+                <NotificationBell />
                 <div className="flex items-center">
                     <div className="flex flex-col items-end hidden sm:flex">
                         <span className="text-[14px] text-foreground">{displayName}</span>

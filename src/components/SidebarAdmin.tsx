@@ -1,0 +1,55 @@
+import { useAuthStore } from '@/store/useAuthStore'
+import { House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone, Wallet, MessageSquareWarning, ShieldBan, RotateCcw, FileText, Users, LogOut } from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router'
+
+const menu = [
+    { icon: <House size={20} />, title: 'หน้าหลัก', path: '/' },
+    { icon: <Search size={20} />, title: 'สำรวจโปรเจกต์', path: '/projects' },
+    { icon: <LayoutDashboard size={20} />, title: 'แดชบอร์ด', path: '/admin/dashboard' },
+    { icon: <UserRoundCheck size={20} />, title: 'ใบสมัคร Pioneer', path: '/' },
+    { icon: <MailSearch size={20} />, title: 'ตรวจสอบโปรเจกต์', path: '/admin/projects-approval' },
+    { icon: <Milestone size={20} />, title: 'ตรวจสอบ Milestone', path: '/' },
+    { icon: <Wallet size={20} />, title: 'การปล่อยเงิน', path: '/' },
+    { icon: <MessageSquareWarning size={20} />, title: 'คำร้องเรียน', path: '/' },
+    { icon: <ShieldBan size={20} />, title: 'ระงับโปรเจกต์', path: '/' },
+    { icon: <RotateCcw size={20} />, title: 'คืนเงิน', path: '/' },
+    { icon: <FileText size={20} />, title: 'บันทึกการตรวจสอบ', path: '/' },
+    { icon: <Users size={20} />, title: 'จัดการผู้ใช้', path: '/' },
+]
+
+const SidebarAdmin = () => {
+    const navigate = useNavigate()
+    const { logout } = useAuthStore()
+
+    const handleLogout = () => {
+        logout()
+        navigate('/')
+    }
+
+    return (
+        <aside className='bg-sidebar w-[230px] flex-none h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent'>
+            <div className='w-full flex flex-col items-center gap-[10px] pb-4'>
+                <img src="/flyup-logo.png" alt="profile" className='h-[48px] w-[48px] rounded-full border border-background' />
+                <span className='text-error text-[14px] px-[8px] py-[2px] rounded-[20px] bg-error/20 font-medium'>Admin</span>
+            </div>
+            <ul className='w-full flex flex-col gap-[4px] p-[10px] flex-1 overflow-y-auto'>
+                {
+                    menu.map((m, idx) => (
+                        <li key={idx}>
+                            <NavLink to={m.path} end={m.path === '/admin/dashboard'} className={({ isActive }) => `flex p-[10px] gap-[10px] text-14px items-center transition-all duration-200 ${isActive ? 'text-sidebar-primary bg-sidebar-accent rounded-[12px]' : 'hover:text-sidebar-primary hover:bg-sidebar-accent hover:rounded-[12px]'}`}>
+                                {m.icon} {m.title}
+                            </NavLink>
+                        </li>
+                    ))
+                }
+            </ul>
+            <div className='w-full p-[10px] border-t border-sidebar-accent'>
+                <button onClick={handleLogout} className='flex w-full p-[10px] gap-[12px] text-[14px] items-center hover:text-error hover:bg-sidebar-accent hover:rounded-[12px] transition-all duration-200 cursor-pointer'>
+                    <LogOut size={20} /> ออกจากระบบ
+                </button>
+            </div>
+        </aside>
+    )
+}
+
+export default SidebarAdmin

@@ -30,7 +30,15 @@ import Step1Basics from '../components/steps/Step1Basics';
 import Step2Story from '../components/steps/Step2Story';
 import Step3Milestone from '../components/steps/Step3Milestone';
 import Step4Agreement from '../components/steps/Step4Agreement';
-import Preview from '../pages/pioneer/Preview';
+import Preview from '../pages/pioneer/Preview'
+import MilestonePage from '../pages/pioneer/MilestonePage'
+import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
+
+// Admin
+import AdminLayout from '../layouts/AdminLayout';
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import ProjectApproval from '@/pages/admin/ProjectApproval';
+import AdminProjectDetail from '@/pages/admin/AdminProjectDetail';
 
 // Booster Pages
 import BoosterLayout from '../layouts/BoosterLayout';
@@ -62,11 +70,20 @@ const BoosterGuard = () => {
 }
 
 const Router = () => {
-    const { authUser, checkAuth, isCheckingAuth } = useAuthStore()
+    const { authUser, checkAuth, isCheckingAuth, loginWithGoogleToken } = useAuthStore()
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const token = params.get('token')
+        const isVerifyPage = window.location.pathname === '/verify'
+        if (token && !isVerifyPage) {
+            loginWithGoogleToken(token)
+            params.delete('token')
+            const newSearch = params.toString()
+            window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)
+        }
         checkAuth()
-    }, [checkAuth])
+    }, [checkAuth, loginWithGoogleToken])
 
     if (isCheckingAuth && !authUser) {
         return (
@@ -96,6 +113,8 @@ const Router = () => {
                         <Route element={<PioneerLayout />}>
                             <Route path='/pioneer/dashboard' element={<Dashboard />} />
                             <Route path='/pioneer/dashboard/projects' element={<MyProjects />} />
+                            <Route path='/pioneer/dashboard/milestones' element={<MilestoneListPage />} />
+                            <Route path='/pioneer/dashboard/projects/:projectId/milestones' element={<MilestonePage />} />
                             <Route path='/pioneer/profile' element={<Profile />} />
                         </Route>
                         <Route element={<MainLayout />}>
@@ -127,6 +146,11 @@ const Router = () => {
                             <Route path='/booster/complaints/new' element={<BoosterComplaintNew />} />
                             <Route path='/booster/complaints/:id' element={<BoosterComplaintDetail />} />
                             <Route path='/booster/profile' element={<BoosterProfile />} />
+                    <Route>
+                        <Route element={<AdminLayout />}>
+                            <Route path='/admin/dashboard' element={<AdminDashboard />} />
+                            <Route path='/admin/projects-approval' element={<ProjectApproval />} />
+                            <Route path='/admin/projects/:id' element={<AdminProjectDetail />} />
                         </Route>
                     </Route>
                 </Routes>
