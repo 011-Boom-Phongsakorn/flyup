@@ -2,10 +2,16 @@ import { useEffect, useState, startTransition } from "react"
 import { Outlet, useLocation } from "react-router"
 import SidebarPioneer from "../components/SidebarPioneer"
 import NavbarDashboard from "../components/NavbarDashboard"
+import { useAuthStore } from "../store/useAuthStore"
 
 const PioneerLayout = () => {
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { checkAuth } = useAuthStore();
+
+    useEffect(() => {
+        checkAuth();
+    }, []);
 
     useEffect(() => {
         startTransition(() => setIsSidebarOpen(false))
