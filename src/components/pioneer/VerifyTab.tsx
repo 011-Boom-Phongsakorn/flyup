@@ -38,10 +38,15 @@ const VerifyTab = () => {
     try { return JSON.parse(localStorage.getItem(LS_KEY) ?? "{}"); } catch { return {}; }
   };
 
-  // prefer backend data (after backend fix), fallback to localStorage
   const studentCardVerify = authUser?.student_card_verification;
   const idCardVerify = authUser?.id_card_verification;
-  const local = getLocalVerify();
+
+  // ถ้า backend ไม่มี record แล้ว (ถูกลบ) ให้ clear localStorage ด้วย
+  const backendHasRecord = !!studentCardVerify?.document;
+  const local = backendHasRecord ? {} : getLocalVerify();
+  if (!backendHasRecord && Object.keys(getLocalVerify()).length > 0 && authUser) {
+    localStorage.removeItem(LS_KEY);
+  }
 
   const storedStudentCardUrl: string = studentCardVerify?.document ?? local.student_card_url ?? "";
   const storedIdCardUrl: string = idCardVerify?.document ?? local.id_card_url ?? "";
