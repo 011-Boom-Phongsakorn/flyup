@@ -30,7 +30,7 @@ const useNotificationSSE = () => {
         return () => {
             es.close()
         }
-    }, [authUser?.email])
+    }, [authUser, addNotification])
 }
 
 export default useNotificationSSE

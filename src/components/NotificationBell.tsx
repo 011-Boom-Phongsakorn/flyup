@@ -89,7 +89,7 @@ const NotificationBell = () => {
     // fetch on mount for the badge count
     useEffect(() => {
         fetchNotifications()
-    }, [])
+    }, [fetchNotifications])
 
     // close on click outside
     useEffect(() => {

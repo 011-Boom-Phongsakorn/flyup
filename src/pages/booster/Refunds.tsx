@@ -1,5 +1,4 @@
 import { CheckCircle2, Clock, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router';
 
 // ─── Mock Data ──────────────────────────────────────────────────────────────
 

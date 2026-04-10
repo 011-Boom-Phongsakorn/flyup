@@ -11,7 +11,7 @@ const PioneerLayout = () => {
 
     useEffect(() => {
         checkAuth();
-    }, []);
+    }, [checkAuth]);
 
     useEffect(() => {
         startTransition(() => setIsSidebarOpen(false))

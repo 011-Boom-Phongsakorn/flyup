@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, CheckCircle2, ChevronRight, File, FileText, Image as ImageIcon, Link2, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronRight, FileText, Image as ImageIcon, Link2, XCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router';
 
 // ─── Mock Data ──────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ const mockDetail = {
 
 const VoteDetail = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Using to potentially fetch real data later
+  useParams();
   const [voteValue, setVoteValue] = useState<'approve' | 'reject' | null>(null);
   const [comment, setComment] = useState('');
   const [isVoted, setIsVoted] = useState(false);

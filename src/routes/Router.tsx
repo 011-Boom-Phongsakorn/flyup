@@ -69,6 +69,13 @@ const BoosterGuard = () => {
     return <Outlet />
 }
 
+const AdminGuard = () => {
+    const { authUser } = useAuthStore()
+    if (!authUser) return <Navigate to='/login' replace />
+    if (authUser.role?.toLowerCase() !== 'admin') return <Navigate to='/' replace />
+    return <Outlet />
+}
+
 const Router = () => {
     const { authUser, checkAuth, isCheckingAuth, loginWithGoogleToken } = useAuthStore()
 
@@ -127,7 +134,6 @@ const Router = () => {
                                 <Route path='3' element={<Step3Milestone />} />
                                 <Route path='4' element={<Step4Agreement />} />
                             </Route>
-                            <Route path='/preview/:projectId' element={<Preview />} />
                         </Route>
                     </Route>
 
@@ -140,19 +146,22 @@ const Router = () => {
                             <Route path='/booster/votes' element={<BoosterVotes />} />
                             <Route path='/booster/votes/:id' element={<BoosterVoteDetail />} />
                             <Route path='/booster/profits' element={<BoosterProfits />} />
-
                             <Route path='/booster/refunds' element={<BoosterRefunds />} />
                             <Route path='/booster/complaints' element={<BoosterComplaints />} />
                             <Route path='/booster/complaints/new' element={<BoosterComplaintNew />} />
                             <Route path='/booster/complaints/:id' element={<BoosterComplaintDetail />} />
                             <Route path='/booster/profile' element={<BoosterProfile />} />
-                    <Route>
+                        </Route>
+                    </Route>
+
+                    <Route element={<AdminGuard />}>
                         <Route element={<AdminLayout />}>
                             <Route path='/admin/dashboard' element={<AdminDashboard />} />
                             <Route path='/admin/projects-approval' element={<ProjectApproval />} />
                             <Route path='/admin/projects/:id' element={<AdminProjectDetail />} />
                         </Route>
                     </Route>
+
                 </Routes>
                 <Toaster position='top-right' />
             </BrowserRouter>

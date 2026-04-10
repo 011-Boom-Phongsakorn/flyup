@@ -54,7 +54,7 @@ const ProfileTab = ({ activeTab }: { activeTab: Tab }) => {
       });
       await checkAuth();
       toast.success("บันทึกข้อมูลเรียบร้อยแล้ว");
-    } catch (error) {
+    } catch {
       toast.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     } finally {
       setIsSaving(false);

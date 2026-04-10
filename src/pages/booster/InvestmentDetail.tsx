@@ -113,7 +113,7 @@ const InvestmentDetail = () => {
           <h3 className="font-bold text-foreground text-lg mb-5">ความคืบหน้า Milestone</h3>
           {milestones.length > 0 ? (
             <div className="space-y-4">
-              {milestones.map((m, idx) => (
+              {milestones.map((m) => (
                 <div key={m.id} className="flex items-center gap-3">
                   <div className={`w-3 h-3 rounded-full flex-shrink-0 ${m.status === 'completed' ? phaseColors[0] : (m.status === 'in_progress' ? phaseColors[1] : phaseColors[2])}`} />
                   <span className="text-sm text-foreground flex-1">Phase {m.phase_no}: {m.title}</span>
