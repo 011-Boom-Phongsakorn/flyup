@@ -30,7 +30,7 @@ const ProfileTab = ({ activeTab }: { activeTab: Tab }) => {
     authUser?.name ||
     "";
   const displayEmail = authUser?.email || "";
-  const profileUrl = authUser?.profile_url || null;
+  const profileUrl = (authUser?.profile_url as string) || null;
   const initials = displayName
     ? (displayName.match(/\b\w/g) || []).join("").substring(0, 2).toUpperCase()
     : "?";
