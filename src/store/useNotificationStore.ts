@@ -25,7 +25,7 @@ interface NotificationStore {
     addNotification: (notif: Notification) => void
 }
 
-export const useNotificationStore = create<NotificationStore>((set, get) => ({
+export const useNotificationStore = create<NotificationStore>((set) => ({
     notifications: [],
     unread: 0,
     total: 0,
