@@ -129,10 +129,9 @@ export const useAuthStore = create<AuthStore>((set) => ({
     login: async (data) => {
         set({ isLoggingIn: true })
         try {
-            const response = await api.post('/signin', data)
-            const token = response.data.token;
-            const decodeUser = jwtDecode(token) as DecodedUser
-            set({ authUser: decodeUser })
+            await api.post('/signin', data)
+            const meRes = await api.get('/user/me')
+            set({ authUser: meRes.data.data })
         } catch (error: unknown) {
             console.log(error)
             const err = error instanceof AxiosError ? error : null;

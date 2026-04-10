@@ -17,17 +17,21 @@ const ProfileTab = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialized = useRef(false);
 
-  // sync form เมื่อ authUser เปลี่ยน (หลัง checkAuth)
+  // sync form ครั้งแรกที่ authUser โหลด ไม่ reset ซ้ำเมื่อ tab อื่น trigger checkAuth
   useEffect(() => {
-    setForm({
-      first_name: (authUser?.first_name as string) ?? "",
-      last_name: (authUser?.last_name as string) ?? "",
-      phone: (authUser?.phone as string) ?? "",
-      bio: authUser?.student_profile?.bio ?? "",
-      portfolio: authUser?.student_profile?.portfolio ?? "",
-      skills: authUser?.student_profile?.skills ?? "",
-    });
+    if (!initialized.current && authUser) {
+      setForm({
+        first_name: (authUser?.first_name as string) ?? "",
+        last_name: (authUser?.last_name as string) ?? "",
+        phone: (authUser?.phone as string) ?? "",
+        bio: authUser?.student_profile?.bio ?? "",
+        portfolio: authUser?.student_profile?.portfolio ?? "",
+        skills: authUser?.student_profile?.skills ?? "",
+      });
+      initialized.current = true;
+    }
   }, [authUser]);
 
   const initials = `${form.first_name[0] ?? ""}${form.last_name[0] ?? ""}`.toUpperCase() || "?";
@@ -48,6 +52,7 @@ const ProfileTab = () => {
       });
       const pictureUrl: string = uploadRes.data.data.url;
       await api.patch("/user/profile", { picture: pictureUrl });
+      initialized.current = false;
       await checkAuth();
       toast.success("เปลี่ยนรูปโปรไฟล์สำเร็จ");
     } catch {
@@ -69,6 +74,7 @@ const ProfileTab = () => {
         portfolio: form.portfolio || undefined,
         skills: form.skills || undefined,
       });
+      initialized.current = false;
       await checkAuth();
       toast.success("บันทึกสำเร็จ");
     } catch {

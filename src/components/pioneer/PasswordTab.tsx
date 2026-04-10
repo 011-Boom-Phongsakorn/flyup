@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
+import { AxiosError } from "axios";
 
 const PasswordTab = () => {
   const [form, setForm] = useState({ current: "", newPass: "", confirm: "" });
@@ -17,16 +18,27 @@ const PasswordTab = () => {
       toast.error("รหัสผ่านใหม่ไม่ตรงกัน");
       return;
     }
+    if (form.newPass.length < 8) {
+      toast.error("รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร");
+      return;
+    }
     setIsSaving(true);
     try {
-      await api.patch("/user/me/password", {
-        current_password: form.current,
+      await api.put("/user/change-password", {
+        old_password: form.current,
         new_password: form.newPass,
       });
       toast.success("เปลี่ยนรหัสผ่านสำเร็จ");
       setForm({ current: "", newPass: "", confirm: "" });
-    } catch {
-      toast.error("รหัสผ่านปัจจุบันไม่ถูกต้อง");
+    } catch (error) {
+      const msg = error instanceof AxiosError ? error.response?.data?.message : null;
+      if (msg === "can't not use old password as new password") {
+        toast.error("ไม่สามารถใช้รหัสผ่านเดิมได้");
+      } else if (msg === "password is incorrect") {
+        toast.error("รหัสผ่านปัจจุบันไม่ถูกต้อง");
+      } else {
+        toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่");
+      }
     } finally {
       setIsSaving(false);
     }
