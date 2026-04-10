@@ -40,10 +40,32 @@ import AdminDashboard from '../pages/admin/AdminDashboard';
 import ProjectApproval from '@/pages/admin/ProjectApproval';
 import AdminProjectDetail from '@/pages/admin/AdminProjectDetail';
 
+// Booster Pages
+import BoosterLayout from '../layouts/BoosterLayout';
+import BoosterDashboard from '../pages/booster/Dashboard';
+import BoosterMyInvestments from '../pages/booster/MyInvestments';
+import BoosterInvestmentDetail from '../pages/booster/InvestmentDetail';
+import BoosterMeetings from '../pages/booster/Meetings';
+import BoosterVotes from '../pages/booster/Votes';
+import BoosterVoteDetail from '../pages/booster/VoteDetail';
+import BoosterProfits from '../pages/booster/Profits';
+import BoosterRefunds from '../pages/booster/Refunds';
+import BoosterComplaints from '../pages/booster/Complaints';
+import BoosterComplaintDetail from '../pages/booster/ComplaintDetail';
+import BoosterComplaintNew from '../pages/booster/ComplaintNew';
+import BoosterProfile from '../pages/booster/Profile';
+
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
     if (!authUser) return <Navigate to='/login' replace />
     if (authUser.role !== 'pioneer') return <Navigate to='/' replace />
+    return <Outlet />
+}
+
+const BoosterGuard = () => {
+    const { authUser } = useAuthStore()
+    if (!authUser) return <Navigate to='/login' replace />
+    if (authUser.role?.toLowerCase() !== 'booster') return <Navigate to='/' replace />
     return <Outlet />
 }
 
@@ -109,6 +131,21 @@ const Router = () => {
                         </Route>
                     </Route>
 
+                    <Route element={<BoosterGuard />}>
+                        <Route element={<BoosterLayout />}>
+                            <Route path='/booster/dashboard' element={<BoosterDashboard />} />
+                            <Route path='/booster/investments' element={<BoosterMyInvestments />} />
+                            <Route path='/booster/investments/:id' element={<BoosterInvestmentDetail />} />
+                            <Route path='/booster/meetings' element={<BoosterMeetings />} />
+                            <Route path='/booster/votes' element={<BoosterVotes />} />
+                            <Route path='/booster/votes/:id' element={<BoosterVoteDetail />} />
+                            <Route path='/booster/profits' element={<BoosterProfits />} />
+
+                            <Route path='/booster/refunds' element={<BoosterRefunds />} />
+                            <Route path='/booster/complaints' element={<BoosterComplaints />} />
+                            <Route path='/booster/complaints/new' element={<BoosterComplaintNew />} />
+                            <Route path='/booster/complaints/:id' element={<BoosterComplaintDetail />} />
+                            <Route path='/booster/profile' element={<BoosterProfile />} />
                     <Route>
                         <Route element={<AdminLayout />}>
                             <Route path='/admin/dashboard' element={<AdminDashboard />} />
