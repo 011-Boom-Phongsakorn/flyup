@@ -67,7 +67,7 @@ const VerificationApproval = () => {
                 await api.patch(`/admin/reject-student-card/${id}`)
                 toast.success("ปฏิเสธบัตรนักศึกษาแล้ว")
             }
-            setStudents((prev) => prev.filter((s) => s.id !== id))
+            setStudents((prev) => prev.filter((s) => s.user_id !== id))
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
             toast.error(msg || "เกิดข้อผิดพลาด")
@@ -86,7 +86,7 @@ const VerificationApproval = () => {
                 await api.patch(`/admin/reject-id-card/${id}`)
                 toast.success("ปฏิเสธบัตรประชาชนแล้ว")
             }
-            setIdCards((prev) => prev.filter((c) => c.id !== id))
+            setIdCards((prev) => prev.filter((c) => c.user_id !== id))
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
             toast.error(msg || "เกิดข้อผิดพลาด")
@@ -232,19 +232,19 @@ const VerificationApproval = () => {
                                     </div>
                                     <div className="py-[14px] flex justify-center gap-[8px]">
                                         <button
-                                            onClick={() => handleIDCardAction(c.id, "approve")}
-                                            disabled={actionLoading === c.id}
+                                            onClick={() => handleIDCardAction(c.user_id, "approve")}
+                                            disabled={actionLoading === c.user_id}
                                             className="flex items-center gap-[4px] px-[12px] py-[6px] rounded-[8px] bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50 text-[13px] font-medium"
                                         >
-                                            {actionLoading === c.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
+                                            {actionLoading === c.user_id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
                                             อนุมัติ
                                         </button>
                                         <button
-                                            onClick={() => handleIDCardAction(c.id, "reject")}
-                                            disabled={actionLoading === c.id}
+                                            onClick={() => handleIDCardAction(c.user_id, "reject")}
+                                            disabled={actionLoading === c.user_id}
                                             className="flex items-center gap-[4px] px-[12px] py-[6px] rounded-[8px] bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors disabled:opacity-50 text-[13px] font-medium"
                                         >
-                                            {actionLoading === c.id ? <Loader2 size={13} className="animate-spin" /> : <XCircle size={13} />}
+                                            {actionLoading === c.user_id ? <Loader2 size={13} className="animate-spin" /> : <XCircle size={13} />}
                                             ปฏิเสธ
                                         </button>
                                     </div>
