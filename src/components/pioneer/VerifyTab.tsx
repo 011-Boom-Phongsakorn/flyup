@@ -163,11 +163,13 @@ const VerifyTab = () => {
         major: studentForm.major || undefined,
       });
 
-      await api.post("/user/student-verify", {
-        student_card_url: studentCardUrl,
-        declare_truth: acceptAccuracy,
-        accept_pioneer_terms: acceptTerms,
-      });
+      if (!studentCardLocked) {
+        await api.post("/user/student-verify", {
+          student_card_url: studentCardUrl,
+          declare_truth: acceptAccuracy,
+          accept_pioneer_terms: acceptTerms,
+        });
+      }
 
       await api.post("/user/id-verify", {
         id_card_url: idCardUrl,
