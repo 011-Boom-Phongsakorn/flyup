@@ -10,7 +10,7 @@ export interface PendingProject {
     }
     funding_goal: number
     state: string
-    created_at: string
+    CreatedAt: string
 }
 
 interface AdminStore {
