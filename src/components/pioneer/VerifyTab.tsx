@@ -107,6 +107,14 @@ const VerifyTab = () => {
       toast.error("กรุณากรอกข้อมูลส่วนตัว (ชื่อ นามสกุล เบอร์โทร) ในแท็บโปรไฟล์ก่อน");
       return;
     }
+    if (!studentForm.faculty.trim()) {
+      toast.error("กรุณากรอกคณะ");
+      return;
+    }
+    if (!studentForm.major.trim()) {
+      toast.error("กรุณากรอกสาขา");
+      return;
+    }
     if (!studentFile && !storedStudentCardUrl) {
       toast.error("กรุณาอัปโหลดบัตรนักศึกษา");
       return;
