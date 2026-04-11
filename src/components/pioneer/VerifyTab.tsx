@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Lock, Upload, Clock, CheckCircle } from "lucide-react";
+import { Lock, Upload, Clock, CheckCircle, XCircle } from "lucide-react";
 
 const THAI_BANKS = [
   "ธนาคารกรุงเทพ (BBL)",
@@ -38,11 +38,23 @@ const VerifyTab = () => {
   const storedStudentCardUrl: string = studentCardVerify?.document ?? "";
   const storedIdCardUrl: string = idCardVerify?.document ?? "";
   const storedSelfieUrl: string = idCardVerify?.selfie_url ?? "";
-  const verifyStatus = studentCardVerify?.status ?? "";
 
-  const isVerified = verifyStatus === "approved";
-  const isPending = verifyStatus === "pending";
-  const isSubmitted = isVerified || isPending;
+  const studentCardStatus = studentCardVerify?.status ?? "";
+  const idCardStatus = idCardVerify?.status ?? "";
+
+  const studentCardApproved = studentCardStatus === "approved";
+  const studentCardPending  = studentCardStatus === "pending";
+  const studentCardRejected = studentCardStatus === "rejected";
+  const studentCardLocked   = studentCardApproved || studentCardPending;
+
+  const idCardApproved = idCardStatus === "approved";
+  const idCardPending  = idCardStatus === "pending";
+  const idCardRejected = idCardStatus === "rejected";
+  const idCardLocked   = idCardApproved || idCardPending;
+
+  const bothLocked  = studentCardLocked && idCardLocked;
+  const allApproved = studentCardApproved && idCardApproved;
+  const anyRejected = studentCardRejected || idCardRejected;
 
   const [studentForm, setStudentForm] = useState({
     student_code: derivedStudentCode,
@@ -57,8 +69,8 @@ const VerifyTab = () => {
     account_name: authUser?.bank_account?.account_name ?? "",
     account_number: authUser?.bank_account?.account_number ?? "",
   });
-  const [acceptTerms, setAcceptTerms] = useState(isSubmitted);
-  const [acceptAccuracy, setAcceptAccuracy] = useState(isSubmitted);
+  const [acceptTerms, setAcceptTerms] = useState(studentCardLocked);
+  const [acceptAccuracy, setAcceptAccuracy] = useState(studentCardLocked);
   const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [isSavingBank, setIsSavingBank] = useState(false);
 
@@ -77,8 +89,8 @@ const VerifyTab = () => {
       account_name: authUser?.bank_account?.account_name ?? "",
       account_number: authUser?.bank_account?.account_number ?? "",
     });
-    const submitted = !!authUser?.student_card_verification?.document || authUser?.student_card_verification?.status === "approved";
-    if (submitted) {
+    const scStatus = authUser?.student_card_verification?.status ?? "";
+    if (scStatus === "approved" || scStatus === "pending") {
       setAcceptTerms(true);
       setAcceptAccuracy(true);
     }
@@ -113,7 +125,6 @@ const VerifyTab = () => {
     }
     setIsSavingStudent(true);
     try {
-      // 1) อัปโหลดบัตรนักศึกษา (ถ้ามีไฟล์ใหม่)
       let studentCardUrl = storedStudentCardUrl;
       if (studentFile) {
         const fd = new FormData();
@@ -122,7 +133,6 @@ const VerifyTab = () => {
         studentCardUrl = res.data.data.url;
       }
 
-      // 2) อัปโหลดบัตรประชาชน (ถ้ามีไฟล์ใหม่)
       let idCardUrl = storedIdCardUrl;
       if (idCardFile) {
         const fd = new FormData();
@@ -131,7 +141,6 @@ const VerifyTab = () => {
         idCardUrl = res.data.data.url;
       }
 
-      // 3) อัปโหลดรูปเซลฟี่ (ถ้ามีไฟล์ใหม่)
       let selfieUrl = storedSelfieUrl;
       if (selfieFile) {
         const fd = new FormData();
@@ -140,21 +149,18 @@ const VerifyTab = () => {
         selfieUrl = res.data.data.url;
       }
 
-      // 5) บันทึก student_code, faculty, major
       await api.patch("/user/profile", {
         student_code: studentForm.student_code || undefined,
         faculty: studentForm.faculty || undefined,
         major: studentForm.major || undefined,
       });
 
-      // 6) ส่งคำขอยืนยันตัวตนนักศึกษา
       await api.post("/user/student-verify", {
         student_card_url: studentCardUrl,
         declare_truth: acceptAccuracy,
         accept_pioneer_terms: acceptTerms,
       });
 
-      // 7) ส่งคำขอยืนยันบัตรประชาชน
       await api.post("/user/id-verify", {
         id_card_url: idCardUrl,
         selfie_url: selfieUrl,
@@ -211,6 +217,11 @@ const VerifyTab = () => {
     ? URL.createObjectURL(selfieFile)
     : storedSelfieUrl || null;
 
+  const uploadBorderClass = (approved: boolean, pending: boolean, rejected: boolean, locked: boolean) =>
+    `border-2 border-dashed rounded-xl overflow-hidden transition-colors block
+      ${approved ? "border-green-300" : pending ? "border-amber-300" : rejected ? "border-red-300" : "border-border"}
+      ${locked ? "cursor-default" : "cursor-pointer hover:border-primary"}`;
+
   return (
     <div className="flex flex-col gap-[16px]">
       {/* ยืนยันตัวตนนักศึกษา */}
@@ -218,13 +229,19 @@ const VerifyTab = () => {
         <div className="flex items-center gap-[8px]">
           <Lock size={18} className="text-foreground" />
           <h2 className="font-semibold text-foreground">ยืนยันตัวตนนักศึกษา</h2>
-          {isVerified && (
+          {allApproved && (
             <span className="ml-auto flex items-center gap-[4px] text-[12px] text-green-600 bg-green-50 border border-green-200 px-[10px] py-[2px] rounded-full font-medium">
               <CheckCircle size={12} />
               อนุมัติแล้ว
             </span>
           )}
-          {isPending && !isVerified && (
+          {anyRejected && (
+            <span className="ml-auto flex items-center gap-[4px] text-[12px] text-red-600 bg-red-50 border border-red-200 px-[10px] py-[2px] rounded-full font-medium">
+              <XCircle size={12} />
+              มีรายการถูกปฏิเสธ
+            </span>
+          )}
+          {!allApproved && !anyRejected && (studentCardPending || idCardPending) && (
             <span className="ml-auto flex items-center gap-[4px] text-[12px] text-amber-600 bg-amber-50 border border-amber-200 px-[10px] py-[2px] rounded-full font-medium">
               <Clock size={12} />
               รออนุมัติ
@@ -247,10 +264,10 @@ const VerifyTab = () => {
           <label className="text-[13px] font-medium text-foreground">รหัสนักศึกษา</label>
           <input
             value={studentForm.student_code}
-            disabled={isSubmitted}
+            disabled={studentCardLocked}
             onChange={(e) => setStudentForm((prev) => ({ ...prev, student_code: e.target.value }))}
             placeholder="เช่น 664259011"
-            className={`border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none transition-colors ${isSubmitted ? "bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" : "focus:border-primary"}`}
+            className={`border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none transition-colors ${studentCardLocked ? "bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" : "focus:border-primary"}`}
           />
         </div>
 
@@ -259,10 +276,10 @@ const VerifyTab = () => {
           <label className="text-[13px] font-medium text-foreground">คณะ</label>
           <input
             value={studentForm.faculty}
-            disabled={isSubmitted}
+            disabled={studentCardLocked}
             onChange={(e) => setStudentForm((prev) => ({ ...prev, faculty: e.target.value }))}
             placeholder="เช่น คณะวิทยาศาสตร์และเทคโนโลยี"
-            className={`border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none transition-colors ${isSubmitted ? "bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" : "focus:border-primary"}`}
+            className={`border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none transition-colors ${studentCardLocked ? "bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" : "focus:border-primary"}`}
           />
         </div>
 
@@ -271,10 +288,10 @@ const VerifyTab = () => {
           <label className="text-[13px] font-medium text-foreground">สาขา</label>
           <input
             value={studentForm.major}
-            disabled={isSubmitted}
+            disabled={studentCardLocked}
             onChange={(e) => setStudentForm((prev) => ({ ...prev, major: e.target.value }))}
             placeholder="เช่น วิทยาการคอมพิวเตอร์"
-            className={`border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none transition-colors ${isSubmitted ? "bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" : "focus:border-primary"}`}
+            className={`border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none transition-colors ${studentCardLocked ? "bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" : "focus:border-primary"}`}
           />
         </div>
 
@@ -283,27 +300,44 @@ const VerifyTab = () => {
           <label className="text-[13px] font-medium text-foreground">
             อัปโหลดบัตรนักศึกษา <span className="text-error">*</span>
           </label>
-          <label className={`border-2 border-dashed border-border rounded-xl overflow-hidden transition-colors ${isSubmitted ? "cursor-default" : "cursor-pointer hover:border-primary"}`}>
-            {studentCardPreview ? (
-              <img
-                src={studentCardPreview}
-                alt="บัตรนักศึกษา"
-                className="w-full max-h-[200px] object-contain"
+          <div className="relative">
+            <label className={uploadBorderClass(studentCardApproved, studentCardPending, studentCardRejected, studentCardLocked)}>
+              {studentCardPreview ? (
+                <img src={studentCardPreview} alt="บัตรนักศึกษา" className="w-full max-h-[200px] object-contain" />
+              ) : (
+                <div className="p-8 flex flex-col items-center justify-center">
+                  <Upload size={24} className="text-muted-foreground mb-2" />
+                  <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                disabled={studentCardLocked}
+                onChange={(e) => setStudentFile(e.target.files?.[0] ?? null)}
               />
-            ) : (
-              <div className="p-8 flex flex-col items-center justify-center">
-                <Upload size={24} className="text-muted-foreground mb-2" />
-                <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+            </label>
+            {studentCardApproved && (
+              <div className="absolute inset-0 rounded-xl bg-green-50/80 flex flex-col items-center justify-center pointer-events-none">
+                <CheckCircle size={32} className="text-green-500" />
+                <span className="text-green-600 font-semibold text-[13px] mt-[6px]">อนุมัติแล้ว</span>
               </div>
             )}
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              className="hidden"
-              disabled={isSubmitted}
-              onChange={(e) => setStudentFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
+            {studentCardPending && (
+              <div className="absolute inset-0 rounded-xl bg-amber-50/70 flex flex-col items-center justify-center pointer-events-none">
+                <Clock size={32} className="text-amber-500" />
+                <span className="text-amber-600 font-semibold text-[13px] mt-[6px]">รออนุมัติ</span>
+              </div>
+            )}
+            {studentCardRejected && (
+              <div className="absolute top-[8px] right-[8px] pointer-events-none">
+                <span className="flex items-center gap-[4px] text-[11px] bg-red-100 text-red-600 border border-red-200 px-[8px] py-[3px] rounded-full font-medium">
+                  <XCircle size={11} /> ถูกปฏิเสธ — อัปโหลดใหม่
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* อัปโหลดบัตรประชาชน */}
@@ -311,27 +345,44 @@ const VerifyTab = () => {
           <label className="text-[13px] font-medium text-foreground">
             อัปโหลดบัตรประชาชน <span className="text-error">*</span>
           </label>
-          <label className={`border-2 border-dashed border-border rounded-xl overflow-hidden transition-colors ${isSubmitted ? "cursor-default" : "cursor-pointer hover:border-primary"}`}>
-            {idCardPreview ? (
-              <img
-                src={idCardPreview}
-                alt="บัตรประชาชน"
-                className="w-full max-h-[200px] object-contain"
+          <div className="relative">
+            <label className={uploadBorderClass(idCardApproved, idCardPending, idCardRejected, idCardLocked)}>
+              {idCardPreview ? (
+                <img src={idCardPreview} alt="บัตรประชาชน" className="w-full max-h-[200px] object-contain" />
+              ) : (
+                <div className="p-8 flex flex-col items-center justify-center">
+                  <Upload size={24} className="text-muted-foreground mb-2" />
+                  <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                disabled={idCardLocked}
+                onChange={(e) => setIdCardFile(e.target.files?.[0] ?? null)}
               />
-            ) : (
-              <div className="p-8 flex flex-col items-center justify-center">
-                <Upload size={24} className="text-muted-foreground mb-2" />
-                <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+            </label>
+            {idCardApproved && (
+              <div className="absolute inset-0 rounded-xl bg-green-50/80 flex flex-col items-center justify-center pointer-events-none">
+                <CheckCircle size={32} className="text-green-500" />
+                <span className="text-green-600 font-semibold text-[13px] mt-[6px]">อนุมัติแล้ว</span>
               </div>
             )}
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              className="hidden"
-              disabled={isSubmitted}
-              onChange={(e) => setIdCardFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
+            {idCardPending && (
+              <div className="absolute inset-0 rounded-xl bg-amber-50/70 flex flex-col items-center justify-center pointer-events-none">
+                <Clock size={32} className="text-amber-500" />
+                <span className="text-amber-600 font-semibold text-[13px] mt-[6px]">รออนุมัติ</span>
+              </div>
+            )}
+            {idCardRejected && (
+              <div className="absolute top-[8px] right-[8px] pointer-events-none">
+                <span className="flex items-center gap-[4px] text-[11px] bg-red-100 text-red-600 border border-red-200 px-[8px] py-[3px] rounded-full font-medium">
+                  <XCircle size={11} /> ถูกปฏิเสธ — อัปโหลดใหม่
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* อัปโหลดรูปเซลฟี่พร้อมบัตรประชาชน */}
@@ -340,27 +391,44 @@ const VerifyTab = () => {
             รูปเซลฟี่พร้อมบัตรประชาชน <span className="text-error">*</span>
           </label>
           <p className="text-[12px] text-muted-foreground">ถ่ายรูปหน้าตัวเองพร้อมถือบัตรประชาชนให้เห็นชัดเจน</p>
-          <label className={`border-2 border-dashed border-border rounded-xl overflow-hidden transition-colors ${isSubmitted ? "cursor-default" : "cursor-pointer hover:border-primary"}`}>
-            {selfiePreview ? (
-              <img
-                src={selfiePreview}
-                alt="เซลฟี่พร้อมบัตรประชาชน"
-                className="w-full max-h-[200px] object-contain"
+          <div className="relative">
+            <label className={uploadBorderClass(idCardApproved, idCardPending, idCardRejected, idCardLocked)}>
+              {selfiePreview ? (
+                <img src={selfiePreview} alt="เซลฟี่พร้อมบัตรประชาชน" className="w-full max-h-[200px] object-contain" />
+              ) : (
+                <div className="p-8 flex flex-col items-center justify-center">
+                  <Upload size={24} className="text-muted-foreground mb-2" />
+                  <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={idCardLocked}
+                onChange={(e) => setSelfieFile(e.target.files?.[0] ?? null)}
               />
-            ) : (
-              <div className="p-8 flex flex-col items-center justify-center">
-                <Upload size={24} className="text-muted-foreground mb-2" />
-                <span className="text-[13px] text-muted-foreground">คลิกเพื่ออัปโหลด</span>
+            </label>
+            {idCardApproved && (
+              <div className="absolute inset-0 rounded-xl bg-green-50/80 flex flex-col items-center justify-center pointer-events-none">
+                <CheckCircle size={32} className="text-green-500" />
+                <span className="text-green-600 font-semibold text-[13px] mt-[6px]">อนุมัติแล้ว</span>
               </div>
             )}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={isSubmitted}
-              onChange={(e) => setSelfieFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
+            {idCardPending && (
+              <div className="absolute inset-0 rounded-xl bg-amber-50/70 flex flex-col items-center justify-center pointer-events-none">
+                <Clock size={32} className="text-amber-500" />
+                <span className="text-amber-600 font-semibold text-[13px] mt-[6px]">รออนุมัติ</span>
+              </div>
+            )}
+            {idCardRejected && (
+              <div className="absolute top-[8px] right-[8px] pointer-events-none">
+                <span className="flex items-center gap-[4px] text-[11px] bg-red-100 text-red-600 border border-red-200 px-[8px] py-[3px] rounded-full font-medium">
+                  <XCircle size={11} /> ถูกปฏิเสธ — อัปโหลดใหม่
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* checkboxes */}
@@ -369,10 +437,10 @@ const VerifyTab = () => {
             { state: acceptTerms, set: setAcceptTerms, label: <>ยอมรับข้อตกลงของ <span className="text-primary">FlyUp Pioneer</span></> },
             { state: acceptAccuracy, set: setAcceptAccuracy, label: "ข้าพเจ้ายืนยันว่าข้อมูลทั้งหมดเป็นความจริง" },
           ].map(({ state, set, label }, idx) => (
-            <label key={idx} className={`flex items-center gap-[10px] ${isSubmitted ? "cursor-default" : "cursor-pointer"}`}>
+            <label key={idx} className={`flex items-center gap-[10px] ${bothLocked ? "cursor-default" : "cursor-pointer"}`}>
               <div
-                onClick={() => !isSubmitted && set(!state)}
-                className={`w-[18px] h-[18px] rounded-[4px] border-2 flex items-center justify-center shrink-0 transition-colors ${state ? "bg-primary border-primary" : "border-border"} ${isSubmitted ? "cursor-default" : "cursor-pointer"}`}
+                onClick={() => !bothLocked && set(!state)}
+                className={`w-[18px] h-[18px] rounded-[4px] border-2 flex items-center justify-center shrink-0 transition-colors ${state ? "bg-primary border-primary" : "border-border"} ${bothLocked ? "cursor-default" : "cursor-pointer"}`}
               >
                 {state && <span className="text-white text-[10px] font-bold">✓</span>}
               </div>
@@ -381,7 +449,7 @@ const VerifyTab = () => {
           ))}
         </div>
 
-        {!isSubmitted && (
+        {!bothLocked && (
           <button
             onClick={handleStudentSubmit}
             disabled={isSavingStudent}
@@ -391,9 +459,9 @@ const VerifyTab = () => {
           </button>
         )}
 
-        {isSubmitted && (
-          <div className={`w-full py-[12px] rounded-[10px] text-[14px] font-medium text-center ${isVerified ? "bg-green-50 text-green-600 border border-green-200" : "bg-amber-50 text-amber-600 border border-amber-200"}`}>
-            {isVerified ? "✓ ยืนยันตัวตนสำเร็จ" : "⏳ รอ admin อนุมัติ"}
+        {bothLocked && (
+          <div className={`w-full py-[12px] rounded-[10px] text-[14px] font-medium text-center ${allApproved ? "bg-green-50 text-green-600 border border-green-200" : "bg-amber-50 text-amber-600 border border-amber-200"}`}>
+            {allApproved ? "✓ ยืนยันตัวตนสำเร็จ" : "⏳ รอ admin อนุมัติ"}
           </div>
         )}
       </div>
