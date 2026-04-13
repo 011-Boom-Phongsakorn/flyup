@@ -16,8 +16,7 @@ export interface Milestone {
     title: string;
     description: string;
     amount: number;
-    startDate: string;
-    endDate: string;
+    duration: number;     // ระยะเวลา (วัน)
     criteria: string[];
     files: ProjectMedia[];
     videos: ProjectMedia[];
@@ -96,8 +95,7 @@ const initialProject: Project = {
         title: '',
         description: '',
         amount: 0,
-        startDate: '',
-        endDate: '',
+        duration: 0,
         criteria: [''],
         files: [],
         videos: [],
@@ -161,12 +159,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             if (!d) return;
 
             // Map media
-            const media: { id: number; type: string; url: string; sort_order: number }[] = d.media ?? [];
+            const media: { id: number; type: string | string[]; url: string; sort_order: number }[] = d.media ?? [];
+            const getMediaType = (t: string | string[]) => (Array.isArray(t) ? t[0] ?? '' : t);
             const images = media
-                .filter((m) => m.type === 'image')
+                .filter((m) => getMediaType(m.type) === 'image')
                 .sort((a, b) => a.sort_order - b.sort_order)
                 .map((m) => ({ id: m.id, name: m.url.split('/').pop() ?? 'image', url: m.url }));
-            const videoMedia = media.find((m) => m.type === 'video');
+            const videoMedia = media.find((m) => getMediaType(m.type) === 'video');
             const video = videoMedia
                 ? { id: videoMedia.id, name: videoMedia.url.split('/').pop() ?? 'video', url: videoMedia.url }
                 : null;
@@ -192,9 +191,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 title?: string;
                 description?: string;
                 acceptance_criteria?: string;
-                start_date?: string;
-                end_date?: string;
-                url?: string;
+                duration?: number;
+                urls?: string[];
                 type?: string;
                 phase_no?: number;
             }[] = [];
@@ -207,23 +205,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 );
             } catch { /* ignore */ }
 
+            const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov|avi)$/i.test(url);
             const milestones = Array.from({ length: 4 }, (_, i) => {
                 const bm = bms[i] ?? {};
-                const url = bm.url;
-                const type = bm.type;
-                const files: ProjectMedia[] = (url && type !== 'video')
-                    ? [{ name: url.split('/').pop() ?? 'file', url }]
-                    : [];
-                const videos: ProjectMedia[] = (url && type === 'video')
-                    ? [{ name: url.split('/').pop() ?? 'video', url }]
-                    : [];
+                const urls: string[] = bm.urls ?? [];
+                const files: ProjectMedia[] = urls
+                    .filter(url => !isVideoUrl(url))
+                    .map(url => ({ name: url.split('/').pop() ?? 'file', url }));
+                const videos: ProjectMedia[] = urls
+                    .filter(url => isVideoUrl(url))
+                    .map(url => ({ name: url.split('/').pop() ?? 'video', url }));
                 return {
                     id: bm.id,
                     title: bm.title ?? '',
                     description: bm.description ?? '',
                     amount: 0,
-                    startDate: bm.start_date ? bm.start_date.split('T')[0] : '',
-                    endDate: bm.end_date ? bm.end_date.split('T')[0] : '',
+                    duration: bm.duration ?? 0,
                     criteria: bm.acceptance_criteria
                         ? bm.acceptance_criteria.split('\n').filter(Boolean)
                         : [''],
@@ -305,9 +302,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 projects.map(async (p) => {
                     try {
                         const mediaRes = await api.get(`/pioneer/projects/${p.id}/media`);
-                        const media: { type: string; url: string; sort_order: number }[] = mediaRes.data?.data ?? [];
+                        const media: { type: string | string[]; url: string; sort_order: number }[] = mediaRes.data?.data ?? [];
                         const firstImage = media
-                            .filter(m => m.type === 'image')
+                            .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
                             .sort((a, b) => a.sort_order - b.sort_order)[0];
                         return { ...p, thumbnail_url: firstImage?.url };
                     } catch {
@@ -327,6 +324,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     deleteProject: async (id) => {
         try {
+            // ลบ milestones ก่อน
+            try {
+                const msRes = await api.get(`/pioneer/projects/${id}/milestones`);
+                const milestones: { id?: number }[] = msRes.data?.data ?? [];
+                await Promise.all(
+                    milestones.filter(m => m.id).map(m => api.delete(`/pioneer/projects/milestones/${m.id}`))
+                );
+            } catch { /* ignore ถ้า milestone ไม่มีหรือลบไม่ได้ */ }
+
+            // ลบ stories และ media ก่อน
+            try {
+                const projRes = await api.get(`/pioneer/projects/${id}`);
+                const projData = projRes.data?.data ?? {};
+                const stories: { id?: number }[] = projData.stories ?? [];
+                const media: { id?: number }[] = projData.media ?? [];
+                await Promise.all([
+                    ...stories.filter(s => s.id).map(s => api.delete(`/pioneer/projects/stories/${s.id}`)),
+                    ...media.filter(m => m.id).map(m => api.delete(`/pioneer/projects/media/${m.id}`)),
+                ]);
+            } catch { /* ignore ถ้า story/media ไม่มีหรือลบไม่ได้ */ }
+
             await api.delete(`/pioneer/projects/${id}`);
             set((state) => ({ projects: state.projects.filter(p => p.id !== id) }));
             return true;
@@ -367,60 +385,42 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
-    saveMilestonePhase: async (projectId, phaseIndex) => {
+    saveMilestonePhase: async (_projectId, phaseIndex) => {
         const { currentProject } = get();
         const m = currentProject.milestones[phaseIndex];
-        if (!m?.title) return;
         const phasePercents = [15, 20, 30, 35];
 
         const acceptanceCriteria = m.criteria.filter(c => c.trim()).join('\n') || undefined;
-        const startDate = m.startDate ? new Date(m.startDate).toISOString() : undefined;
-        const endDate = m.endDate ? new Date(m.endDate).toISOString() : undefined;
 
-        // หา URL จริง (ไม่ใช่ blob) จากวิดีโอหรือไฟล์แรกสำหรับบันทึกลง milestone
-        const videoUrl = m.videos?.find(v => v.url && !v.url.startsWith('blob:'))?.url;
-        const firstFileUrl = m.files?.find(f => f.url && !f.url.startsWith('blob:'))?.url;
-        const mURL = videoUrl || firstFileUrl || undefined;
-        let mType: string | undefined = undefined;
-        if (videoUrl) {
-            mType = 'video';
-        } else if (firstFileUrl) {
-            mType = firstFileUrl.match(/\.(xlsx?|pdf|docx?)$/i) ? 'raw' : 'image';
+        // รวม URL จริง (ไม่ใช่ blob) จาก videos หรือ files
+        const videoUrls = (m.videos ?? []).filter(v => v.url && !v.url.startsWith('blob:')).map(v => v.url);
+        const fileUrls = (m.files ?? []).filter(f => f.url && !f.url.startsWith('blob:')).map(f => f.url);
+
+        // ไม่ save ถ้ายังไม่มี id (milestone ยังไม่ถูก pre-create) หรือไม่มีข้อมูลอะไรเลย
+        if (!m.id) return;
+        const hasMedia = videoUrls.length > 0 || fileUrls.length > 0;
+        const hasAnyData = !!(m?.title || m?.description || m?.duration || acceptanceCriteria || hasMedia);
+        if (!hasAnyData) return;
+
+        const allUrls = [...fileUrls, ...videoUrls];
+        const mTypes: string[] = [];
+        if (fileUrls.length > 0) {
+            if (fileUrls.some(u => /\.(jpg|jpeg|png|gif|webp)$/i.test(u))) mTypes.push('image');
+            if (fileUrls.some(u => !/\.(jpg|jpeg|png|gif|webp)$/i.test(u))) mTypes.push('raw');
         }
+        if (videoUrls.length > 0) mTypes.push('video');
 
         try {
-            if (m.id) {
-                await api.patch(`/pioneer/projects/milestones/${m.id}`, {
-                    title: m.title,
-                    description: m.description || undefined,
-                    phase_no: phaseIndex + 1,
-                    acceptance_criteria: acceptanceCriteria,
-                    start_date: startDate,
-                    end_date: endDate,
-                    url: mURL ?? '',
-                    type: mType ?? '',
-                });
-            } else {
-                const res = await api.post(`/pioneer/projects/${projectId}/milestones`, {
-                    phase_no: phaseIndex + 1,
-                    title: m.title,
-                    description: m.description || undefined,
-                    percent_release: phasePercents[phaseIndex],
-                    acceptance_criteria: acceptanceCriteria,
-                    start_date: startDate,
-                    end_date: endDate,
-                    url: mURL ?? '',
-                    type: mType ?? '',
-                });
-                const newId = res.data?.data?.id;
-                if (newId) {
-                    set(state => {
-                        const milestones = [...state.currentProject.milestones];
-                        milestones[phaseIndex] = { ...milestones[phaseIndex], id: newId };
-                        return { currentProject: { ...state.currentProject, milestones } };
-                    });
-                }
-            }
+            await api.patch(`/pioneer/projects/milestones/${m.id}`, {
+                title: m.title,
+                description: m.description || undefined,
+                phase_no: phaseIndex + 1,
+                percent_release: phasePercents[phaseIndex],
+                acceptance_criteria: acceptanceCriteria,
+                duration: m.duration || undefined,
+                urls: allUrls,
+                type: mTypes.length > 0 ? mTypes : undefined,
+            });
         } catch (error) {
             console.error('saveMilestonePhase:', error);
             toast.error('บันทึก Milestone ไม่สำเร็จ');
@@ -432,7 +432,26 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         try {
             const res = await api.post('/pioneer/projects');
             const projectId = res.data?.data?.id ?? res.data?.id;
-            set({ currentProject: { ...initialProject } });
+
+            // Pre-create milestone ทั้ง 4 phase ทันที เพื่อให้มี id ครบ
+            // ต้องสร้างทีละตัว (sequential) เพื่อให้ backend assign phase_no ถูกลำดับ
+            const phasePercents = [15, 20, 30, 35];
+            const milestoneIds: (number | undefined)[] = [undefined, undefined, undefined, undefined];
+            for (let i = 0; i < phasePercents.length; i++) {
+                try {
+                    const mRes = await api.post(`/pioneer/projects/${projectId}/milestones`, {
+                        phase_no: i + 1,
+                        percent_release: phasePercents[i],
+                    });
+                    milestoneIds[i] = mRes.data?.data?.id;
+                } catch { /* ignore */ }
+            }
+
+            const milestones = initialProject.milestones.map((m, i) => ({
+                ...m,
+                id: milestoneIds[i],
+            }));
+            set({ currentProject: { ...initialProject, milestones } });
             return projectId;
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string } }; message?: string };

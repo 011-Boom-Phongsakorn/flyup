@@ -11,9 +11,11 @@ const Step1Basics = () => {
   const { currentProject, updateProjectInfo, updateProject, setSaveStatus } = useProjectStore()
 
   const [isOpen, setIsOpen] = useState(false)
+  const [activeField, setActiveField] = useState<string | null>(null)
 
   const formatNum = (n: number) => n > 0 ? n.toLocaleString('th-TH') : '';
   const parseNum = (s: string) => Number(s.replace(/,/g, '')) || 0;
+  const numVal = (field: string, n: number) => activeField === field ? (n > 0 ? String(n) : '') : formatNum(n);
 
   const [allCategories, setAllCategories] = useState<{ id: number; name: string }[]>([]);
 
@@ -100,7 +102,7 @@ const Step1Basics = () => {
       if (!url || !type) return null;
 
       // Step 2: attach uploaded URL to project
-      await api.post(`/pioneer/projects/${projectId}/media`, { url, type });
+      await api.post(`/pioneer/projects/${projectId}/media`, [{ url, type: [type] }]);
 
       // Step 3: fetch media list to get the DB id of the newly attached item
       const mediaRes = await api.get(`/pioneer/projects/${projectId}/media`);
@@ -233,7 +235,7 @@ const Step1Basics = () => {
         <h1 className="text-foreground text-[24px] font-semibold">ข้อมูลโปรเจกต์</h1>
         <form className="flex flex-col gap-[13px]">
           <div className="flex flex-col gap-[4px]">
-            <label className="text-foreground text-[14px]">ชื่อโปรเจกต์</label>
+            <label className="text-foreground text-[14px]">ชื่อโปรเจกต์ <span className="text-error">*</span></label>
             <input
               value={localData.title}
               onBlur={() => handleAutoSave('title', localData.title)}
@@ -243,7 +245,7 @@ const Step1Basics = () => {
           </div>
           <p className="text-[12px] text-muted-foreground">*การตั้งชื่อโปรเจกต์ควรเน้นความสั้นและจดจำง่ายในทันที่ เพื่อให้ชื่อโปรเจกต์ของคุณดูโดดเด่นและค้นหาได้รวดเร็ว*</p>
           <div className="flex flex-col gap-[4px]">
-            <label className="text-foreground text-[14px]">คำอธิบาย</label>
+            <label className="text-foreground text-[14px]">คำอธิบาย <span className="text-error">*</span></label>
             <textarea
               value={localData.description}
               onBlur={() => handleAutoSave('description', localData.description)}
@@ -253,7 +255,7 @@ const Step1Basics = () => {
           </div>
           <p className="text-[12px] text-muted-foreground">*ส่วนคำอธิบายคือพื้นที่สำหรับสรุปใจความสำคัญในประโยคเดียวว่าโปรเจกต์นี้ทำอะไร เพื่อให้ผู้ที่สนใจเข้าใจเป้าหมายหลักได้ทันทีโดยไม่ต้องอ่านยาว*</p>
           <div className="flex flex-col gap-[8px] relative">
-            <label className="text-[14px] text-foreground">หมวดหมู่</label>
+            <label className="text-[14px] text-foreground">หมวดหมู่ <span className="text-error">*</span></label>
             <button
               type="button"
               onClick={() => setIsOpen(!isOpen)}
@@ -295,10 +297,11 @@ const Step1Basics = () => {
         <h1 className="text-foreground text-[24px] font-semibold">การระดมทุน</h1>
         <form className="flex flex-col gap-[20px]">
           <div className="flex flex-col gap-[4px]">
-            <label className="text-foreground text-[14px]">เป้าหมายเงินทุน (บาท)</label>
+            <label className="text-foreground text-[14px]">เป้าหมายเงินทุน (บาท) <span className="text-error">*</span></label>
             <input
               type="text"
-              value={formatNum(localData.fundingGoal)}
+              value={numVal('fundingGoal', localData.fundingGoal)}
+              onFocus={() => setActiveField('fundingGoal')}
               onChange={(e) => {
                 const newGoal = parseNum(e.target.value);
                 const autoSoftCap = Math.ceil(newGoal * 0.7);
@@ -306,6 +309,7 @@ const Step1Basics = () => {
                 setLocalData({ ...localData, fundingGoal: newGoal, softCap: autoSoftCap, minInvestAmount: autoMinInvest });
               }}
               onBlur={async () => {
+                setActiveField(null);
                 const goalChanged = localData.fundingGoal !== currentProject.fundingGoal;
                 const capChanged = localData.softCap !== currentProject.softCap;
                 if (!goalChanged && !capChanged) return;
@@ -319,22 +323,25 @@ const Step1Basics = () => {
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
           <div className="flex flex-col gap-[4px]">
-            <label className="text-foreground text-[14px]">ระยะเวลาโปรเจกต์  (เดือน)</label>
+            <label className="text-foreground text-[14px]">ระยะเวลาโปรเจกต์ (เดือน) <span className="text-error">*</span></label>
             <input
               type="text"
-              value={formatNum(localData.projectDuration)}
+              value={numVal('projectDuration', localData.projectDuration)}
+              onFocus={() => setActiveField('projectDuration')}
               onChange={(e) => setLocalData({ ...localData, projectDuration: parseNum(e.target.value) })}
-              onBlur={() => handleAutoSave('projectDuration', localData.projectDuration)}
+              onBlur={() => { setActiveField(null); handleAutoSave('projectDuration', localData.projectDuration); }}
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
           <div className="grid grid-cols-1 gap-[20px] md:grid-cols-3 md:gap-[20px]">
             <div className="flex flex-col gap-[4px]">
-              <label className="text-foreground text-[14px]">Soft Cap (ได้รับทุนแม้ไม่ถึงเป้า)</label>
+              <label className="text-foreground text-[14px]">Soft Cap (ได้รับทุนแม้ไม่ถึงเป้า) <span className="text-error">*</span></label>
               <input
                 type="text"
-                value={formatNum(localData.softCap)}
+                value={numVal('softCap', localData.softCap)}
+                onFocus={() => setActiveField('softCap')}
                 onChange={(e) => setLocalData({ ...localData, softCap: parseNum(e.target.value) })}
                 onBlur={() => {
+                  setActiveField(null);
                   const minSoftCap = Math.ceil(localData.fundingGoal * 0.7);
                   if (localData.softCap > 0 && localData.softCap < minSoftCap) {
                     toast.error(`Soft Cap ต้องไม่ต่ำกว่า 70% ของเป้าหมาย (${formatNum(minSoftCap)} บาท)`);
@@ -347,34 +354,45 @@ const Step1Basics = () => {
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
             </div>
             <div className="flex flex-col gap-[4px]">
-              <label className="text-foreground text-[14px]">ระยะเวลาระดมทุน (วัน)</label>
+              <label className="text-foreground text-[14px]">ระยะเวลาระดมทุน (1-60 วัน) <span className="text-error">*</span></label>
               <input
                 type="text"
-                value={formatNum(localData.campaignDuration)}
+                value={numVal('campaignDuration', localData.campaignDuration)}
+                onFocus={() => setActiveField('campaignDuration')}
                 onChange={(e) => setLocalData({ ...localData, campaignDuration: parseNum(e.target.value) })}
-                onBlur={() => handleAutoSave('campaignDuration', localData.campaignDuration)}
+                onBlur={() => {
+                  setActiveField(null);
+                  const val = localData.campaignDuration;
+                  if (val > 0 && (val < 1 || val > 60)) {
+                    toast.error('ระยะเวลาระดมทุนต้องอยู่ระหว่าง 1-60 วัน');
+                    const clamped = Math.min(Math.max(val, 1), 60);
+                    setLocalData({ ...localData, campaignDuration: clamped });
+                    handleAutoSave('campaignDuration', clamped);
+                    return;
+                  }
+                  handleAutoSave('campaignDuration', val);
+                }}
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
             </div>
             <div className="flex flex-col gap-[4px]">
-              <label className="text-foreground text-[14px]">ส่วนแบ่งกำไร (%)</label>
+              <label className="text-foreground text-[14px]">ส่วนแบ่งกำไร (%) <span className="text-error">*</span></label>
               <input
                 type="text"
-                value={formatNum(localData.revenueShare)}
+                value={numVal('revenueShare', localData.revenueShare)}
+                onFocus={() => setActiveField('revenueShare')}
                 onChange={(e) => setLocalData({ ...localData, revenueShare: parseNum(e.target.value) })}
-                onBlur={() => handleAutoSave('revenueShare', localData.revenueShare)}
+                onBlur={() => { setActiveField(null); handleAutoSave('revenueShare', localData.revenueShare); }}
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-[20px] md:grid-cols-2 md:gap-[20px]">
-            <div className="flex flex-col gap-[4px]">
-              <label className="text-foreground text-[14px]">ลงทุนขั้นต่ำ (บาท)</label>
-              <input
-                type="text"
-                value={formatNum(localData.minInvestAmount)}
-                disabled
-                className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] text-muted-foreground cursor-not-allowed opacity-60"
-              />
-            </div>
+          <div className="flex flex-col gap-[4px]">
+            <label className="text-foreground text-[14px]">ลงทุนขั้นต่ำ (บาท)</label>
+            <input
+              type="text"
+              value={formatNum(localData.minInvestAmount)}
+              disabled
+              className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] text-muted-foreground cursor-not-allowed opacity-60"
+            />
           </div>
           <p className="text-[12px] text-muted-foreground"><span className="text-error">*</span> ระบุเป้าหมายเงินทุนและระยะเวลา ให้ชัดเจน พร้อมกำหนดเงื่อนไขการรับเงินทั้งแบบ Soft Cap รวมถึงสัดส่วนผลตอบแทนที่แน่นอน เพื่อใช้เป็นข้อตกลงในการระดมทุน*</p>
         </form>
@@ -386,7 +404,7 @@ const Step1Basics = () => {
           <h1 className="text-[24px] text-foreground font-semibold">สื่อประกอบ</h1>
           {/* ไฟล์ประกอบ */}
           <div className="space-y-3">
-            <label className="text-foreground text-[14px] flex items-center gap-[10px]"><FileImage size={16} />รูปภาพปก</label>
+            <label className="text-foreground text-[14px] flex items-center gap-[10px]"><FileImage size={16} />รูปภาพปก <span className="text-error">*</span></label>
             <div
               onClick={() => additionalImagesRef.current?.click()}
               className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer group"

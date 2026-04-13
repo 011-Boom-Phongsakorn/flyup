@@ -4,12 +4,18 @@ import api from "../../services/api"
 import toast from "react-hot-toast"
 import { AxiosError } from "axios"
 
+interface VerifUser {
+    email: string
+    role: string
+}
+
 interface StudentVerification {
     id: number
     user_id: number
     document: string
     status: string
     CreatedAt: string
+    User: VerifUser
 }
 
 interface IDCardVerification {
@@ -20,6 +26,7 @@ interface IDCardVerification {
     status: string
     face_score: number | null
     CreatedAt: string
+    User: VerifUser
 }
 
 type Tab = "student" | "idcard"
@@ -67,7 +74,7 @@ const VerificationApproval = () => {
                 await api.patch(`/admin/reject-student-card/${id}`)
                 toast.success("ปฏิเสธบัตรนักศึกษาแล้ว")
             }
-            setStudents((prev) => prev.filter((s) => s.user_id !== id))
+            await fetchData()
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
             toast.error(msg || "เกิดข้อผิดพลาด")
@@ -86,7 +93,7 @@ const VerificationApproval = () => {
                 await api.patch(`/admin/reject-id-card/${id}`)
                 toast.success("ปฏิเสธบัตรประชาชนแล้ว")
             }
-            setIdCards((prev) => prev.filter((c) => c.user_id !== id))
+            await fetchData()
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
             toast.error(msg || "เกิดข้อผิดพลาด")
@@ -139,20 +146,27 @@ const VerificationApproval = () => {
                     </div>
                 ) : tab === "student" ? (
                     <>
-                        <div className="grid grid-cols-5 bg-[#f8f9fc] px-[16px] py-[12px] font-medium text-gray-500 border-b border-border">
+                        <div className="grid grid-cols-7 bg-[#f8f9fc] px-[16px] py-[12px] font-medium text-gray-500 border-b border-border">
                             <div>User ID</div>
+                            <div className="col-span-2">Email</div>
+                            <div>Role</div>
                             <div>วันที่ส่ง</div>
                             <div>เอกสาร</div>
-                            <div className="text-center">สถานะ</div>
                             <div className="text-center">จัดการ</div>
                         </div>
                         {students.length === 0 ? (
                             <div className="py-[60px] text-center text-muted-foreground">ไม่มีรายการรออนุมัติ</div>
                         ) : (
                             students.map((s) => (
-                                <div key={s.id} className="grid grid-cols-5 px-[16px] items-center border-b border-border last:border-0">
+                                <div key={s.id} className="grid grid-cols-7 px-[16px] items-center border-b border-border last:border-0">
                                     <div className="py-[14px] text-muted-foreground">#{s.user_id}</div>
-                                    <div className="py-[14px]">{formatDate(s.CreatedAt)}</div>
+                                    <div className="py-[14px] col-span-2 text-[13px] truncate pr-[8px]">{s.User?.email ?? '-'}</div>
+                                    <div className="py-[14px]">
+                                        <span className="text-[12px] px-[8px] py-[2px] rounded-full border bg-primary/10 text-primary border-primary/20 font-medium">
+                                            {s.User?.role ?? '-'}
+                                        </span>
+                                    </div>
+                                    <div className="py-[14px] text-[13px]">{formatDate(s.CreatedAt)}</div>
                                     <div className="py-[14px]">
                                         <button
                                             onClick={() => setPreview({ url: s.document, label: "บัตรนักศึกษา" })}
@@ -160,11 +174,6 @@ const VerificationApproval = () => {
                                         >
                                             <ExternalLink size={13} /> ดูบัตร
                                         </button>
-                                    </div>
-                                    <div className="py-[14px] flex justify-center">
-                                        <span className="bg-amber-50 text-amber-600 border border-amber-200 text-[12px] px-[10px] py-[2px] rounded-full font-medium">
-                                            รออนุมัติ
-                                        </span>
                                     </div>
                                     <div className="py-[14px] flex justify-center gap-[8px]">
                                         <button
@@ -190,21 +199,29 @@ const VerificationApproval = () => {
                     </>
                 ) : (
                     <>
-                        <div className="grid grid-cols-6 bg-[#f8f9fc] px-[16px] py-[12px] font-medium text-gray-500 border-b border-border">
+                        <div className="grid grid-cols-9 bg-[#f8f9fc] px-[16px] py-[12px] font-medium text-gray-500 border-b border-border">
                             <div>User ID</div>
+                            <div className="col-span-2">Email</div>
+                            <div>Role</div>
                             <div>วันที่ส่ง</div>
                             <div>บัตรประชาชน</div>
                             <div>เซลฟี่</div>
-                            <div className="text-center">สถานะ</div>
+                            <div className="text-center">Face Score</div>
                             <div className="text-center">จัดการ</div>
                         </div>
                         {idCards.length === 0 ? (
                             <div className="py-[60px] text-center text-muted-foreground">ไม่มีรายการรออนุมัติ</div>
                         ) : (
                             idCards.map((c) => (
-                                <div key={c.id} className="grid grid-cols-6 px-[16px] items-center border-b border-border last:border-0">
+                                <div key={c.id} className="grid grid-cols-9 px-[16px] items-center border-b border-border last:border-0">
                                     <div className="py-[14px] text-muted-foreground">#{c.user_id}</div>
-                                    <div className="py-[14px]">{formatDate(c.CreatedAt)}</div>
+                                    <div className="py-[14px] col-span-2 text-[13px] truncate pr-[8px]">{c.User?.email ?? '-'}</div>
+                                    <div className="py-[14px]">
+                                        <span className="text-[12px] px-[8px] py-[2px] rounded-full border bg-primary/10 text-primary border-primary/20 font-medium">
+                                            {c.User?.role ?? '-'}
+                                        </span>
+                                    </div>
+                                    <div className="py-[14px] text-[13px]">{formatDate(c.CreatedAt)}</div>
                                     <div className="py-[14px]">
                                         <button
                                             onClick={() => setPreview({ url: c.document, label: "บัตรประชาชน" })}
@@ -226,9 +243,13 @@ const VerificationApproval = () => {
                                         )}
                                     </div>
                                     <div className="py-[14px] flex justify-center">
-                                        <span className="bg-amber-50 text-amber-600 border border-amber-200 text-[12px] px-[10px] py-[2px] rounded-full font-medium">
-                                            รออนุมัติ
-                                        </span>
+                                        {c.face_score != null ? (
+                                            <span className={`text-[12px] px-[10px] py-[2px] rounded-full font-medium border ${c.face_score >= 80 ? 'bg-green-50 text-green-600 border-green-200' : c.face_score >= 50 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                                                {c.face_score.toFixed(1)}%
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground">-</span>
+                                        )}
                                     </div>
                                     <div className="py-[14px] flex justify-center gap-[8px]">
                                         <button

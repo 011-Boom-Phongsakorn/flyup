@@ -11,7 +11,9 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
   const fundingGoal = currentProject.fundingGoal || 0
   const phasePercents = [0.15, 0.20, 0.30, 0.35]
 
-  const activeMilestones = milestones.filter(m => m.title);
+  const activeMilestones = milestones
+    .map((m, i) => ({ m, phaseIndex: i }))
+    .filter(({ m }) => m.title);
 
 
 
@@ -27,11 +29,11 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
     <div className="flex flex-col gap-[24px] mt-[20px] relative w-full overflow-hidden">
       <div className="absolute left-[24px] top-[24px] bottom-[24px] w-[1px] bg-border z-0 hidden md:block" />
 
-      {activeMilestones.map((m, idx) => (
-        <div key={idx} className="flex gap-[20px] relative z-10 w-full">
+      {activeMilestones.map(({ m, phaseIndex }, idx) => (
+        <div key={phaseIndex} className="flex gap-[20px] relative z-10 w-full">
           {/* Circle Indicator */}
           <div className={`hidden md:flex shrink-0 w-[48px] h-[48px] rounded-full items-center justify-center font-bold text-[20px] shadow-sm ${idx === 0 ? 'bg-primary text-white' : 'bg-white border border-border text-foreground'}`}>
-            {idx + 1}
+            {phaseIndex + 1}
           </div>
 
           {/* Card Content */}
@@ -43,13 +45,6 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
                   <p className="text-[14px] text-muted-foreground mt-[4px]">{m.description}</p>
                 )}
               </div>
-
-              {(m.startDate || m.endDate) && (
-                <div className="flex items-center gap-[6px] text-muted-foreground text-[12px] mt-[4px]">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                  {m.startDate && m.endDate ? `${m.startDate} — ${m.endDate}` : m.endDate || m.startDate}
-                </div>
-              )}
 
               {m.criteria.filter(c => c).length > 0 && (
                 <div className="flex flex-col gap-[8px] mt-[8px]">
@@ -66,7 +61,7 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
             </div>
 
             <div className="flex flex-row xl:flex-col items-center xl:items-end justify-between xl:justify-start gap-[12px] shrink-0 mt-[10px] xl:mt-0">
-              <span className="text-[20px] font-bold text-primary">{fundingGoal > 0 ? `฿${(fundingGoal * phasePercents[idx]).toLocaleString('th-TH')}` : 'กรุณากำหนดเป้าหมายเงินทุนก่อน'}฿</span>
+              <span className="text-[20px] font-bold text-primary">{fundingGoal > 0 ? `฿${(fundingGoal * phasePercents[phaseIndex]).toLocaleString('th-TH')}` : 'กรุณากำหนดเป้าหมายเงินทุนก่อน'}฿</span>
               <span className="px-[12px] py-[4px] rounded-full text-[12px] font-medium border bg-white text-foreground border-border">
                 รอดำเนินการ
               </span>
