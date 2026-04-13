@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ShieldCheck, Camera, Phone, Briefcase, Link, FileBraces, Mail } from "lucide-react";
+import { ShieldCheck, Camera, Phone, Briefcase, Link, FileBraces, Mail, MapPin, GraduationCap } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
 import api from "../../services/api";
@@ -10,9 +10,12 @@ const ProfileTab = () => {
     first_name: (authUser?.first_name as string) ?? "",
     last_name: (authUser?.last_name as string) ?? "",
     phone: (authUser?.phone as string) ?? "",
+    address: (authUser?.address as string) ?? "",
     bio: authUser?.student_profile?.bio ?? "",
     portfolio: authUser?.student_profile?.portfolio ?? "",
     skills: authUser?.student_profile?.skills ?? "",
+    faculty: authUser?.student_profile?.faculty ?? "",
+    major: authUser?.student_profile?.major ?? "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
@@ -26,9 +29,12 @@ const ProfileTab = () => {
         first_name: (authUser?.first_name as string) ?? "",
         last_name: (authUser?.last_name as string) ?? "",
         phone: (authUser?.phone as string) ?? "",
+        address: (authUser?.address as string) ?? "",
         bio: authUser?.student_profile?.bio ?? "",
         portfolio: authUser?.student_profile?.portfolio ?? "",
         skills: authUser?.student_profile?.skills ?? "",
+        faculty: authUser?.student_profile?.faculty ?? "",
+        major: authUser?.student_profile?.major ?? "",
       });
       initialized.current = true;
     }
@@ -70,9 +76,12 @@ const ProfileTab = () => {
         first_name: form.first_name,
         last_name: form.last_name,
         phone: form.phone,
+        address: form.address || undefined,
         bio: form.bio || undefined,
         portfolio: form.portfolio || undefined,
         skills: form.skills || undefined,
+        faculty: form.faculty || undefined,
+        major: form.major || undefined,
       });
       initialized.current = false;
       await checkAuth();
@@ -164,6 +173,19 @@ const ProfileTab = () => {
             className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
           />
         </div>
+
+        <div className="flex flex-col gap-[6px]">
+          <label className="text-[13px] font-medium text-foreground flex items-center gap-[6px]">
+            <span><MapPin size={14} /></span> ที่อยู่
+          </label>
+          <input
+            name="address"
+            value={form.address}
+            onChange={handleChange}
+            placeholder="เช่น 123 ถนนสุขุมวิท กรุงเทพมหานคร"
+            className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
+          />
+        </div>
       </div>
 
       {/* ข้อมูล Pioneer */}
@@ -208,6 +230,33 @@ const ProfileTab = () => {
             onChange={handleChange}
             className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
           />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+          <div className="flex flex-col gap-[6px]">
+            <label className="text-[13px] font-medium text-foreground flex items-center gap-[6px]">
+              <span><GraduationCap size={14} /></span> คณะ
+            </label>
+            <input
+              name="faculty"
+              value={form.faculty}
+              onChange={handleChange}
+              placeholder="เช่น คณะวิทยาศาสตร์และเทคโนโลยี"
+              className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
+            />
+          </div>
+          <div className="flex flex-col gap-[6px]">
+            <label className="text-[13px] font-medium text-foreground flex items-center gap-[6px]">
+              <span><GraduationCap size={14} /></span> สาขา
+            </label>
+            <input
+              name="major"
+              value={form.major}
+              onChange={handleChange}
+              placeholder="เช่น วิทยาการคอมพิวเตอร์"
+              className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
+            />
+          </div>
         </div>
       </div>
 

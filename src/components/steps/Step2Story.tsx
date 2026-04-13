@@ -293,7 +293,7 @@ const Step2Story = () => {
 
         <div className="space-y-3">
           {/* ✅ Container หลักต้องเป็น overflow-visible เพื่อให้เมนูเด้งออกมาได้ */}
-          <p className='text-[14px] text-foreground'>ความเป็นมาของโปรเจกต์</p>
+          <p className='text-[14px] text-foreground'>ความเป็นมาของโปรเจกต์ <span className="text-error">*</span></p>
           <div
             tabIndex={0}
             ref={editorContainerRef}
@@ -562,7 +562,7 @@ const Step2Story = () => {
 
           </div>
           <p className='text-[12px] text-muted-foreground'>*อธิบายความเป็นมาและรายละเอียด เชิงลึกเพื่อสร้างความเชื่อมั่น  *</p>
-          <p className='text-[14px] text-foreground'>ความเสี่ยงของโปรเจกต์</p>
+          <p className='text-[14px] text-foreground'>ความเสี่ยงของโปรเจกต์ <span className="text-error">*</span></p>
           <textarea
             value={risks}
             onChange={(e) => setRisks(e.target.value)}

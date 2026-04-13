@@ -44,6 +44,7 @@ interface DecodedUser extends Record<string, unknown> {
     first_name?: string;
     last_name?: string;
     phone?: string;
+    address?: string;
     picture?: string;
     student_profile?: StudentProfile;
     bank_account?: BankAccount;

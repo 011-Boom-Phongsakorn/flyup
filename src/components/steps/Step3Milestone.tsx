@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useRef } from 'react'
 import { useProjectStore, type Milestone } from '../../store/useProjectStore'
 import { Plus, Trash2, Upload, Video, X, Loader2 } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
@@ -9,6 +9,8 @@ import api from '../../services/api'
 const Step3Milestone = () => {
   const { projectId } = useParams()
   const [activePhase, setActivePhase] = useState(0) // 0-3
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
   // ✅ ดึง currentProject มาก่อน แล้วค่อยเข้าถึง milestones
   const { currentProject, updateMilestone, saveMilestonePhase, setSaveStatus } = useProjectStore()
 
@@ -28,48 +30,35 @@ const Step3Milestone = () => {
 
   const currentData = currentProject.milestones[activePhase]
 
-  const projectMaxDateStr = useMemo(() => {
-    if (!currentProject.projectDuration) return undefined
-    const d = new Date()
-    d.setMonth(d.getMonth() + currentProject.projectDuration)
-    return d.toISOString().split('T')[0]
-  }, [currentProject.projectDuration])
-
-  const projectMaxDateDisplay = useMemo(() => {
-    if (!currentProject.projectDuration) return ''
-    const d = new Date()
-    d.setMonth(d.getMonth() + currentProject.projectDuration)
-    return d.toLocaleDateString('th-TH')
-  }, [currentProject.projectDuration])
 
   // 1. ฟังก์ชันอัปเดตข้อมูลทั่วไปของ Milestone
   const handleChange = <K extends keyof Milestone>(field: K, value: Milestone[K]) => {
     updateMilestone(activePhase, { [field]: value })
   }
 
-  // อัปโหลดหลายไฟล์พร้อมกันผ่าน /upload (key: files) — returns items[]
-  const uploadFiles = async (files: File[]): Promise<Array<{ filename: string; type: string; url: string }>> => {
+  // อัปโหลดไฟล์เดียวผ่าน /upload (key: file) — คืน server URL
+  const uploadOneFile = async (file: File): Promise<string | null> => {
     try {
       const formData = new FormData()
-      files.forEach(file => formData.append('files', file))
+      formData.append('file', file)
       const res = await api.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 180000,
+        timeout: 120000,
       })
-      return res.data?.data?.items ?? []
+      return res.data?.data?.url ?? null
     } catch {
-      return []
+      return null
     }
   }
 
   // แทนที่ blob URL ด้วย server URL ใน milestone files
-  const replaceFileBlobUrl = (blobUrl: string, serverUrl: string, name: string) => {
+  const replaceFileBlobUrl = (blobUrl: string, serverUrl: string, name: string, phase: number) => {
     URL.revokeObjectURL(blobUrl)
     useProjectStore.setState(state => ({
       currentProject: {
         ...state.currentProject,
         milestones: state.currentProject.milestones.map((m, idx) =>
-          idx !== activePhase ? m : {
+          idx !== phase ? m : {
             ...m,
             files: (m.files || []).map(f => f.url === blobUrl ? { name, url: serverUrl } : f),
           }
@@ -78,30 +67,25 @@ const Step3Milestone = () => {
     }))
   }
 
-  // ลบ blob URL ที่ upload ล้มเหลว
-  const removeFileBlobUrl = (blobUrl: string) => {
+  const removeFileBlobUrl = (blobUrl: string, phase: number) => {
     URL.revokeObjectURL(blobUrl)
     useProjectStore.setState(state => ({
       currentProject: {
         ...state.currentProject,
         milestones: state.currentProject.milestones.map((m, idx) =>
-          idx !== activePhase ? m : {
-            ...m,
-            files: (m.files || []).filter(f => f.url !== blobUrl),
-          }
+          idx !== phase ? m : { ...m, files: (m.files || []).filter(f => f.url !== blobUrl) }
         ),
       },
     }))
   }
 
-  // แทนที่ blob URL ด้วย server URL ใน milestone videos
-  const replaceVideoBlobUrl = (blobUrl: string, serverUrl: string, name: string) => {
+  const replaceVideoBlobUrl = (blobUrl: string, serverUrl: string, name: string, phase: number) => {
     URL.revokeObjectURL(blobUrl)
     useProjectStore.setState(state => ({
       currentProject: {
         ...state.currentProject,
         milestones: state.currentProject.milestones.map((m, idx) =>
-          idx !== activePhase ? m : {
+          idx !== phase ? m : {
             ...m,
             videos: (m.videos || []).map(v => v.url === blobUrl ? { name, url: serverUrl } : v),
           }
@@ -110,45 +94,57 @@ const Step3Milestone = () => {
     }))
   }
 
-  const removeVideoBlobUrl = (blobUrl: string) => {
+  const removeVideoBlobUrl = (blobUrl: string, phase: number) => {
     URL.revokeObjectURL(blobUrl)
     useProjectStore.setState(state => ({
       currentProject: {
         ...state.currentProject,
         milestones: state.currentProject.milestones.map((m, idx) =>
-          idx !== activePhase ? m : {
-            ...m,
-            videos: (m.videos || []).filter(v => v.url !== blobUrl),
-          }
+          idx !== phase ? m : { ...m, videos: (m.videos || []).filter(v => v.url !== blobUrl) }
         ),
       },
     }))
   }
 
-  // 2. อัปโหลดไฟล์เดียว (แทนที่ไฟล์เดิม + ล้าง video เพราะ backend มีแค่ 1 URL ต่อ milestone)
+  // 2. อัปโหลดหลายไฟล์ (append ต่อไฟล์เดิม)
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const fileList = e.target.files
+    if (!fileList || fileList.length === 0) return
+    const phase = activePhase
+
+    // ต้อง convert ก่อน clear — FileList เป็น live reference ถูกล้างเมื่อ value = ""
+    const files = Array.from(fileList)
     e.target.value = ""
+    const previews = files.map(file => ({ name: file.name, url: URL.createObjectURL(file) }))
 
-    const blobUrl = URL.createObjectURL(file)
-    updateMilestone(activePhase, { files: [{ name: file.name, url: blobUrl }], videos: [] })
+    // append blob previews ต่อรายการปัจจุบัน (อ่านจาก store ผ่าน setState เพื่อหลีกเลี่ยง stale closure)
+    useProjectStore.setState(state => ({
+      currentProject: {
+        ...state.currentProject,
+        milestones: state.currentProject.milestones.map((m, idx) =>
+          idx !== phase ? m : { ...m, files: [...(m.files || []), ...previews] }
+        ),
+      },
+    }))
 
-    const results = await uploadFiles([file])
-    const result = results[0]
-    if (result?.url) {
-      replaceFileBlobUrl(blobUrl, result.url, file.name)
-      await savePhase(activePhase)
-    } else {
-      removeFileBlobUrl(blobUrl)
-      toast.error(`อัปโหลด ${file.name} ไม่สำเร็จ`)
+    // upload ทีละไฟล์แล้วแทนที่ blob URL
+    for (let i = 0; i < files.length; i++) {
+      const serverUrl = await uploadOneFile(files[i])
+      if (serverUrl) {
+        replaceFileBlobUrl(previews[i].url, serverUrl, files[i].name, phase)
+      } else {
+        removeFileBlobUrl(previews[i].url, phase)
+        toast.error(`อัปโหลด ${files[i].name} ไม่สำเร็จ`)
+      }
     }
+    await savePhase(phase)
   }
 
-  // 3. อัปโหลดวิดีโอเดียว (แทนที่วิดีโอเดิม + ล้าง files)
+  // 3. อัปโหลดวิดีโอ (append ต่อรายการเดิม)
   const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const phase = activePhase
     const supportedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']
     if (!supportedVideoTypes.includes(file.type)) {
       toast.error(`ไม่รองรับไฟล์นี้ (รองรับ MP4, WebM, OGG, MOV)`)
@@ -163,15 +159,21 @@ const Step3Milestone = () => {
     e.target.value = ""
 
     const blobUrl = URL.createObjectURL(file)
-    updateMilestone(activePhase, { videos: [{ name: file.name, url: blobUrl }], files: [] })
+    useProjectStore.setState(state => ({
+      currentProject: {
+        ...state.currentProject,
+        milestones: state.currentProject.milestones.map((m, idx) =>
+          idx !== phase ? m : { ...m, videos: [...(m.videos || []), { name: file.name, url: blobUrl }] }
+        ),
+      },
+    }))
 
-    const results = await uploadFiles([file])
-    const result = results[0]
-    if (result?.url) {
-      replaceVideoBlobUrl(blobUrl, result.url, file.name)
-      await savePhase(activePhase)
+    const serverUrl = await uploadOneFile(file)
+    if (serverUrl) {
+      replaceVideoBlobUrl(blobUrl, serverUrl, file.name, phase)
+      await savePhase(phase)
     } else {
-      removeVideoBlobUrl(blobUrl)
+      removeVideoBlobUrl(blobUrl, phase)
       toast.error(`อัปโหลด ${file.name} ไม่สำเร็จ`)
     }
   }
@@ -241,7 +243,7 @@ const Step3Milestone = () => {
           <div className="flex flex-col gap-[20px]">
             {/* กล่อง input สำหรับ ชื่อ Milestone */}
             <div className="flex flex-col gap-[8px]">
-              <label className="text-[14px] font-semibold text-foreground">ชื่อ Milestone</label>
+              <label className="text-[14px] font-semibold text-foreground">ชื่อ Milestone <span className="text-error">*</span></label>
               <input
                 type="text"
                 value={currentData.title}
@@ -253,7 +255,7 @@ const Step3Milestone = () => {
 
             {/* กล่อง textarea สำหรับ คำอธิบายของ Milestone */}
             <div className="flex flex-col gap-[8px]">
-              <label className="text-[14px] font-semibold text-foreground">คำอธิบาย</label>
+              <label className="text-[14px] font-semibold text-foreground">คำอธิบาย <span className="text-error">*</span></label>
               <textarea
                 rows={4}
                 value={currentData.description}
@@ -279,37 +281,17 @@ const Step3Milestone = () => {
               />
             </div>
 
-            {/* กล่อง input แบบ grid 2 ฝั่ง สำหรับเลือก วันเริ่มต้น และ วันสิ้นสุด */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-[20px]">
-              <div className="flex flex-col gap-[8px]">
-                <label className="text-[14px] font-semibold text-foreground">วันเริ่มต้น</label>
-                <input
-                  type="date"
-                  value={currentData.startDate}
-                  min={new Date().toISOString().split('T')[0]}
-                  max={projectMaxDateStr}
-                  onChange={(e) => handleChange('startDate', e.target.value)}
-                  onBlur={() => { savePhase(activePhase) }}
-                  className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
-                />
-              </div>
-              <div className="flex flex-col gap-[8px]">
-                <label className="text-[14px] font-semibold text-foreground">วันสิ้นสุด</label>
-                <input
-                  type="date"
-                  value={currentData.endDate}
-                  min={currentData.startDate || new Date().toISOString().split('T')[0]}
-                  max={projectMaxDateStr}
-                  onChange={(e) => handleChange('endDate', e.target.value)}
-                  onBlur={() => { savePhase(activePhase) }}
-                  className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px] text-foreground"
-                />
-              </div>
-              {currentProject.projectDuration > 0 && (
-                <p className="md:col-span-2 text-[12px] text-muted-foreground">
-                  ระยะเวลาโปรเจกต์ทั้งหมด {currentProject.projectDuration} เดือน (วันสิ้นสุดไม่เกิน {projectMaxDateDisplay})
-                </p>
-              )}
+            {/* ระยะเวลา (วัน) */}
+            <div className="flex flex-col gap-[8px]">
+              <label className="text-[14px] font-semibold text-foreground">ระยะเวลา (วัน) <span className="text-error">*</span></label>
+              <input
+                type="number"
+                min={1}
+                value={currentData.duration || ''}
+                onChange={(e) => handleChange('duration', Number(e.target.value))}
+                onBlur={() => { savePhase(activePhase) }}
+                className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px]"
+              />
             </div>
           </div>
 
@@ -322,7 +304,7 @@ const Step3Milestone = () => {
           <div className="flex flex-col gap-[16px]">
             <div className="flex justify-between items-center">
               <div className="flex flex-col gap-[4px]">
-                <label className="text-[14px] font-semibold text-foreground">เกณฑ์การยอมรับ</label>
+                <label className="text-[14px] font-semibold text-foreground">เกณฑ์การยอมรับ <span className="text-error">*</span></label>
                 <span className="text-[12px] text-muted-foreground">ระบุสิ่งที่ต้องทำให้เสร็จใน Milestone นี้ (1-10 ข้อ)</span>
               </div>
               <button
@@ -377,17 +359,17 @@ const Step3Milestone = () => {
               นำพื้นที่อัปโหลดแบบลากวางมาเรียงซ้อนกันแนวตั้ง (Stacked)
               ========================================= */}
           <div className="flex flex-col gap-[24px]">
-            {/* 5.1 ไฟล์ประกอบ — 1 ไฟล์ หรือ 1 วิดีโอ (backend มี 1 URL slot ต่อ milestone) */}
+            {/* 5.1 ไฟล์ประกอบ — เพิ่มไฟล์จะล้าง video อัตโนมัติ (backend รองรับ type เดียวต่อ milestone) */}
             <div className="flex flex-col gap-[8px]">
               <label className="text-[14px] font-semibold text-foreground">ไฟล์ประกอบ (ไม่บังคับ)</label>
-              {!currentData.files?.length && !currentData.videos?.length && (
-                <label className="relative border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group">
-                  <input type="file" onChange={handleFileChange} accept="image/*,.xlsx,.xls"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                  <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
-                  <span className="text-[13px] text-muted-foreground">รูปภาพ, Excel, เอกสาร (สูงสุด 5MB)</span>
-                </label>
-              )}
+              <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,.xlsx,.xls,.pdf,.doc,.docx" />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
+              >
+                <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
+                <span className="text-[13px] text-muted-foreground">รูปภาพ, Excel, เอกสาร (สูงสุด 5MB ต่อไฟล์)</span>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {currentData.files?.map((f, i) => {
                   const uploading = f.url?.startsWith('blob:');
@@ -422,14 +404,14 @@ const Step3Milestone = () => {
               <label className="text-[14px] font-semibold text-foreground flex items-center">
                 <Video size={16} className="mr-2" /> ไฟล์วิดีโอ (ไม่บังคับ)
               </label>
-              {!currentData.videos?.length && !currentData.files?.length && (
-                <label className="relative border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group">
-                  <input type="file" accept="video/*" onChange={handleVideoChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                  <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
-                  <span className="text-[13px] text-muted-foreground">อัปโหลดวิดีโอ (สูงสุด 50MB)</span>
-                </label>
-              )}
+              <input type="file" accept="video/*" hidden ref={videoInputRef} onChange={handleVideoChange} />
+              <div
+                onClick={() => videoInputRef.current?.click()}
+                className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
+              >
+                <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
+                <span className="text-[13px] text-muted-foreground">อัปโหลดวิดีโอ (สูงสุด 50MB)</span>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {(currentData.videos || []).map((vid, i) => {
                   const uploading = vid.url?.startsWith('blob:');

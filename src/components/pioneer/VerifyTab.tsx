@@ -58,8 +58,6 @@ const VerifyTab = () => {
 
   const [studentForm, setStudentForm] = useState({
     student_code: derivedStudentCode,
-    faculty: authUser?.student_profile?.faculty ?? "",
-    major: authUser?.student_profile?.major ?? "",
   });
   const [studentFile, setStudentFile] = useState<File | null>(null);
   const [idCardFile, setIdCardFile] = useState<File | null>(null);
@@ -75,14 +73,16 @@ const VerifyTab = () => {
   const [isSavingBank, setIsSavingBank] = useState(false);
 
   useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
     const code =
       authUser?.student_profile?.student_code ??
       (authUser?.email as string)?.split("@")[0] ??
       "";
     setStudentForm({
       student_code: code,
-      faculty: authUser?.student_profile?.faculty ?? "",
-      major: authUser?.student_profile?.major ?? "",
     });
     setBankForm({
       bank_name: authUser?.bank_account?.bank_name ?? "",
@@ -90,7 +90,7 @@ const VerifyTab = () => {
       account_number: authUser?.bank_account?.account_number ?? "",
     });
     const scStatus = authUser?.student_card_verification?.status ?? "";
-    if (scStatus === "approved" || scStatus === "pending") {
+    if (scStatus) {
       setAcceptTerms(true);
       setAcceptAccuracy(true);
     }
@@ -105,14 +105,6 @@ const VerifyTab = () => {
   const handleStudentSubmit = async () => {
     if (!baseRequired.first_name || !baseRequired.last_name || !baseRequired.phone) {
       toast.error("กรุณากรอกข้อมูลส่วนตัว (ชื่อ นามสกุล เบอร์โทร) ในแท็บโปรไฟล์ก่อน");
-      return;
-    }
-    if (!studentForm.faculty.trim()) {
-      toast.error("กรุณากรอกคณะ");
-      return;
-    }
-    if (!studentForm.major.trim()) {
-      toast.error("กรุณากรอกสาขา");
       return;
     }
     if (!studentFile && !storedStudentCardUrl) {
@@ -159,8 +151,6 @@ const VerifyTab = () => {
 
       await api.patch("/user/profile", {
         student_code: studentForm.student_code || undefined,
-        faculty: studentForm.faculty || undefined,
-        major: studentForm.major || undefined,
       });
 
       if (!studentCardLocked) {
@@ -171,11 +161,13 @@ const VerifyTab = () => {
         });
       }
 
-      await api.post("/user/id-verify", {
-        id_card_url: idCardUrl,
-        selfie_url: selfieUrl,
-        declare_truth: acceptAccuracy,
-      });
+      if (!idCardLocked) {
+        await api.post("/user/id-verify", {
+          id_card_url: idCardUrl,
+          selfie_url: selfieUrl,
+          declare_truth: acceptAccuracy,
+        });
+      }
 
       await checkAuth();
       toast.success("ส่งข้อมูลยืนยันตัวตนแล้ว รอ admin อนุมัติ");
@@ -274,34 +266,8 @@ const VerifyTab = () => {
           <label className="text-[13px] font-medium text-foreground">รหัสนักศึกษา</label>
           <input
             value={studentForm.student_code}
-            disabled={studentCardLocked}
-            onChange={(e) => setStudentForm((prev) => ({ ...prev, student_code: e.target.value }))}
-            placeholder="เช่น 664259011"
-            className={`border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none transition-colors ${studentCardLocked ? "bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" : "focus:border-primary"}`}
-          />
-        </div>
-
-        {/* คณะ */}
-        <div className="flex flex-col gap-[6px]">
-          <label className="text-[13px] font-medium text-foreground">คณะ</label>
-          <input
-            value={studentForm.faculty}
-            disabled={studentCardLocked}
-            onChange={(e) => setStudentForm((prev) => ({ ...prev, faculty: e.target.value }))}
-            placeholder="เช่น คณะวิทยาศาสตร์และเทคโนโลยี"
-            className={`border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none transition-colors ${studentCardLocked ? "bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" : "focus:border-primary"}`}
-          />
-        </div>
-
-        {/* สาขา */}
-        <div className="flex flex-col gap-[6px]">
-          <label className="text-[13px] font-medium text-foreground">สาขา</label>
-          <input
-            value={studentForm.major}
-            disabled={studentCardLocked}
-            onChange={(e) => setStudentForm((prev) => ({ ...prev, major: e.target.value }))}
-            placeholder="เช่น วิทยาการคอมพิวเตอร์"
-            className={`border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none transition-colors ${studentCardLocked ? "bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" : "focus:border-primary"}`}
+            disabled
+            className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] bg-[#F8F9FA] text-muted-foreground cursor-not-allowed"
           />
         </div>
 
@@ -482,16 +448,16 @@ const VerifyTab = () => {
           <Lock size={18} className="text-foreground" />
           <h2 className="font-semibold text-foreground">ยืนยันบัญชี</h2>
           {authUser?.bank_account?.id && (
-            <span className="ml-auto text-[12px] text-muted-foreground bg-muted px-[8px] py-[2px] rounded-full">มีบัญชีอยู่แล้ว</span>
+            <span className="ml-auto text-[12px] text-green-600 bg-green-50 border border-green-200 px-[8px] py-[2px] rounded-full">ผูกบัญชีแล้ว</span>
           )}
         </div>
 
         <div className="flex flex-col gap-[6px]">
-          <label className="text-[13px] font-medium text-foreground">ธนาคาร</label>
+          <label className="text-[13px] font-medium text-foreground">ธนาคาร <span className="text-error">*</span></label>
           <select
             value={bankForm.bank_name}
             onChange={(e) => setBankForm((prev) => ({ ...prev, bank_name: e.target.value }))}
-            className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer"
+            className="border border-border rounded-[8px] px-[12px] py-[10px] pr-[32px] text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_10px_center]"
           >
             <option value="">-- เลือกธนาคาร --</option>
             {THAI_BANKS.map((bank) => (
@@ -505,7 +471,7 @@ const VerifyTab = () => {
           { key: "account_number", label: "เลขบัญชี" },
         ].map(({ key, label }) => (
           <div key={key} className="flex flex-col gap-[6px]">
-            <label className="text-[13px] font-medium text-foreground">{label}</label>
+            <label className="text-[13px] font-medium text-foreground">{label} <span className="text-error">*</span></label>
             <input
               value={bankForm[key as keyof typeof bankForm]}
               onChange={(e) => setBankForm((prev) => ({ ...prev, [key]: e.target.value }))}

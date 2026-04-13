@@ -11,7 +11,7 @@ const Step4Agreement = () => {
   const { currentProject } = useProjectStore();
 
   const allMilestonesComplete = currentProject.milestones?.length === 4 &&
-    currentProject.milestones.every(m => !!m.title && !!m.description && !!m.startDate && !!m.endDate);
+    currentProject.milestones.every(m => !!m.title && !!m.description && m.duration > 0);
 
   // State สำหรับเก็บค่าการยอมรับข้อตกลงและเงื่อนไข — sync กับ localStorage
   const [isAgreed, setIsAgreed] = useState(() =>
