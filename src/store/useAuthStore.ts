@@ -95,7 +95,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
             const response = await api.get('/user/me')
             set({ authUser: response?.data?.data })
         } catch {
-            set({ authUser: null })
+            // ถ้ามี token ใน localStorage อยู่แล้ว (เช่น หลัง Google OAuth)
+            // ไม่ล้าง authUser เพื่อไม่ให้ลบ session ที่เพิ่ง set ไป
+            if (!localStorage.getItem('auth_token')) {
+                set({ authUser: null })
+            }
         } finally {
             set({ isCheckingAuth: false })
         }
