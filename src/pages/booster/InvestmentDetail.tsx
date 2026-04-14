@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, CheckCircle2, Loader2, Calendar } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Calendar } from 'lucide-react';
 import { useBoosterStore } from '../../store/useBoosterStore';
 import { usePublicProjectStore } from '../../store/usePublicProjectStore';
 import { useProjectDetailStore } from '../../store/useProjectDetailStore';
-import PreviewStory from '../../components/preview/PreviewStory';
 import PreviewMilestone from '../../components/preview/PreviewMilestone';
 import { PreviewUpdate, PreviewQuestion, PreviewComment } from '../../components/preview/PreviewMisc';
 
@@ -65,7 +64,7 @@ const InvestmentDetail = () => {
   const description = project?.description || '';
   const milestones = project?.milestones?.sort((a, b) => a.phase_no - b.phase_no) || [];
   
-  const targetGoal = project?.funding_goal || 0;
+
   const profitShare = inv.profit_share_pct || project?.profit_share_pct || 0;
 
   // Media
