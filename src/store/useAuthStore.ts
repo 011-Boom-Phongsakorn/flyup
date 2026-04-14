@@ -134,11 +134,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
         } catch (error: unknown) {
-            console.log(error)
             const err = error instanceof AxiosError ? error : null;
             const errorMessage = err?.response?.data?.error;
 
-            if (errorMessage === 'please verify email') {
+            if (!err || err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED') {
+                toast.error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่')
+            } else if (errorMessage === 'please verify email') {
                 toast.error('กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
             } else {
                 toast.error('อีเมล์หรือรหัสผ่านไม่ถูกต้อง')
