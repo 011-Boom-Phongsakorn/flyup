@@ -124,13 +124,18 @@ export const useAuthStore = create<AuthStore>((set) => ({
         }
     },
     loginWithGoogleToken: (token) => {
+        localStorage.setItem('auth_token', token)
         const decoded = jwtDecode(token) as DecodedUser
         set({ authUser: decoded })
     },
     login: async (data) => {
         set({ isLoggingIn: true })
         try {
-            await api.post('/signin', data)
+            const res = await api.post('/signin', data)
+            const token: string = res.data?.token
+            if (token) {
+                localStorage.setItem('auth_token', token)
+            }
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
         } catch (error: unknown) {
@@ -154,6 +159,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         } catch {
             // ignore
         } finally {
+            localStorage.removeItem('auth_token')
             set({ authUser: null })
         }
     },
