@@ -57,7 +57,8 @@ import BoosterComplaintNew from '../pages/booster/ComplaintNew';
 import BoosterProfile from '../pages/booster/Profile';
 import AdminProfile from '@/pages/admin/AdminProfile'
 import AdminMilestoneApproval from '@/pages/admin/AdminMilestoneApproval'
-import AdminMilestoneDetail from '@/pages/admin/AdminMilestoneDetail';
+import AdminMilestoneDetail from '@/pages/admin/AdminMilestoneDetail'
+import AdminRefunds from '@/pages/admin/AdminRefunds';
 
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
@@ -166,6 +167,7 @@ const Router = () => {
                             <Route path='/admin/verifications' element={<VerificationApproval />} />
                             <Route path='/admin/milestones' element={<AdminMilestoneApproval />} />
                             <Route path='/admin/milestones/:milestoneId' element={<AdminMilestoneDetail />} />
+                            <Route path='/admin/refunds' element={<AdminRefunds />} />
                             <Route path='/admin/profile' element={<AdminProfile />} />
                         </Route>
                     </Route>
