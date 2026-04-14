@@ -12,7 +12,7 @@ const Preview = () => {
     const navigate = useNavigate();
     const { projectId } = useParams();
     const { currentProject, loadCurrentProject } = useProjectStore();
-    const { updates, faqs, threads, fetchAll } = useProjectDetailStore();
+    const { updates, faqs, threads, investorCount, fetchAll } = useProjectDetailStore();
     const { authUser } = useAuthStore();
     const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
 
@@ -175,7 +175,7 @@ const Preview = () => {
                             <div className="flex items-center justify-between border-y border-border py-[16px] mt-[24px]">
                                 <div className="flex flex-col items-center flex-1 border-r border-border">
                                     <div className="flex items-center gap-[6px] text-foreground font-semibold text-[16px]">
-                                        <Users size={16} /> 0
+                                        <Users size={16} /> {investorCount > 0 ? investorCount : '—'}
                                     </div>
                                     <span className="text-[12px] text-muted-foreground">ผู้สนับสนุน</span>
                                 </div>
