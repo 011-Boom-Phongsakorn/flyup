@@ -78,7 +78,21 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
     set({ isLoading: true });
     try {
       const res = await api.get('/projects');
-      const projects: PublicProject[] = res.data?.data ?? [];
+      const projectsRaw: PublicProject[] = res.data?.data ?? [];
+      const projects = await Promise.all(
+          projectsRaw.map(async (p) => {
+              try {
+                  const detailRes = await api.get(`/projects/${p.id}`);
+                  const media: { type: string | string[]; url: string; sort_order: number }[] = detailRes.data?.data?.media ?? [];
+                  const firstImage = media
+                      .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
+                      .sort((a, b) => a.sort_order - b.sort_order)[0];
+                  return { ...p, thumbnail_url: firstImage?.url };
+              } catch {
+                  return p;
+              }
+          })
+      );
       set({ publicProjects: projects });
     } catch (error) {
       console.error('fetchPublicProjects:', error);
@@ -104,7 +118,21 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
     set({ isLoading: true });
     try {
       const res = await api.get(`/projects/category/${categoryId}`);
-      const projects: PublicProject[] = res.data?.data ?? [];
+      const projectsRaw: PublicProject[] = res.data?.data ?? [];
+      const projects = await Promise.all(
+          projectsRaw.map(async (p) => {
+              try {
+                  const detailRes = await api.get(`/projects/${p.id}`);
+                  const media: { type: string | string[]; url: string; sort_order: number }[] = detailRes.data?.data?.media ?? [];
+                  const firstImage = media
+                      .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
+                      .sort((a, b) => a.sort_order - b.sort_order)[0];
+                  return { ...p, thumbnail_url: firstImage?.url };
+              } catch {
+                  return p;
+              }
+          })
+      );
       set({ publicProjects: projects });
     } catch (error) {
       console.error('fetchProjectsByCategory:', error);
