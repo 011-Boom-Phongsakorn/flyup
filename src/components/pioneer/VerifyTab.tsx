@@ -74,7 +74,7 @@ const VerifyTab = () => {
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
   useEffect(() => {
     const code =

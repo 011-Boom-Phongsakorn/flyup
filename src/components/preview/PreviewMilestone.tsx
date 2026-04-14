@@ -1,7 +1,13 @@
-import { useProjectStore, type Milestone } from '../../store/useProjectStore';
+import { useProjectStore } from '../../store/useProjectStore';
+
+interface MilestonePreviewItem {
+  title: string;
+  description?: string;
+  criteria?: string[];
+}
 
 interface PreviewMilestoneProps {
-  milestones: Milestone[];
+  milestones: MilestonePreviewItem[];
 }
 
 const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
@@ -46,11 +52,11 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
                 )}
               </div>
 
-              {m.criteria.filter(c => c).length > 0 && (
+              {(m.criteria ?? []).filter(c => c).length > 0 && (
                 <div className="flex flex-col gap-[8px] mt-[8px]">
                   <span className="text-[12px] font-bold text-foreground">สิ่งที่ส่งมอบ:</span>
                   <div className="flex flex-wrap gap-[8px]">
-                    {m.criteria.filter(c => c).map((c, i) => (
+                    {(m.criteria ?? []).filter(c => c).map((c, i) => (
                       <span key={i} className="px-[12px] py-[4px] border border-border rounded-full text-[12px] text-foreground bg-white whitespace-nowrap">
                         {c}
                       </span>

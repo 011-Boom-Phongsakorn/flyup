@@ -185,10 +185,10 @@ const InvestmentDetail = () => {
                   )}
                 </div>
              )}
-             {activeTab === 'milestone' && <PreviewMilestone milestones={milestones as any} />}
+             {activeTab === 'milestone' && <PreviewMilestone milestones={milestones} />}
              {activeTab === 'update' && <PreviewUpdate updates={updates} />}
              {activeTab === 'comment' && <PreviewComment comments={threads} />}
-             {activeTab === 'question' && <PreviewQuestion questions={faqs as any} />}
+             {activeTab === 'question' && <PreviewQuestion questions={faqs} />}
           </div>
         </div>
 
@@ -245,7 +245,7 @@ const InvestmentDetail = () => {
           <div className="bg-white border border-border rounded-[16px] p-[24px] shadow-sm">
               <h3 className="text-[14px] font-bold text-foreground mb-4">สถานะโปรเจกต์</h3>
               <div className="space-y-4">
-                 {milestones.length > 0 ? milestones.map((m: any) => (
+                 {milestones.length > 0 ? milestones.map((m) => (
                     <div key={m.id} className="flex gap-3">
                        <div className="flex flex-col items-center mt-1">
                           <div className={`w-3 h-3 rounded-full flex-shrink-0 ${m.status === 'completed' ? phaseColors[0] : (m.status === 'in_progress' ? phaseColors[1] : phaseColors[2])}`} />
