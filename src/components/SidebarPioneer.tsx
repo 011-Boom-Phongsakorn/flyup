@@ -26,9 +26,9 @@ const SidebarPioneer = () => {
         <aside className="bg-sidebar w-[230px] min-w-[230px] h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent">
             <div className="w-full flex flex-col items-center gap-[10px] pb-4">
                 {authUser?.picture ? (
-                    <img src={authUser.picture as string} alt="Profile" className="h-[48px] w-[48px] rounded-full object-cover border border-background" />
+                    <img src={authUser.picture as string} alt="Profile" className="h-[48px] w-[48px] rounded-full object-cover" />
                 ) : (
-                    <div className="h-[48px] w-[48px] rounded-full bg-sidebar-primary/20 border border-background flex items-center justify-center text-sidebar-primary text-[16px] font-bold">
+                    <div className="h-[48px] w-[48px] rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary text-[16px] font-bold">
                         {initials}
                     </div>
                 )}
