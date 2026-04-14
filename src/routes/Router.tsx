@@ -34,6 +34,7 @@ import Preview from '../pages/pioneer/Preview'
 import MilestonePage from '../pages/pioneer/MilestonePage'
 import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
 import PioneerMeetings from '../pages/pioneer/Meetings';
+import CancelProjectRequest from '../pages/pioneer/CancelProjectRequest';
 
 // Admin
 import AdminLayout from '../layouts/AdminLayout';
@@ -128,6 +129,7 @@ const Router = () => {
                             <Route path='/pioneer/dashboard/projects' element={<MyProjects />} />
                             <Route path='/pioneer/dashboard/milestones' element={<MilestoneListPage />} />
                             <Route path='/pioneer/dashboard/meetings' element={<PioneerMeetings />} />
+                            <Route path='/pioneer/dashboard/projects/:projectId/cancel-request' element={<CancelProjectRequest />} />
                             <Route path='/pioneer/dashboard/projects/:projectId/milestones' element={<MilestonePage />} />
                             <Route path='/pioneer/profile' element={<Profile />} />
                         </Route>
