@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import toast, { Toaster } from "react-hot-toast";
 import {
@@ -9,7 +9,11 @@ import {
   ShieldCheck,
   CheckCircle2,
   X,
+  Loader2,
 } from "lucide-react";
+import { useAuthStore } from "../../store/useAuthStore";
+import { usePublicProjectStore } from "../../store/usePublicProjectStore";
+import { useInvestmentStore } from "../../store/useInvestmentStore";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -18,61 +22,25 @@ const ContractModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-card w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center bg-background/50">
-          <div className="flex items-center gap-2">
-            <FileText className="text-primary" size={20} />
-            <h3 className="font-bold text-lg text-foreground">สัญญาการลงทุน</h3>
-          </div>
-          <button onClick={onClose} className="p-1 hover:bg-muted rounded-full transition-colors">
-            <X size={20} className="text-muted-foreground" />
+      <div className="bg-card w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[80vh]">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h3 className="font-bold text-foreground">สัญญาการลงทุน</h3>
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg transition-colors">
+            <X size={20} />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto flex-1 space-y-4 text-sm text-foreground">
-          <h4 className="font-bold text-primary mb-2">สัญญาการสนับสนุนโครงการผ่านแพลตฟอร์ม FlyUp (ฉบับเพิ่มเติม)</h4>
-          <p>สัญญารับบนี้ทำขึ้นระหว่าง:</p>
-          <ol className="list-decimal pl-5 space-y-1">
-            <li>ผู้สนับสนุน (Investor/Backer) ซึ่งต่อไปเรียกว่า "ผู้สนับสนุน"</li>
-            <li>ผู้พัฒนาโครงการ (Project Owner) ซึ่งต่อไปเรียกว่า "ผู้พัฒนาโครงการ"</li>
-          </ol>
-          <p>โดยมีแพลตฟอร์ม FlyUp ทำหน้าที่เป็นผู้ให้บริการระบบตัวกลาง</p>
-
-          <h5 className="font-bold text-primary mt-4">ข้อ 1 วัตถุประสงค์ของสัญญา</h5>
-          <p>ผู้สนับสนุนตกลงให้การสนับสนุนทางการเงินแก่ผู้พัฒนาโครงการผ่านระบบ FlyUp ตามรายละเอียดที่ระบุไว้ในหน้าโครงการ</p>
-
-          <h5 className="font-bold text-primary mt-4">ข้อ 2 การรับทราบความเสี่ยง</h5>
-          <ul className="list-none space-y-1">
-            <li>2.1 ผู้สนับสนุนทราบว่าการลงทุนมีความเสี่ยง และอาจสูญเสียเงินลงทุนทั้งหมดหรือบางส่วน</li>
-            <li>2.2 ไม่มีการรับประกันผลตอบแทนจากผู้พัฒนาโครงการหรือแพลตฟอร์ม</li>
-            <li>2.3 ผู้สนับสนุนตัดสินใจลงทุนด้วยความสมัครใจและศึกษาข้อมูลอย่างเพียงพอแล้ว</li>
-          </ul>
-
-          <h5 className="font-bold text-primary mt-4">ข้อ 3 บทบาทของแพลตฟอร์ม FlyUp</h5>
-          <ul className="list-none space-y-1">
-            <li>3.1 FlyUp เป็นเพียงผู้ให้บริการระบบเทคโนโลยี</li>
-            <li>3.2 ไม่เป็นคู่สัญญาในการลงทุน</li>
-            <li>3.3 ไม่รับผิดชอบต่อความล้มเหลวของโครงการ</li>
-            <li>3.4 ไม่มีหน้าที่รับประกันผลตอบแทน</li>
-          </ul>
-
-          <h5 className="font-bold text-primary mt-4">ข้อ 4 การบริหารเงินลงทุนและ Milestone</h5>
-          <ul className="list-none space-y-1">
-            <li>4.1 เงินลงทุนจะถูกเก็บรักษาไว้ในระบบตามเงื่อนไขที่กำหนด</li>
-            <li>4.2 การปล่อยเงินจะดำเนินการตาม Milestone ที่ระบุในโครงการ</li>
-            <li>4.3 Milestone ต้องผ่านการตรวจสอบก่อนปล่อยเงิน</li>
-            <li>4.4 หากไม่ผ่านการตรวจสอบ สามารถชะลอหรือระงับการจ่ายเงินได้</li>
-          </ul>
-
-          <h5 className="font-bold text-primary mt-4">ข้อ 5 ค่าธรรมเนียมแพลตฟอร์ม</h5>
-          <ul className="list-none space-y-1">
-            <li>5.1 FlyUp มีสิทธิเรียกเก็บค่าธรรมเนียมการให้บริการจากผู้พัฒนาโครงการในอัตรา 5% ของยอดเงินที่ระดมทุนได้สำเร็จ</li>
-            <li>5.2 ค่าธรรมเนียมอาจรวมถึงค่าดำเนินการระบบ, ค่าธรรมเนียมการชำระเงิน และค่าบริหารจัดการ Milestone</li>
-            <li>5.3 ค่าธรรมเนียมดังกล่าวจะถูกหักออกก่อนการโอนเงินให้ผู้พัฒนาโครงการ</li>
-          </ul>
+        <div className="overflow-y-auto p-4 sm:p-6 text-sm text-muted-foreground space-y-4 leading-relaxed">
+          <p>1. ผู้สนับสนุน ("นักลงทุน") ตกลงที่จะลงทุนตามจำนวนเงินที่ระบุในโปรเจกต์ที่เลือก</p>
+          <p>2. เงินลงทุนจะถูกเก็บรักษาไว้ในระบบ Escrow และจะถูกปล่อยตาม Milestone ที่ผ่านการตรวจสอบ</p>
+          <p>3. ผู้สนับสนุนมีสิทธิ์โหวตยืนยันหรือปฏิเสธ Milestone ก่อนปล่อยเงินลงทุน</p>
+          <p>4. ส่วนแบ่งกำไรจะเริ่มจ่ายเมื่อโปรเจกต์เริ่มสร้างรายได้ ตามเงื่อนไขที่ระบุ</p>
+          <p>5. แพลตฟอร์ม FlyUp เป็นเพียงตัวกลาง ไม่รับประกันผลตอบแทนใดๆ</p>
+          <p>6. หากโปรเจกต์ไม่ผ่าน Milestone ตามเงื่อนไข เงินที่เหลือจะถูกคืนให้กับนักลงทุนตามสัดส่วน</p>
+          <p>7. การลงทุนมีความเสี่ยง ผู้สนับสนุนควรพิจารณาอย่างรอบคอบก่อนตัดสินใจ</p>
         </div>
-        <div className="p-4 border-t border-border bg-background/50 flex justify-end">
-          <button onClick={onClose} className="px-6 py-2 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity">
-            ปิด
+        <div className="p-4 border-t border-border">
+          <button onClick={onClose} className="w-full py-2.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity">
+            รับทราบ
           </button>
         </div>
       </div>
@@ -86,12 +54,26 @@ const Investment = () => {
 
   const [step, setStep] = useState<Step>(1);
   const [agreed, setAgreed] = useState(false);
-  const [amount, setAmount] = useState<string>("5000");
+  const [amount, setAmount] = useState<string>("5,000");
   const [showContract, setShowContract] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(15 * 60);
 
-  // Format time left
+  const pollingRef = useRef<number | null>(null);
+
+  const { authUser } = useAuthStore();
+  const { currentPublicProject, fetchPublicProjectById } = usePublicProjectStore();
+  const { createInvestment, getInvestmentById, isSubmitting, investmentData, clearInvestmentData } = useInvestmentStore();
+
+  const project = currentPublicProject;
+
+  useEffect(() => {
+    if (id) {
+      fetchPublicProjectById(Number(id));
+    }
+  }, [id, fetchPublicProjectById]);
+
+  // Timer countdown
   useEffect(() => {
     if (step === 3 && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
@@ -102,16 +84,47 @@ const Investment = () => {
     }
   }, [step, timeLeft, navigate]);
 
-  const minAmount = 1000;
-  const maxAmount = 14000;
-  const platformFeeRate = 0.05;
+  // Polling for investment status
+  useEffect(() => {
+    if (step === 3 && investmentData?.investment_id) {
+      pollingRef.current = window.setInterval(async () => {
+        try {
+          const response = await getInvestmentById(investmentData.investment_id);
+          if (response?.data?.investment?.status === 'verified' || response?.data?.status === 'verified') {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+            setStep(4);
+            clearInvestmentData();
+          }
+        } catch (error) {
+          console.error("Polling error:", error);
+        }
+      }, 5000);
+    }
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [step, investmentData, getInvestmentById, clearInvestmentData]);
+
+  // Project data
+  const projectTitle = project?.title || "กำลังโหลด...";
+  const revenueShare = project?.profit_share_pct || 0;
+  const minAmount = project?.min_invest_amount || 1000;
+  const maxAmount = project?.max_invest_amount || 14000;
+  const platformFeeRate = (project?.platform_fee || 5) / 100;
   const vatRate = 0.07;
 
-  // Amount parsing
   const parsedAmount = parseInt(amount.replace(/,/g, "")) || 0;
   const fee = parsedAmount * platformFeeRate;
   const vat = fee * vatRate;
   const investedValue = parsedAmount - fee - vat;
+
+  const userName = (() => {
+    if (!authUser) return "—";
+    const fn = typeof authUser.first_name === 'string' ? authUser.first_name : '';
+    const ln = typeof authUser.last_name === 'string' ? authUser.last_name : '';
+    return `${fn} ${ln}`.trim() || typeof authUser.name === 'string' ? authUser.name as string : '—';
+  })();
 
   const handleNextStep1 = () => {
     if (!agreed) {
@@ -140,9 +153,18 @@ const Investment = () => {
     setShowConfirm(true);
   };
 
-  const handleConfirmInvestment = () => {
-    setShowConfirm(false);
-    setStep(3);
+  const handleConfirmInvestment = async () => {
+    if (!authUser || !id) return;
+
+    const success = await createInvestment({
+      project_id: Number(id),
+      amount: parsedAmount,
+    });
+
+    if (success) {
+      setShowConfirm(false);
+      setStep(3);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -168,11 +190,11 @@ const Investment = () => {
               <div className="bg-background rounded-xl p-4 border border-border space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">โปรเจกต์</span>
-                  <span className="font-semibold text-sm">UniTrack</span>
+                  <span className="font-semibold text-sm">{projectTitle}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">ชื่อผู้สนับสนุน</span>
-                  <span className="font-semibold text-sm">Phongsakorn</span>
+                  <span className="font-semibold text-sm">{userName}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">ยอดลงทุน</span>
@@ -180,7 +202,7 @@ const Investment = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">ส่วนแบ่งกำไร</span>
-                  <span className="font-semibold text-primary text-sm">15%</span>
+                  <span className="font-semibold text-primary text-sm">{revenueShare}%</span>
                 </div>
               </div>
 
@@ -204,8 +226,10 @@ const Investment = () => {
               </button>
               <button
                 onClick={handleConfirmInvestment}
-                className="flex-1 py-3 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity"
+                disabled={isSubmitting}
+                className="flex-1 py-3 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
               >
+                {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : null}
                 ยืนยันการลงทุน
               </button>
             </div>
@@ -225,7 +249,7 @@ const Investment = () => {
                 <ArrowLeft size={18} /> กลับ
               </button>
               <div className="flex flex-col items-center text-center">
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">ลงทุนใน UniTrack</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">ลงทุนใน {projectTitle}</h1>
                 <p className="text-muted-foreground text-sm mt-1">กรุณาทำตามขั้นตอนเพื่อดำเนินการลงทุน</p>
               </div>
             </div>
@@ -233,7 +257,6 @@ const Investment = () => {
             {/* Stepper */}
             <div className="mb-10 relative px-4 max-w-xl mx-auto w-full">
               <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-border -z-10 -translate-y-1/2 rounded-full" />
-              {/* Progress line */}
               <div
                 className="absolute top-1/2 left-0 h-[2px] bg-primary -z-10 -translate-y-1/2 transition-all duration-300 rounded-full"
                 style={{ width: step === 1 ? '10%' : step === 2 ? '50%' : '100%' }}
@@ -263,8 +286,6 @@ const Investment = () => {
 
             {/* Content Cards */}
             <div className="bg-card w-full rounded-[24px] rounded-tl-[24px] p-5 sm:p-8 shadow-xl border border-white/50 relative overflow-hidden backdrop-blur-sm bg-white/90">
-
-              {/* Fake aesthetic gradient border top */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-[image:var(--gradient-primary)]" />
 
               {/* Step 1: Conditions */}
@@ -279,13 +300,13 @@ const Investment = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border mb-4">
                       <span className="font-bold text-foreground">สัญญาการลงทุน</span>
                       <span className="hidden sm:block text-muted-foreground">—</span>
-                      <span className="font-bold text-foreground mt-1 sm:mt-0">โปรเจกต์ UniTrack</span>
+                      <span className="font-bold text-foreground mt-1 sm:mt-0">โปรเจกต์ {projectTitle}</span>
                     </div>
 
                     <div className="space-y-4 text-sm">
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">สัดส่วนกำไรที่จะได้รับ</span>
-                        <span className="font-bold text-primary text-base">15%</span>
+                        <span className="font-bold text-primary text-base">{revenueShare}%</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">จำนวนเงินลงทุนขั้นต่ำ</span>
@@ -425,24 +446,36 @@ const Investment = () => {
                   <div className="flex flex-col items-center py-4">
                     <div className="w-full max-w-sm border-2 border-dashed border-primary/20 rounded-3xl p-6 sm:p-8 bg-background flex flex-col items-center shadow-sm text-center">
                       <div className="mb-4 text-center w-full">
-                        <img src="/img-payment-qr.png" alt="QR Code" className="w-[80%] mx-auto object-contain rounded-lg aspect-square mb-2 bg-white"
+                        <img
+                          src={investmentData?.qr_code_image_url || '/img-payment-qr.png'}
+                          alt="QR Code"
+                          className="w-[80%] mx-auto object-contain rounded-lg aspect-square mb-2 bg-white"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237C4DDB%22%20stroke-width%3D%221%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%2218%22%20height%3D%2218%22%20rx%3D%222%22%20ry%3D%222%22%3E%3C%2Frect%3E%3Crect%20x%3D%227%22%20y%3D%227%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%2214%22%20y%3D%227%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%227%22%20y%3D%2214%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%2214%22%20y%3D%2214%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3C%2Fsvg%3E';
                           }}
                         />
                         <h3 className="font-bold text-sm text-foreground mb-1">สแกน QR Code เพื่อชำระเงิน</h3>
-                        <p className="font-black text-2xl text-primary font-mono tracking-tight">฿{parsedAmount.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-2 font-medium">ใช้งานได้ภายใน <span className="text-error">{formatTime(timeLeft)}</span> นาที</p>
+                        <p className="font-black text-2xl text-primary font-mono tracking-tight">
+                          ฿{(investmentData?.total_amount || parsedAmount).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2 font-medium">
+                          ใช้งานได้ภายใน <span className="text-error">{formatTime(timeLeft)}</span> นาที
+                        </p>
+                        {investmentData?.reference_number && (
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            Ref: {investmentData.reference_number}
+                          </p>
+                        )}
                       </div>
 
                       <div className="w-full bg-muted/50 rounded-xl p-4 text-xs space-y-2.5 mb-4 text-left border border-border/50">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">ชื่อโปรเจกต์</span>
-                          <span className="font-semibold text-foreground">UniTrack</span>
+                          <span className="font-semibold text-foreground">{projectTitle}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">ผู้สนับสนุน</span>
-                          <span className="font-semibold text-foreground">Phongsakorn</span>
+                          <span className="font-semibold text-foreground">{userName}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">รับเงินโดย</span>
@@ -454,12 +487,10 @@ const Investment = () => {
                         <ShieldCheck size={14} /> ปลอดภัยด้วยระบบ Escrow
                       </div>
 
-                      <button
-                        onClick={() => setStep(4)}
-                        className="w-full py-3 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 text-sm"
-                      >
-                        (จำลองสแกนจ่ายสำเร็จ)
-                      </button>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 size={14} className="animate-spin text-primary" />
+                        <span>กำลังรอการชำระเงิน...</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -467,7 +498,7 @@ const Investment = () => {
             </div>
           </>
         ) : (
-          /* Step 4: Success Fullscreen */
+          /* Step 4: Success */
           <div className="flex-1 flex flex-col items-center justify-center animate-in zoom-in-95 duration-700">
             <div className="bg-card w-full max-w-lg rounded-[32px] p-8 sm:p-12 shadow-2xl border border-white/50 text-center relative overflow-hidden backdrop-blur-sm bg-white/95">
               <div className="w-24 h-24 bg-success/10 text-success rounded-full flex items-center justify-center mx-auto mb-6">
@@ -485,11 +516,11 @@ const Investment = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">โปรเจกต์</span>
-                  <span className="font-bold text-primary">UniTrack</span>
+                  <span className="font-bold text-primary">{projectTitle}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ส่วนแบ่งกำไร</span>
-                  <span className="font-bold text-foreground">15%</span>
+                  <span className="font-bold text-foreground">{revenueShare}%</span>
                 </div>
               </div>
 

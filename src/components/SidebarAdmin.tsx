@@ -1,13 +1,13 @@
 import { useAuthStore } from '@/store/useAuthStore'
-import { House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone, Wallet, MessageSquareWarning, ShieldBan, RotateCcw, FileText, Users, LogOut } from 'lucide-react'
+import { House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone, Wallet, MessageSquareWarning, ShieldBan, RotateCcw, FileText, Users, LogOut, UserRound } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 
 const menu = [
     { icon: <House size={20} />, title: 'หน้าหลัก', path: '/' },
     { icon: <Search size={20} />, title: 'สำรวจโปรเจกต์', path: '/projects' },
     { icon: <LayoutDashboard size={20} />, title: 'แดชบอร์ด', path: '/admin/dashboard' },
-    { icon: <UserRoundCheck size={20} />, title: 'ใบสมัคร Pioneer', path: '/' },
-    { icon: <MailSearch size={20} />, title: 'ตรวจสอบโปรเจกต์', path: '/' },
+    { icon: <UserRoundCheck size={20} />, title: 'ใบสมัคร Pioneer', path: '/admin/verifications' },
+    { icon: <MailSearch size={20} />, title: 'ตรวจสอบโปรเจกต์', path: '/admin/projects-approval' },
     { icon: <Milestone size={20} />, title: 'ตรวจสอบ Milestone', path: '/' },
     { icon: <Wallet size={20} />, title: 'การปล่อยเงิน', path: '/' },
     { icon: <MessageSquareWarning size={20} />, title: 'คำร้องเรียน', path: '/' },
@@ -15,28 +15,37 @@ const menu = [
     { icon: <RotateCcw size={20} />, title: 'คืนเงิน', path: '/' },
     { icon: <FileText size={20} />, title: 'บันทึกการตรวจสอบ', path: '/' },
     { icon: <Users size={20} />, title: 'จัดการผู้ใช้', path: '/' },
+    { icon: <UserRound size={20} />, title: 'โปรไฟล์', path: '/admin/profile' },
 ]
 
 const SidebarAdmin = () => {
     const navigate = useNavigate()
-    const { logout } = useAuthStore()
+    const { logout, authUser } = useAuthStore()
 
     const handleLogout = () => {
         logout()
         navigate('/')
     }
 
+    const initials = `${(authUser?.first_name as string)?.[0] ?? ""}${(authUser?.last_name as string)?.[0] ?? ""}`.toUpperCase() || "?"
+
     return (
         <aside className='bg-sidebar w-[230px] flex-none h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent'>
             <div className='w-full flex flex-col items-center gap-[10px] pb-4'>
-                <img src="/flyup-logo.png" alt="profile" className='h-[48px] w-[48px] rounded-full border border-background' />
+                {authUser?.picture ? (
+                    <img src={authUser.picture as string} alt="profile" className='h-[48px] w-[48px] rounded-full object-cover' />
+                ) : (
+                    <div className='h-[48px] w-[48px] rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-[16px]'>
+                        {initials}
+                    </div>
+                )}
                 <span className='text-error text-[14px] px-[8px] py-[2px] rounded-[20px] bg-error/20 font-medium'>Admin</span>
             </div>
             <ul className='w-full flex flex-col gap-[4px] p-[10px] flex-1 overflow-y-auto'>
                 {
                     menu.map((m, idx) => (
                         <li key={idx}>
-                            <NavLink to={m.path} end={m.path === '/admin/dashboard'} className={({ isActive }) => `flex p-[10px] gap-[10px] text-14px items-center transition-all duration-200 ${isActive ? 'text-sidebar-primary bg-sidebar-accent rounded-[12px]' : 'hover:text-sidebar-primary hover:bg-sidebar-accent hover:rounded-[12px]'}`}>
+                            <NavLink to={m.path} end={m.path === '/admin/dashboard'} className={({ isActive }) => `flex p-[10px] gap-[10px] text-[14px] items-center transition-all duration-200 ${isActive ? 'text-sidebar-primary bg-sidebar-accent rounded-[12px]' : 'hover:text-sidebar-primary hover:bg-sidebar-accent hover:rounded-[12px]'}`}>
                                 {m.icon} {m.title}
                             </NavLink>
                         </li>

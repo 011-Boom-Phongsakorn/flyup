@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router"
-import { Loader2, Users, CheckCircle, Circle } from 'lucide-react'
+import { Loader2, Users, CheckCircle, Circle, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useAuthStore } from "../../store/useAuthStore"
 
@@ -22,6 +22,8 @@ const Register = () => {
     const [role, setRole] = useState<UserRole>('')
     const [confirmPassword, setConfirmPassword] = useState<string>('')
     const [errors, setErrors] = useState<{ [key: string]: boolean }>({})
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [formData, setFormData] = useState<RegisterFormData>({
         first_name: '',
         last_name: '',
@@ -124,7 +126,8 @@ const Register = () => {
     const inputStyle = (n: string) => `w-full border focus:outline-none bg-background text-foreground rounded-[6px] border-border outline-none p-[12px] h-[38px] ${errors[n] ? 'border-error focus:border-error' : 'border-border focus:border-primary'}`
 
     return (
-        <div className="w-full mx-auto max-w-[510px] border border-border rounded-[12px] bg-card mt-[100px]">
+        <div className="w-full px-4">
+        <div className="mx-auto max-w-[510px] border border-border rounded-[12px] bg-card mt-[100px] mb-6">
             <div className="flex flex-col gap-[16px] p-[24px]">
                 <div className="flex flex-col items-center justify-center">
                     <img src="/flyup-logo.png" alt="flyup-logo.png" className="h-[70px] w-[106px]" />
@@ -174,7 +177,12 @@ const Register = () => {
                         </div>
                         <div className="flex flex-col gap-[4px]">
                             <label className="font-[14px] text-foreground">รหัสผ่าน <span className="text-error">*</span></label>
-                            <input name="password" onChange={handleChange} value={formData.password} type="password" className={inputStyle('password')} />
+                            <div className="relative">
+                                <input name="password" onChange={handleChange} value={formData.password} type={showPassword ? 'text' : 'password'} className={`${inputStyle('password')} pr-[38px]`} />
+                                <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-[10px] top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
                             {(formData.password.length > 0 || errors.password) && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[10px] gap-y-[6px] mt-[4px] bg-muted/30 p-[12px] rounded-[8px] border border-border/50">
                                     {[
@@ -200,7 +208,12 @@ const Register = () => {
                         </div>
                         <div className="flex flex-col gap-[4px]">
                             <label className="font-[14px] text-foreground">ยืนยันรหัสผ่าน <span className="text-error">*</span></label>
-                            <input name="confirmPassword" onChange={handleConfirmPasswordChange} value={confirmPassword} type="password" className={inputStyle('confirmPassword')} />
+                            <div className="relative">
+                                <input name="confirmPassword" onChange={handleConfirmPasswordChange} value={confirmPassword} type={showConfirmPassword ? 'text' : 'password'} className={`${inputStyle('confirmPassword')} pr-[38px]`} />
+                                <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className="absolute right-[10px] top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
                         </div>
                         <div className="flex gap-[8px] items-center">
                             <input name="accept_terms" onChange={handleCheckboxChange} checked={formData.accept_terms} type="checkbox" className="w-[18px] h-[18px] accent-primary cursor-pointer" />
@@ -222,6 +235,7 @@ const Register = () => {
                     <p className="text-[14px] text-foreground">มีบัญชีอยู่แล้ว? <Link to='/login' className="text-primary">เข้าสู่ระบบ</Link></p>
                 </div>
             </div>
+        </div>
         </div>
     )
 }

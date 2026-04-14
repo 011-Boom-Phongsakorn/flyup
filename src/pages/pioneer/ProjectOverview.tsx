@@ -33,7 +33,7 @@ const step: StageItems[] = [
     des: 'กำหนดช่วงเวลาและเป้าหมายหลักในแต่ละระยะของโครงการ เพื่อให้ผู้สนับสนุนเห็นแผนการดำเนินงานที่ชัดเจน (เช่น วันเริ่ม, วันเริ่มสิ้นสุด)',
     isComplete: (p) =>
       p.milestones?.length === 4 &&
-      p.milestones.every(m => !!m.title && !!m.description && !!m.startDate && !!m.endDate),
+      p.milestones.every(m => !!m.title && !!m.description && (m.duration ?? 0) > 0),
   },
   {
     icon: CircleCheckBig,
@@ -53,7 +53,7 @@ const ProjectOverview = () => {
 
   useEffect(() => {
     if (projectId) loadCurrentProject(Number(projectId));
-  }, [projectId]);
+  }, [projectId, loadCurrentProject]);
 
   const canSubmit = step.every(s => s.isComplete(currentProject, projectId))
 

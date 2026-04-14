@@ -15,7 +15,7 @@ const ProjectStageLayout = () => {
     if (projectId) {
       loadCurrentProject(Number(projectId));
     }
-  }, [projectId]);
+  }, [projectId, loadCurrentProject]);
 
   return (
     <div className="w-full min-h-screen">

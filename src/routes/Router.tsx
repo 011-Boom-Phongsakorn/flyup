@@ -30,11 +30,32 @@ import Step1Basics from '../components/steps/Step1Basics';
 import Step2Story from '../components/steps/Step2Story';
 import Step3Milestone from '../components/steps/Step3Milestone';
 import Step4Agreement from '../components/steps/Step4Agreement';
-import Preview from '../pages/pioneer/Preview';
+import Preview from '../pages/pioneer/Preview'
+import MilestonePage from '../pages/pioneer/MilestonePage'
+import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
 
 // Admin
 import AdminLayout from '../layouts/AdminLayout';
 import AdminDashboard from '../pages/admin/AdminDashboard';
+import ProjectApproval from '@/pages/admin/ProjectApproval';
+import AdminProjectDetail from '@/pages/admin/AdminProjectDetail';
+import VerificationApproval from '@/pages/admin/VerificationApproval';
+
+// Booster Pages
+import BoosterLayout from '../layouts/BoosterLayout';
+import BoosterDashboard from '../pages/booster/Dashboard';
+import BoosterMyInvestments from '../pages/booster/MyInvestments';
+import BoosterInvestmentDetail from '../pages/booster/InvestmentDetail';
+import BoosterMeetings from '../pages/booster/Meetings';
+import BoosterVotes from '../pages/booster/Votes';
+import BoosterVoteDetail from '../pages/booster/VoteDetail';
+import BoosterProfits from '../pages/booster/Profits';
+import BoosterRefunds from '../pages/booster/Refunds';
+import BoosterComplaints from '../pages/booster/Complaints';
+import BoosterComplaintDetail from '../pages/booster/ComplaintDetail';
+import BoosterComplaintNew from '../pages/booster/ComplaintNew';
+import BoosterProfile from '../pages/booster/Profile';
+import AdminProfile from '@/pages/admin/AdminProfile';
 
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
@@ -43,12 +64,35 @@ const PioneerGuard = () => {
     return <Outlet />
 }
 
+const BoosterGuard = () => {
+    const { authUser } = useAuthStore()
+    if (!authUser) return <Navigate to='/login' replace />
+    if (authUser.role?.toLowerCase() !== 'booster') return <Navigate to='/' replace />
+    return <Outlet />
+}
+
+const AdminGuard = () => {
+    const { authUser } = useAuthStore()
+    if (!authUser) return <Navigate to='/login' replace />
+    if (authUser.role?.toLowerCase() !== 'admin') return <Navigate to='/' replace />
+    return <Outlet />
+}
+
 const Router = () => {
-    const { authUser, checkAuth, isCheckingAuth } = useAuthStore()
+    const { authUser, checkAuth, isCheckingAuth, loginWithGoogleToken } = useAuthStore()
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const token = params.get('token')
+        const isVerifyPage = window.location.pathname === '/verify'
+        if (token && !isVerifyPage) {
+            loginWithGoogleToken(token)
+            params.delete('token')
+            const newSearch = params.toString()
+            window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)
+        }
         checkAuth()
-    }, [checkAuth])
+    }, [checkAuth, loginWithGoogleToken])
 
     if (isCheckingAuth && !authUser) {
         return (
@@ -78,6 +122,8 @@ const Router = () => {
                         <Route element={<PioneerLayout />}>
                             <Route path='/pioneer/dashboard' element={<Dashboard />} />
                             <Route path='/pioneer/dashboard/projects' element={<MyProjects />} />
+                            <Route path='/pioneer/dashboard/milestones' element={<MilestoneListPage />} />
+                            <Route path='/pioneer/dashboard/projects/:projectId/milestones' element={<MilestonePage />} />
                             <Route path='/pioneer/profile' element={<Profile />} />
                         </Route>
                         <Route element={<MainLayout />}>
@@ -90,15 +136,36 @@ const Router = () => {
                                 <Route path='3' element={<Step3Milestone />} />
                                 <Route path='4' element={<Step4Agreement />} />
                             </Route>
-                            <Route path='/preview/:projectId' element={<Preview />} />
                         </Route>
                     </Route>
 
-                    <Route>
-                        <Route element={<AdminLayout />}>
-                            <Route path='/admin/dashboard' element={<AdminDashboard />} />
+                    <Route element={<BoosterGuard />}>
+                        <Route element={<BoosterLayout />}>
+                            <Route path='/booster/dashboard' element={<BoosterDashboard />} />
+                            <Route path='/booster/investments' element={<BoosterMyInvestments />} />
+                            <Route path='/booster/investments/:id' element={<BoosterInvestmentDetail />} />
+                            <Route path='/booster/meetings' element={<BoosterMeetings />} />
+                            <Route path='/booster/votes' element={<BoosterVotes />} />
+                            <Route path='/booster/votes/:id' element={<BoosterVoteDetail />} />
+                            <Route path='/booster/profits' element={<BoosterProfits />} />
+                            <Route path='/booster/refunds' element={<BoosterRefunds />} />
+                            <Route path='/booster/complaints' element={<BoosterComplaints />} />
+                            <Route path='/booster/complaints/new' element={<BoosterComplaintNew />} />
+                            <Route path='/booster/complaints/:id' element={<BoosterComplaintDetail />} />
+                            <Route path='/booster/profile' element={<BoosterProfile />} />
                         </Route>
                     </Route>
+
+                    <Route element={<AdminGuard />}>
+                        <Route element={<AdminLayout />}>
+                            <Route path='/admin/dashboard' element={<AdminDashboard />} />
+                            <Route path='/admin/projects-approval' element={<ProjectApproval />} />
+                            <Route path='/admin/projects/:id' element={<AdminProjectDetail />} />
+                            <Route path='/admin/verifications' element={<VerificationApproval />} />
+                            <Route path='/admin/profile' element={<AdminProfile />} />
+                        </Route>
+                    </Route>
+
                 </Routes>
                 <Toaster position='top-right' />
             </BrowserRouter>

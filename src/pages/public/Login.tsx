@@ -3,7 +3,7 @@ import { useAuthStore } from "../../store/useAuthStore";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router";
 import { FcGoogle } from "react-icons/fc";
-import { Loader } from "lucide-react";
+import { Loader, Eye, EyeOff } from "lucide-react";
 
 
 interface LoginFromData {
@@ -14,6 +14,7 @@ interface LoginFromData {
 const Login = () => {
     const { login, isLoggingIn, checkAuth } = useAuthStore()
     const [errors, setErrors] = useState<{ [key: string]: boolean }>({})
+    const [showPassword, setShowPassword] = useState(false)
     const [formData, setFormData] = useState<LoginFromData>({
         email: '',
         password: ''
@@ -64,14 +65,15 @@ const Login = () => {
     const inputStyle = (n: string) => `border focus:outline-none bg-background text-foreground rounded-[6px] border-border outline-none p-[12px] h-[38px] ${errors[n] ? 'border-error focus:border-error' : 'border-border focus:border-primary'}`
 
     return (
-        <div className="w-full mx-auto max-w-[510px] border border-border rounded-[12px] bg-white mt-[100px]">
+        <div className="w-full px-4">
+        <div className="mx-auto max-w-[510px] border border-border rounded-[12px] bg-white mt-[100px] mb-6">
             <div className="flex flex-col gap-[16px] p-[24px]">
                 <div>
                     <div className="flex flex-col items-center justify-center">
                         <img src="./flyup-logo.png" alt="flyup-logo.png" />
                         <h1 className="text-foreground text-[24px] font-semibold">ยินดีต้อนรับกลับ</h1>
                         <p className="text-muted-foreground text-[14px] font-medium">เข้าสู่ระบบบัญชี FlyUp ของคุณ</p>
-                        <Link to='/' className="flex items-center gap-[8px] mt-[24px] mb-[8px] h-[40px] bg-background border border-border rounded-[12px] justify-center w-full"><FcGoogle size={32} />เข้าสู่ระบบด้วย Google</Link>
+                        <a href={`${import.meta.env.VITE_BASE_URL}/auth/google?role=booster`} className="flex items-center gap-[8px] mt-[24px] mb-[8px] h-[40px] bg-background border border-border rounded-[12px] justify-center w-full"><FcGoogle size={32} />เข้าสู่ระบบด้วย Google</a>
                         <div className="flex items-center w-full gap-4 mb-[6px]">
                             <div className="flex-grow h-px bg-border"></div>
                             <span className="text-muted-foreground text-sm font-medium">หรือ</span>
@@ -87,7 +89,12 @@ const Login = () => {
                         </div>
                         <div className="flex flex-col gap-[4px]">
                             <label className="text-[14px] text-foreground">รหัสผ่าน <span className="text-error">*</span></label>
-                            <input name="password" onChange={handleChange} value={formData.password} type="password" className={inputStyle('password')} />
+                            <div className="relative">
+                                <input name="password" onChange={handleChange} value={formData.password} type={showPassword ? 'text' : 'password'} className={`${inputStyle('password')} w-full pr-[38px]`} />
+                                <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-[10px] top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
                         </div>
                         <Link to='/forgot/password' className="self-start text-[14px] text-muted-foreground hover:text-primary transition-all duration-200">ลืมรหัสผ่าน</Link>
                     </div>
@@ -104,6 +111,7 @@ const Login = () => {
                     <p>ยังไม่มีบัญชี? <Link to='/register' className="text-primary">สมัครสมาชิก</Link></p>
                 </div>
             </div>
+        </div>
         </div>
     )
 }

@@ -1,22 +1,20 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
-import ProfileTab from "../../components/pioneer/ProfileTab";
+import AdminProfileTab from "../../components/admin/AdminProfileTab";
 import NotificationTab from "../../components/pioneer/NotificationTab";
 import PasswordTab from "../../components/pioneer/PasswordTab";
-import VerifyTab from "../../components/pioneer/VerifyTab";
 
-type Tab = "profile" | "notification" | "password" | "verify";
+type Tab = "profile" | "notification" | "password";
 
 const tabs: { key: Tab; label: string }[] = [
   { key: "profile", label: "โปรไฟล์" },
-  { key: "notification", label: "การแจ้งเดือน" },
+  { key: "notification", label: "การแจ้งเตือน" },
   { key: "password", label: "รหัสผ่าน" },
-  { key: "verify", label: "ยืนยันตัวตน" },
 ];
 
-const validTabs: Tab[] = ["profile", "notification", "password", "verify"];
+const validTabs: Tab[] = ["profile", "notification", "password"];
 
-const Profile = () => {
+const AdminProfile = () => {
   const [searchParams] = useSearchParams();
   const initialTab = (searchParams.get("tab") ?? "profile") as Tab;
   const [activeTab, setActiveTab] = useState<Tab>(
@@ -45,12 +43,11 @@ const Profile = () => {
       </div>
 
       {/* Tab Content */}
-      {activeTab === "profile"      && <ProfileTab />}
+      {activeTab === "profile"      && <AdminProfileTab />}
       {activeTab === "notification" && <NotificationTab />}
       {activeTab === "password"     && <PasswordTab />}
-      {activeTab === "verify"       && <VerifyTab />}
     </div>
   );
 };
 
-export default Profile;
+export default AdminProfile;

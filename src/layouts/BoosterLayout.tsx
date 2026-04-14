@@ -1,17 +1,11 @@
 import { useEffect, useState, startTransition } from "react"
 import { Outlet, useLocation } from "react-router"
-import SidebarPioneer from "../components/SidebarPioneer"
+import SidebarBooster from "../components/SidebarBooster"
 import NavbarDashboard from "../components/NavbarDashboard"
-import { useAuthStore } from "../store/useAuthStore"
 
-const PioneerLayout = () => {
+const BoosterLayout = () => {
     const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const { checkAuth } = useAuthStore();
-
-    useEffect(() => {
-        checkAuth();
-    }, [checkAuth]);
 
     useEffect(() => {
         startTransition(() => setIsSidebarOpen(false))
@@ -20,7 +14,7 @@ const PioneerLayout = () => {
     return (
         <div className="flex min-h-screen bg-background font-kanit">
             <div className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-                <SidebarPioneer />
+                <SidebarBooster />
             </div>
 
             {isSidebarOpen && (
@@ -40,4 +34,4 @@ const PioneerLayout = () => {
     )
 }
 
-export default PioneerLayout
+export default BoosterLayout

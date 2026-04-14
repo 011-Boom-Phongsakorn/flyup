@@ -1,6 +1,6 @@
 import { FileText, Sparkles, CheckCircle2, Target, Check, type LucideIcon } from 'lucide-react';
 import { useProjectStore, type Project } from '../store/useProjectStore';
-import { useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 
 interface StepperProps {
   currentStep: number;
@@ -35,7 +35,7 @@ const steps: StepItems[] = [
     icon: CheckCircle2,
     isComplete: (p) =>
       p.milestones?.length === 4 &&
-      p.milestones.every(m => !!m.title && !!m.description && !!m.startDate && !!m.endDate),
+      p.milestones.every(m => !!m.title && !!m.description && m.duration > 0),
   },
   {
     id: 4,
@@ -48,6 +48,7 @@ const steps: StepItems[] = [
 
 const Stepper = ({ currentStep }: StepperProps) => {
   const { projectId } = useParams();
+  const navigate = useNavigate();
   const currentProject = useProjectStore(s => s.currentProject);
 
   const completionList = steps.map(s => s.isComplete(currentProject, projectId));
@@ -83,7 +84,11 @@ const Stepper = ({ currentStep }: StepperProps) => {
           const highlighted = isActive || done;
 
           return (
-            <div key={step.id} className="relative flex flex-col items-center gap-3 w-1/4 z-10">
+            <button
+              key={step.id}
+              onClick={() => navigate(`/project/overview/${projectId}/step/${step.id}`)}
+              className="relative flex flex-col items-center gap-3 w-1/4 z-10 cursor-pointer"
+            >
               <div
                 className={`w-[44px] h-[44px] rounded-full flex items-center justify-center transition-all duration-300 ${
                   highlighted ? 'bg-primary text-white shadow-md' : 'bg-muted text-foreground'
@@ -97,7 +102,7 @@ const Stepper = ({ currentStep }: StepperProps) => {
               <span className={`text-[12px] text-center ${highlighted ? 'text-foreground' : 'text-gray-400'}`}>
                 {step.title}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
