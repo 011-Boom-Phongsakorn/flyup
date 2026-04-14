@@ -21,7 +21,7 @@ interface MilestoneStore {
   ) => Promise<boolean>
 }
 
-export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
+export const useMilestoneStore = create<MilestoneStore>((set) => ({
   milestones: [],
   projectTitle: '',
   isLoading: false,
