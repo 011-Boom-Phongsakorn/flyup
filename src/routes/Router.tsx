@@ -55,6 +55,7 @@ import BoosterComplaints from '../pages/booster/Complaints';
 import BoosterComplaintDetail from '../pages/booster/ComplaintDetail';
 import BoosterComplaintNew from '../pages/booster/ComplaintNew';
 import BoosterProfile from '../pages/booster/Profile';
+import AdminProfile from '@/pages/admin/AdminProfile';
 
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
@@ -161,6 +162,7 @@ const Router = () => {
                             <Route path='/admin/projects-approval' element={<ProjectApproval />} />
                             <Route path='/admin/projects/:id' element={<AdminProjectDetail />} />
                             <Route path='/admin/verifications' element={<VerificationApproval />} />
+                            <Route path='/admin/profile' element={<AdminProfile />} />
                         </Route>
                     </Route>
 
