@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Search, Plus, SlidersHorizontal, ChevronDown, Eye, Edit3, Trash2, Loader2, ChevronLeft, ChevronRight, XCircle } from "lucide-react";
+import { Search, Plus, SlidersHorizontal, ChevronDown, Eye, Edit3, Trash2, Loader2, ChevronLeft, ChevronRight, XCircle, Ban } from "lucide-react";
 import { useProjectStore } from "../../store/useProjectStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import Swal from "sweetalert2";
@@ -235,6 +235,7 @@ const MyProjects = () => {
             const hasMilestone = project.state === 'funding';
             const hasDelete = project.state === 'draft';
             const hasCancel = project.state === 'pending_review';
+            const hasCancelRequest = project.state === 'funding' || project.state === 'closed';
             const progress = project.funding_goal > 0
               ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
               : 0;
@@ -320,11 +321,20 @@ const MyProjects = () => {
 
                       {hasMilestone && (
                         <button
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#8B5CF6] hover:bg-[#7C3AED] transition-colors rounded-[8px] text-[13px] font-medium text-white shadow-sm"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/pioneer/dashboard/projects/${project.id}/milestones`); }}
+                          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#8B5CF6] hover:bg-[#7C3AED] transition-colors rounded-[8px] text-[13px] font-medium text-white shadow-sm cursor-pointer"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                           Milestone
+                        </button>
+                      )}
+
+                      {hasCancelRequest && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/pioneer/dashboard/projects/${project.id}/cancel-request`); }}
+                          className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-red-50 hover:bg-red-100 transition-colors rounded-[8px] text-[13px] font-medium text-red-500 cursor-pointer"
+                        >
+                          <Ban size={16} /> ขอยกเลิก
                         </button>
                       )}
 
