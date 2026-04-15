@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { useProjectStore } from "../../store/useProjectStore";
 import { useProjectDetailStore } from "../../store/useProjectDetailStore";
 import { useAuthStore } from "../../store/useAuthStore";
-import { CheckCircle2, Users, Clock, Flag, Shield } from "lucide-react";
+import { CheckCircle2, Users, Clock, Flag, Shield, HandCoins } from "lucide-react";
 import PreviewStory from "../../components/preview/PreviewStory";
 import PreviewMilestone from "../../components/preview/PreviewMilestone";
 import { PreviewUpdate, PreviewQuestion, PreviewComment } from "../../components/preview/PreviewMisc";
@@ -11,7 +11,7 @@ import { PreviewUpdate, PreviewQuestion, PreviewComment } from "../../components
 const Preview = () => {
     const navigate = useNavigate();
     const { projectId } = useParams();
-    const { currentProject, loadCurrentProject } = useProjectStore();
+    const { currentProject, loadCurrentProject, projects, fetchMyProjects } = useProjectStore();
     const { updates, faqs, threads, investorCount, fetchAll } = useProjectDetailStore();
     const { authUser } = useAuthStore();
     const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
@@ -21,7 +21,10 @@ const Preview = () => {
             loadCurrentProject(Number(projectId));
             fetchAll(Number(projectId));
         }
-    }, [projectId, loadCurrentProject, fetchAll]);
+        fetchMyProjects();
+    }, [projectId, loadCurrentProject, fetchAll, fetchMyProjects]);
+
+    const completedProjects = projects.filter(p => p.status === 'completed');
 
     const formatCurrency = (amount: number) => new Intl.NumberFormat("th-TH").format(amount);
 
@@ -54,7 +57,7 @@ const Preview = () => {
             <div className="w-full flex justify-end p-[20px] max-w-7xl mx-auto">
                 <button
                     onClick={() => navigate(-1)}
-                    className="border border-border bg-white text-foreground px-[20px] py-[8px] rounded-[6px] text-[14px] font-medium hover:bg-gray-50 transition-colors"
+                    className="border border-border bg-white text-foreground px-[20px] py-[8px] rounded-[6px] text-[14px] font-medium hover:bg-gray-50 transition-all duration-200 cursor-pointer"
                 >
                     ออกจากดูตัวอย่าง
                 </button>
@@ -121,31 +124,31 @@ const Preview = () => {
                         <div className="flex flex-wrap md:flex-nowrap bg-[#F1F3F5] rounded-[8px] p-[4px] mt-[10px] overflow-x-auto">
                             <button
                                 onClick={() => setActiveTab('story')}
-                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'story' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
+                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors cursor-pointer ${activeTab === 'story' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
                                 เรื่องราว
                             </button>
                             <button
                                 onClick={() => setActiveTab('milestone')}
-                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'milestone' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
+                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors cursor-pointer ${activeTab === 'milestone' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
                                 Milestone ({activeMilestones.length})
                             </button>
                             <button
                                 onClick={() => setActiveTab('update')}
-                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'update' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
+                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors cursor-pointer ${activeTab === 'update' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
                                 อัปเดต ({updates.length})
                             </button>
                             <button
                                 onClick={() => setActiveTab('comment')}
-                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'comment' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
+                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors cursor-pointer ${activeTab === 'comment' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
                                 ความคิดเห็น ({threads.length})
                             </button>
                             <button
                                 onClick={() => setActiveTab('question')}
-                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${activeTab === 'question' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
+                                className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors cursor-pointer ${activeTab === 'question' ? 'bg-white text-foreground font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground font-medium'}`}
                             >
                                 คำถาม ({faqs.length})
                             </button>
@@ -226,38 +229,49 @@ const Preview = () => {
                             </div>
 
                             <div className="flex gap-[12px]">
-                                <button className="flex-1 bg-primary hover:bg-primary-hover text-white h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3" /><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4" /><path d="m21 3-6 11.5" /><path d="M3 21 16 8" /><path d="m3 21 8.5-6.5" /></svg>
+                                <button className="flex-1 bg-primary hover:bg-primary-hover text-white h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors cursor-pointer duration-200">
+                                    <HandCoins size={18} />
                                     <span>ลงทุนโปรเจกต์นี้</span>
                                 </button>
-                                <button className="w-[44px] h-[44px] bg-secondary border border-border rounded-[10px] flex justify-center items-center text-foreground hover:bg-mute transition-colors">
+                                <button className="w-[44px] h-[44px] bg-secondary border border-border rounded-[10px] flex justify-center items-center text-foreground hover:bg-mute transition-colors cursor-pointer duration-200">
                                     <Flag size={18} />
                                 </button>
                             </div>
                         </div>
 
                         {/* Creator Profile */}
-                        <div className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[16px]">
-                            <h3 className="text-[12px] text-muted-foreground font-medium">ผู้สร้างโปรเจกต์</h3>
-                            <div className="flex items-center gap-[12px]">
-                                <div className="w-[44px] h-[44px] rounded-full bg-gray-200 overflow-hidden border border-border">
-                                    {authUser?.profile_url ? (
-                                        <img src={authUser.profile_url as string} alt="Creator" className="w-full h-full object-cover" />
+                        <div className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[14px]">
+                            <h3 className="text-[13px] text-foreground font-semibold">ผู้สร้างโปรเจกต์</h3>
+                            <div className="flex items-center gap-[14px]">
+                                <div className="w-[48px] h-[48px] rounded-full bg-gray-200 overflow-hidden border border-border flex-shrink-0">
+                                    {authUser?.picture ? (
+                                        <img src={authUser?.picture as string} alt="Creator" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-foreground font-bold text-[16px]">
-                                            {(authUser?.name as string)?.[0] ?? '?'}
+                                        <div className="w-full h-full flex items-center justify-center text-foreground font-bold text-[18px]">
+                                            {(authUser?.first_name as string)?.[0] ?? '?'}
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[14px] font-bold text-foreground">{(authUser?.name as string) || "ผู้สร้างโปรเจกต์"}</span>
-                                    <span className="text-[12px] text-muted-foreground">{(authUser?.email as string) || ""}</span>
+                                <div className="flex flex-col gap-[2px]">
+                                    <span className="text-[14px] font-bold text-foreground leading-tight">{(authUser?.first_name + " " + authUser?.last_name)}</span>
+                                    <span className="text-[12px] text-muted-foreground">{(authUser?.student_profile?.university?.name_th as string) || ""}</span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-[12px]">
-                                <span className="inline-flex items-center gap-[4px] border border-primary text-primary px-[8px] py-[2px] rounded-full text-[10px] font-medium">
-                                    <CheckCircle2 size={12} /> ยืนยันแล้ว
+                            <div>
+                                <p className="text-[12px] text-muted-foreground">{authUser?.student_profile?.bio as string}</p>
+                            </div>
+                            <div className="flex gap-[20px]">
+                                <span className="inline-flex items-center gap-[5px] border border-primary text-primary px-[10px] py-[4px] rounded-full text-[11px] font-medium">
+                                    {
+                                        authUser?.student_card_verification?.status && <><CheckCircle2 size={13} /> ยืนยันแล้ว</>
+                                    }
                                 </span>
+                                {completedProjects.length > 0 && (
+                                    <span className="inline-flex items-center gap-1.25 border border-green-500 text-green-600 px-2.5 py-1 rounded-full text-[11px] font-medium ml-1.5">
+                                        <CheckCircle2 size={13} />
+                                        {completedProjects.length} โปรเจกต์เสร็จสิ้น
+                                    </span>
+                                )}
                             </div>
                         </div>
 
