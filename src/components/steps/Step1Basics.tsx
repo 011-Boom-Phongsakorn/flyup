@@ -56,12 +56,21 @@ const Step1Basics = () => {
     }
   }, [currentProject]);
 
+  // resize description textarea เมื่อ localData.description เปลี่ยน (รวมถึงตอน load จาก API)
+  useEffect(() => {
+    if (descriptionRef.current) {
+      descriptionRef.current.style.height = 'auto';
+      descriptionRef.current.style.height = descriptionRef.current.scrollHeight + 'px';
+    }
+  }, [localData.description]);
+
   useEffect(() => {
     api.get('/categories').then(res => {
       setAllCategories(res.data?.data ?? []);
     }).catch(() => {});
   }, []);
 
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const additionalImagesRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
@@ -247,10 +256,16 @@ const Step1Basics = () => {
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">คำอธิบาย <span className="text-error">*</span></label>
             <textarea
+              ref={descriptionRef}
               value={localData.description}
               onBlur={() => handleAutoSave('description', localData.description)}
-              onChange={(e) => setLocalData({ ...localData, description: e.target.value })}
-              className="border border-border bg-background h-[100px] p-[12px] rounded-[8px] focus:outline-none focus:border-primary resize-none transition-all duration-200 hover:border-primary/50"
+              onChange={(e) => {
+                setLocalData({ ...localData, description: e.target.value });
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+              }}
+              rows={3}
+              className="border border-border bg-background p-[12px] rounded-[8px] focus:outline-none focus:border-primary resize-none transition-all duration-200 hover:border-primary/50 overflow-hidden"
             />
           </div>
           <p className="text-[12px] text-muted-foreground">*ส่วนคำอธิบายคือพื้นที่สำหรับสรุปใจความสำคัญในประโยคเดียวว่าโปรเจกต์นี้ทำอะไร เพื่อให้ผู้ที่สนใจเข้าใจเป้าหมายหลักได้ทันทีโดยไม่ต้องอ่านยาว*</p>
@@ -329,7 +344,17 @@ const Step1Basics = () => {
               value={numVal('projectDuration', localData.projectDuration)}
               onFocus={() => setActiveField('projectDuration')}
               onChange={(e) => setLocalData({ ...localData, projectDuration: parseNum(e.target.value) })}
-              onBlur={() => { setActiveField(null); handleAutoSave('projectDuration', localData.projectDuration); }}
+              onBlur={() => {
+                setActiveField(null);
+                const val = localData.projectDuration;
+                if (val > 48) {
+                  toast.error('ระยะเวลาโปรเจกต์ต้องไม่เกิน 48 เดือน (4 ปี)');
+                  setLocalData({ ...localData, projectDuration: 48 });
+                  handleAutoSave('projectDuration', 48);
+                  return;
+                }
+                handleAutoSave('projectDuration', val);
+              }}
               className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
           </div>
           <div className="grid grid-cols-1 gap-[20px] md:grid-cols-3 md:gap-[20px]">
@@ -343,10 +368,17 @@ const Step1Basics = () => {
                 onBlur={() => {
                   setActiveField(null);
                   const minSoftCap = Math.ceil(localData.fundingGoal * 0.7);
+                  const maxSoftCap = localData.fundingGoal;
                   if (localData.softCap > 0 && localData.softCap < minSoftCap) {
                     toast.error(`Soft Cap ต้องไม่ต่ำกว่า 70% ของเป้าหมาย (${formatNum(minSoftCap)} บาท)`);
                     setLocalData({ ...localData, softCap: minSoftCap });
                     handleAutoSave('softCap', minSoftCap);
+                    return;
+                  }
+                  if (localData.softCap > maxSoftCap) {
+                    toast.error(`Soft Cap ต้องไม่เกินเป้าหมายเงินทุน (${formatNum(maxSoftCap)} บาท)`);
+                    setLocalData({ ...localData, softCap: maxSoftCap });
+                    handleAutoSave('softCap', maxSoftCap);
                     return;
                   }
                   handleAutoSave('softCap', localData.softCap);
@@ -381,7 +413,23 @@ const Step1Basics = () => {
                 value={numVal('revenueShare', localData.revenueShare)}
                 onFocus={() => setActiveField('revenueShare')}
                 onChange={(e) => setLocalData({ ...localData, revenueShare: parseNum(e.target.value) })}
-                onBlur={() => { setActiveField(null); handleAutoSave('revenueShare', localData.revenueShare); }}
+                onBlur={() => {
+                  setActiveField(null);
+                  const val = localData.revenueShare;
+                  if (val > 50) {
+                    toast.error('ส่วนแบ่งกำไรต้องไม่เกิน 50%');
+                    setLocalData({ ...localData, revenueShare: 50 });
+                    handleAutoSave('revenueShare', 50);
+                    return;
+                  }
+                  if (val > 0 && val < 1) {
+                    toast.error('ส่วนแบ่งกำไรต้องไม่ต่ำกว่า 1%');
+                    setLocalData({ ...localData, revenueShare: 1 });
+                    handleAutoSave('revenueShare', 1);
+                    return;
+                  }
+                  handleAutoSave('revenueShare', val);
+                }}
                 className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
             </div>
           </div>

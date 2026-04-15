@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuthStore } from "../../store/useAuthStore";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router";
@@ -12,13 +12,22 @@ interface LoginFromData {
 }
 
 const Login = () => {
-    const { login, isLoggingIn, checkAuth } = useAuthStore()
+    const { login, isLoggingIn } = useAuthStore()
     const [errors, setErrors] = useState<{ [key: string]: boolean }>({})
     const [showPassword, setShowPassword] = useState(false)
     const [formData, setFormData] = useState<LoginFromData>({
         email: '',
         password: ''
     })
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('error') === 'oauth_failed') {
+            toast.error('เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่')
+            params.delete('error')
+            window.history.replaceState({}, '', window.location.pathname)
+        }
+    }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target
@@ -57,7 +66,6 @@ const Login = () => {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (validateForm()) {
-            await checkAuth()
             await login(formData)
         }
     }

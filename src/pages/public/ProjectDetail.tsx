@@ -34,7 +34,7 @@ function ProjectDetail() {
   const [selectedImage, setSelectedImage] = useState(0);
 
   const { currentPublicProject, isDetailLoading, fetchPublicProjectById } = usePublicProjectStore();
-  const { updates, threads, faqs, fetchAll } = useProjectDetailStore();
+  const { updates, threads, faqs, investorCount: actualInvestorCount, fetchAll } = useProjectDetailStore();
   const { authUser } = useAuthStore();
 
   const isLoggedIn = !!authUser;
@@ -50,10 +50,19 @@ function ProjectDetail() {
 
   // ─── Derived data ──────────────────────────────────────────────────────────
 
-  const projectImages = project?.media
-    ? project.media.filter(m => m.type === 'image').sort((a, b) => a.sort_order - b.sort_order).map(m => m.url)
+  type MediaItem = { type: 'video' | 'image'; url: string; };
+
+  const mediaList: MediaItem[] = project?.media
+    ? project.media
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map(m => {
+          const typeStr = Array.isArray(m.type) ? m.type[0] : m.type;
+          return { type: typeStr as 'video' | 'image', url: m.url };
+        })
     : [];
-  const displayImages = projectImages.length > 0 ? projectImages : [PLACEHOLDER_IMG];
+
+  const displayMedia = mediaList.length > 0 ? mediaList : [{ type: 'image' as const, url: PLACEHOLDER_IMG }];
+  const selectedMedia = displayMedia[selectedImage] || displayMedia[0];
 
   const milestones = project?.milestones ?? [];
   const hasMilestones = milestones.length > 0;
@@ -110,6 +119,8 @@ function ProjectDetail() {
     );
   }
 
+  const investorCount = actualInvestorCount;
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden w-full mt-[100px]">
       <Toaster
@@ -146,17 +157,25 @@ function ProjectDetail() {
           <div className="flex-1 min-w-0 w-full lg:w-auto">
             {/* Main image */}
             <div className="rounded-2xl overflow-hidden mb-3 w-full bg-primary-light min-h-[280px] sm:min-h-[380px] max-h-[420px]">
-              <img
-                src={displayImages[selectedImage]}
-                alt="project"
-                className="w-full h-full object-cover transition-all duration-300 ease-in-out"
-              />
+              {selectedMedia.type === 'video' ? (
+                <video
+                  src={selectedMedia.url}
+                  controls
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={selectedMedia.url}
+                  alt="project media"
+                  className="w-full h-full object-cover transition-all duration-300 ease-in-out"
+                />
+              )}
             </div>
 
             {/* Thumbnails */}
-            {displayImages.length > 1 && (
+            {displayMedia.length > 1 && (
               <div className="flex gap-2 mb-8 overflow-x-auto scrollbar-hide">
-                {displayImages.map((img, i) => (
+                {displayMedia.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
@@ -165,7 +184,11 @@ function ProjectDetail() {
                       : "border-transparent opacity-70 hover:opacity-100"
                       }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    {img.type === 'video' ? (
+                      <video src={img.url} className="w-full h-full object-cover pointer-events-none" />
+                    ) : (
+                      <img src={img.url} alt="thumbnail" className="w-full h-full object-cover" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -367,7 +390,7 @@ function ProjectDetail() {
                     <div>
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                         <Users size={13} />
-                        <span className="font-semibold text-base text-foreground">—</span>
+                        <span className="font-semibold text-base text-foreground">{investorCount > 0 ? investorCount : '—'}</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">ผู้สนับสนุน</p>
                     </div>

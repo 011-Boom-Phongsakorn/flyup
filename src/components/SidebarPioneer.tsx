@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router"
-import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files, Flag } from 'lucide-react'
+import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files, Flag, CalendarClock } from 'lucide-react'
 import { useAuthStore } from '../store/useAuthStore'
 
 const menu = [
@@ -8,6 +8,7 @@ const menu = [
     { icon: <LayoutDashboard size={20} />, title: 'แดชบอร์ด', path: '/pioneer/dashboard' },
     { icon: <Files size={20} />, title: 'โปรเจกต์ของฉัน', path: '/pioneer/dashboard/projects' },
     { icon: <Flag size={20} />, title: 'Milestone', path: '/pioneer/dashboard/milestones' },
+    { icon: <CalendarClock size={20} />, title: 'การประชุม', path: '/pioneer/dashboard/meetings' },
     { icon: <UserRound size={20} />, title: 'โปรไฟล์', path: '/pioneer/profile' },
 ]
 
@@ -26,9 +27,9 @@ const SidebarPioneer = () => {
         <aside className="bg-sidebar w-[230px] min-w-[230px] h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent">
             <div className="w-full flex flex-col items-center gap-[10px] pb-4">
                 {authUser?.picture ? (
-                    <img src={authUser.picture as string} alt="Profile" className="h-[48px] w-[48px] rounded-full object-cover border border-background" />
+                    <img src={authUser.picture as string} alt="Profile" className="h-[48px] w-[48px] rounded-full object-cover" />
                 ) : (
-                    <div className="h-[48px] w-[48px] rounded-full bg-sidebar-primary/20 border border-background flex items-center justify-center text-sidebar-primary text-[16px] font-bold">
+                    <div className="h-[48px] w-[48px] rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary text-[16px] font-bold">
                         {initials}
                     </div>
                 )}
