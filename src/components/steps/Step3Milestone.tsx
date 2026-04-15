@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useProjectStore, type Milestone } from '../../store/useProjectStore'
 import { Plus, Trash2, Upload, Video, X, Loader2 } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
@@ -11,6 +11,7 @@ const Step3Milestone = () => {
   const [activePhase, setActivePhase] = useState(0) // 0-3
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
+  const descriptionRef = useRef<HTMLTextAreaElement>(null)
   // ✅ ดึง currentProject มาก่อน แล้วค่อยเข้าถึง milestones
   const { currentProject, updateMilestone, saveMilestonePhase, setSaveStatus } = useProjectStore()
 
@@ -30,6 +31,33 @@ const Step3Milestone = () => {
 
   const currentData = currentProject.milestones[activePhase]
 
+  // คำนวณวันเริ่ม/สิ้นสุดของแต่ละ phase (เหมือน PreviewMilestone)
+  const thMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+  const formatThDate = (d: Date) => `${d.getDate()} ${thMonths[d.getMonth()]} ${d.getFullYear() + 543}`
+  const activeMilestonesCount = currentProject.milestones.filter(m => m.title).length || 4
+  const phaseDates = (() => {
+    const result: { start: Date; end: Date }[] = []
+    let cursor = new Date()
+    cursor.setDate(cursor.getDate() + (currentProject.campaignDuration || 0))
+    for (let i = 0; i < activeMilestonesCount; i++) {
+      const duration = currentProject.milestones[i]?.duration || 0
+      const start = new Date(cursor)
+      const end = new Date(cursor)
+      end.setDate(end.getDate() + duration)
+      result.push({ start, end })
+      cursor = new Date(end)
+    }
+    return result
+  })()
+  const activePhaseDates = phaseDates[activePhase]
+  const showDates = (currentProject.campaignDuration || 0) > 0 && (currentData.duration || 0) > 0
+
+  useEffect(() => {
+    if (descriptionRef.current) {
+      descriptionRef.current.style.height = 'auto'
+      descriptionRef.current.style.height = descriptionRef.current.scrollHeight + 'px'
+    }
+  }, [currentData.description])
 
   // 1. ฟังก์ชันอัปเดตข้อมูลทั่วไปของ Milestone
   const handleChange = <K extends keyof Milestone>(field: K, value: Milestone[K]) => {
@@ -257,11 +285,16 @@ const Step3Milestone = () => {
             <div className="flex flex-col gap-[8px]">
               <label className="text-[14px] font-semibold text-foreground">คำอธิบาย <span className="text-error">*</span></label>
               <textarea
-                rows={4}
+                ref={descriptionRef}
+                rows={3}
                 value={currentData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
+                onChange={(e) => {
+                  handleChange('description', e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = e.target.scrollHeight + 'px'
+                }}
                 onBlur={() => { savePhase(activePhase) }}
-                className="w-full p-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none text-[14px]"
+                className="w-full p-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none overflow-hidden text-[14px]"
               />
             </div>
 
@@ -289,9 +322,26 @@ const Step3Milestone = () => {
                 min={1}
                 value={currentData.duration || ''}
                 onChange={(e) => handleChange('duration', Number(e.target.value))}
-                onBlur={() => { savePhase(activePhase) }}
+                onBlur={() => {
+                  const maxDays = (currentProject.projectDuration || 0) * 30;
+                  if (maxDays > 0 && currentData.duration > maxDays) {
+                    toast.error(`ระยะเวลา Milestone ต้องไม่เกินระยะเวลาโปรเจกต์ (${maxDays} วัน / ${currentProject.projectDuration} เดือน)`);
+                    updateMilestone(activePhase, { duration: maxDays });
+                    savePhase(activePhase);
+                    return;
+                  }
+                  savePhase(activePhase);
+                }}
                 className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px]"
               />
+              {showDates && activePhaseDates && (
+                <p className="text-[12px] text-muted-foreground">
+                  เริ่ม {formatThDate(activePhaseDates.start)} — สิ้นสุด {formatThDate(activePhaseDates.end)}
+                </p>
+              )}
+              {!currentProject.campaignDuration && (
+                <p className="text-[12px] text-muted-foreground">กำหนดระยะเวลาระดมทุนใน Step 1 เพื่อคำนวณวันที่</p>
+              )}
             </div>
           </div>
 

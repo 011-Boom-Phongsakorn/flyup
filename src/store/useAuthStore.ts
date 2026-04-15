@@ -95,7 +95,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
             const response = await api.get('/user/me')
             set({ authUser: response?.data?.data })
         } catch {
-            set({ authUser: null })
+            // ถ้ามี token ใน localStorage อยู่แล้ว (เช่น หลัง Google OAuth)
+            // ไม่ล้าง authUser เพื่อไม่ให้ลบ session ที่เพิ่ง set ไป
+            if (!localStorage.getItem('auth_token')) {
+                set({ authUser: null })
+            }
         } finally {
             set({ isCheckingAuth: false })
         }
@@ -124,21 +128,27 @@ export const useAuthStore = create<AuthStore>((set) => ({
         }
     },
     loginWithGoogleToken: (token) => {
+        localStorage.setItem('auth_token', token)
         const decoded = jwtDecode(token) as DecodedUser
         set({ authUser: decoded })
     },
     login: async (data) => {
         set({ isLoggingIn: true })
         try {
-            await api.post('/signin', data)
+            const res = await api.post('/signin', data)
+            const token: string = res.data?.token
+            if (token) {
+                localStorage.setItem('auth_token', token)
+            }
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
         } catch (error: unknown) {
-            console.log(error)
             const err = error instanceof AxiosError ? error : null;
             const errorMessage = err?.response?.data?.error;
 
-            if (errorMessage === 'please verify email') {
+            if (!err || err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED') {
+                toast.error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่')
+            } else if (errorMessage === 'please verify email') {
                 toast.error('กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
             } else {
                 toast.error('อีเมล์หรือรหัสผ่านไม่ถูกต้อง')
@@ -153,6 +163,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         } catch {
             // ignore
         } finally {
+            localStorage.removeItem('auth_token')
             set({ authUser: null })
         }
     },

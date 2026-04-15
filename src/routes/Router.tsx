@@ -177,7 +177,10 @@ const Router = () => {
                     </Route>
 
                 </Routes>
-                <Toaster position='top-right' />
+                <Toaster
+                    position='top-center'
+                    containerStyle={{ top: 'max(16px, env(safe-area-inset-top))' }}
+                />
             </BrowserRouter>
         </>
     )

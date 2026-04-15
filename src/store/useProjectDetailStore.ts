@@ -30,10 +30,12 @@ interface ProjectDetailState {
   updates: ProjectUpdate[];
   threads: ProjectThread[];
   faqs: ProjectFAQ[];
+  investorCount: number;
   isLoading: boolean;
   fetchUpdates: (id: number) => Promise<void>;
   fetchThreads: (id: number) => Promise<void>;
   fetchFAQs: (id: number) => Promise<void>;
+  fetchInvestorCount: (id: number) => Promise<void>;
   fetchAll: (id: number) => Promise<void>;
 }
 
@@ -43,6 +45,7 @@ export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
   updates: [],
   threads: [],
   faqs: [],
+  investorCount: 0,
   isLoading: false,
 
   fetchUpdates: async (id: number) => {
@@ -72,18 +75,30 @@ export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
     }
   },
 
+  fetchInvestorCount: async (id: number) => {
+    try {
+      const res = await api.get(`/investments/projects/${id}/investors`);
+      set({ investorCount: res.data?.data?.total ?? 0 });
+    } catch (error) {
+      console.warn('fetchInvestorCount:', error);
+      set({ investorCount: 0 });
+    }
+  },
+
   fetchAll: async (id: number) => {
     set({ isLoading: true });
     try {
-      const [updatesRes, threadsRes, faqsRes] = await Promise.allSettled([
+      const [updatesRes, threadsRes, faqsRes, invCountRes] = await Promise.allSettled([
         api.get(`/projects/${id}/updates`),
         api.get(`/projects/${id}/threads`),
         api.get(`/projects/${id}/faqs`),
+        api.get(`/investments/projects/${id}/investors`),
       ]);
       set({
         updates: updatesRes.status === 'fulfilled' ? updatesRes.value.data?.data ?? [] : [],
         threads: threadsRes.status === 'fulfilled' ? threadsRes.value.data?.data ?? [] : [],
         faqs: faqsRes.status === 'fulfilled' ? faqsRes.value.data?.data ?? [] : [],
+        investorCount: invCountRes.status === 'fulfilled' ? invCountRes.value.data?.data?.total ?? 0 : 0,
       });
     } catch (error) {
       console.warn('fetchAll:', error);

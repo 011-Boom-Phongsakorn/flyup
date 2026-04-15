@@ -45,7 +45,8 @@ export interface Project {
 export interface ProjectSummary {
     id: number;
     title: string;
-    state: 'draft' | 'pending_review' | 'funding' | 'closed' | 'cancelled';
+    state: 'draft' | 'pending_review' | 'funding' | 'executing' | 'closed' | 'cancelled';
+    status: 'active' | 'funded' | 'failed' | 'rejected' | 'completed' | 'cancelled';
     category: { id: number; name: string } | null;
     description: string | null;
     current_funding: number;

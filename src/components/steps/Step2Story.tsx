@@ -74,6 +74,7 @@ const Step2Story = () => {
   const [mediaUrlInputOpen, setMediaUrlInputOpen] = useState(false)
   const [mediaUrl, setMediaUrl] = useState('')
   const [risks, setRisks] = useState(currentProject.risks || '')
+  const risksRef = useRef<HTMLTextAreaElement>(null)
   const hasInitializedRef = useRef(false)
 
   // ✅ State สำหรับลิงก์บนรูปภาพ
@@ -144,6 +145,14 @@ const Step2Story = () => {
       }
     }
   }, [currentProject.risks, currentProject.story, editor])
+
+  // resize risks textarea เมื่อ risks state เปลี่ยน (รวมถึงตอน load จาก API)
+  useEffect(() => {
+    if (risksRef.current) {
+      risksRef.current.style.height = 'auto'
+      risksRef.current.style.height = risksRef.current.scrollHeight + 'px'
+    }
+  }, [risks])
 
   // ✅ ฟังก์ชันเช็คว่า cursor อยู่บนบรรทัดว่างหรือไม่ + คำนวณตำแหน่ง
   const updateFloatingMenu = useCallback(() => {
@@ -564,14 +573,19 @@ const Step2Story = () => {
           <p className='text-[12px] text-muted-foreground'>*อธิบายความเป็นมาและรายละเอียด เชิงลึกเพื่อสร้างความเชื่อมั่น  *</p>
           <p className='text-[14px] text-foreground'>ความเสี่ยงของโปรเจกต์ <span className="text-error">*</span></p>
           <textarea
+            ref={risksRef}
             value={risks}
-            onChange={(e) => setRisks(e.target.value)}
+            onChange={(e) => {
+              setRisks(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = e.target.scrollHeight + 'px'
+            }}
             onBlur={() => {
               updateProjectInfo({ risks });
               if (projectId) updateProject(Number(projectId), { risks });
             }}
-            rows={4}
-            className="w-full border border-border bg-background h-[100px] p-[12px] rounded-[8px] resize-none focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"/>
+            rows={3}
+            className="w-full border border-border bg-background p-[12px] rounded-[8px] resize-none focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50 overflow-hidden"/>
           <p className='text-[12px] text-muted-foreground'>*ระบุความเสี่ยงที่อาจเกิดขึ้น  เพื่อให้ผู้สนับสนุนได้รับทราบข้อมูลที่ครบถ้วน  *</p>
         </div>
       </div>
