@@ -3,21 +3,24 @@ import { useParams, useNavigate } from "react-router"
 import {
     ArrowLeft,
     CheckCircle,
+    CheckCircle2,
     XCircle,
     Loader2,
     Users,
     Clock,
     Shield,
+    Calendar,
 } from "lucide-react"
 import api from "../../services/api"
 import toast from "react-hot-toast"
 import { AxiosError } from "axios"
-import { PreviewUpdate, PreviewComment } from "../../components/preview/PreviewMisc"
+import PreviewStory from "../../components/preview/PreviewStory"
+import { PreviewUpdate, PreviewQuestion, PreviewComment } from "../../components/preview/PreviewMisc"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface ProjectMedia {
     id: number
-    type: string
+    type: string | string[]
     url: string
     sort_order: number
 }
@@ -29,6 +32,8 @@ interface Milestone {
     description: string | null
     percent_release: number
     status: string
+    duration?: number
+    acceptance_criteria?: string | null
 }
 
 interface StorySection {
@@ -48,6 +53,16 @@ interface ProjectOwner {
     first_name: string
     last_name: string
     email: string
+    picture?: string | null
+    student_profile?: {
+        bio?: string | null
+        university?: {
+            name_th?: string | null
+        } | null
+    } | null
+    student_card_verification?: {
+        status?: string | null
+    } | null
 }
 
 interface AdminProjectDetail {
@@ -129,8 +144,20 @@ const AdminProjectDetail = () => {
     }
 
     // ── Derived ────────────────────────────────────────────────────────────────
-    const images = project?.media.filter((m) => m.type === "image").sort((a, b) => a.sort_order - b.sort_order) ?? []
-    const displayImages = images.length > 0 ? images : null
+    const getMediaType = (t: string | string[]) => (Array.isArray(t) ? t[0] ?? "" : t)
+    type MediaItem = { type: "video" | "image"; url: string; id: number }
+    const mediaList: MediaItem[] = project
+        ? [
+              ...project.media
+                  .filter((m) => getMediaType(m.type) === "video")
+                  .map((m) => ({ type: "video" as const, url: m.url, id: m.id })),
+              ...project.media
+                  .filter((m) => getMediaType(m.type) === "image")
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .map((m) => ({ type: "image" as const, url: m.url, id: m.id })),
+          ]
+        : []
+    const selectedItem = mediaList[selectedMedia] ?? null
 
     const storyHtml = useMemo(() => {
         if (!project?.stories?.length) return ""
@@ -236,44 +263,50 @@ const AdminProjectDetail = () => {
                     <div className="flex-1 flex flex-col gap-[20px]">
                         {/* Main Media */}
                         <div className="w-full aspect-[16/10] bg-white rounded-[16px] border border-border overflow-hidden">
-                            {displayImages ? (
-                                <img
-                                    src={displayImages[selectedMedia]?.url}
-                                    alt="project"
-                                    className="w-full h-full object-cover"
-                                />
+                            {selectedItem ? (
+                                selectedItem.type === "video" ? (
+                                    <video src={selectedItem.url} controls className="w-full h-full object-cover" />
+                                ) : (
+                                    <img src={selectedItem.url} alt="project" className="w-full h-full object-cover" />
+                                )
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-100 text-muted-foreground text-[14px]">
+                                <div className="w-full h-full flex items-center justify-center bg-gray-100 text-muted-foreground">
                                     ไม่มีรูปภาพ
                                 </div>
                             )}
                         </div>
 
                         {/* Thumbnails */}
-                        {displayImages && displayImages.length > 1 && (
-                            <div className="flex gap-[10px] overflow-x-auto pb-1">
-                                {displayImages.map((m, i) => (
-                                    <button
+                        {mediaList.length > 0 ? (
+                            <div className="flex gap-[10px] overflow-x-auto pb-2">
+                                {mediaList.map((m, i) => (
+                                    <div
                                         key={m.id}
                                         onClick={() => setSelectedMedia(i)}
-                                        className={`w-[80px] h-[60px] flex-shrink-0 border-2 rounded-[8px] overflow-hidden transition-colors ${
+                                        className={`w-[80px] h-[60px] flex-shrink-0 border-2 rounded-[8px] overflow-hidden cursor-pointer transition-colors ${
                                             selectedMedia === i
                                                 ? "border-primary"
                                                 : "border-border hover:border-primary/50"
                                         }`}
                                     >
-                                        <img
-                                            src={m.url}
-                                            alt=""
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </button>
+                                        {m.type === "video" ? (
+                                            <video src={m.url} className="w-full h-full object-cover pointer-events-none" />
+                                        ) : (
+                                            <img src={m.url} alt="" className="w-full h-full object-cover" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex gap-[10px]">
+                                {[1, 2, 3, 4, 5].map((_, i) => (
+                                    <div key={i} className="w-[80px] h-[60px] bg-white border border-border rounded-[8px]" />
                                 ))}
                             </div>
                         )}
 
                         {/* Tabs */}
-                        <div className="flex bg-[#F1F3F5] rounded-[8px] p-[4px]">
+                        <div className="flex flex-wrap md:flex-nowrap bg-[#F1F3F5] rounded-[8px] p-[4px] mt-[10px] overflow-x-auto">
                             {(
                                 [
                                     { key: "story", label: "เรื่องราว" },
@@ -286,7 +319,7 @@ const AdminProjectDetail = () => {
                                 <button
                                     key={key}
                                     onClick={() => setActiveTab(key)}
-                                    className={`flex-1 py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors ${
+                                    className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors cursor-pointer ${
                                         activeTab === key
                                             ? "bg-white text-foreground font-semibold shadow-sm"
                                             : "text-muted-foreground hover:text-foreground font-medium"
@@ -298,14 +331,15 @@ const AdminProjectDetail = () => {
                         </div>
 
                         {/* Tab Content */}
-                        <div className="w-full">
+                        <div className="w-full mt-[10px]">
                             {activeTab === "story" && (
-                                <StoryTab html={storyHtml} risk={project.risk} />
+                                <PreviewStory story={storyHtml} risks={project.risk ?? undefined} />
                             )}
                             {activeTab === "milestone" && (
                                 <MilestoneTab
                                     milestones={project.milestones}
                                     fundingGoal={project.funding_goal}
+                                    campaignDuration={project.duration_days || (project.duration_months * 30)}
                                 />
                             )}
                             {activeTab === "update" && (
@@ -315,7 +349,7 @@ const AdminProjectDetail = () => {
                                 <PreviewComment comments={threads} />
                             )}
                             {activeTab === "faq" && (
-                                <FAQTab faqs={project.faqs} />
+                                <PreviewQuestion questions={project.faqs} />
                             )}
                         </div>
                     </div>
@@ -360,39 +394,60 @@ const AdminProjectDetail = () => {
                             </div>
 
                             <div className="flex flex-col gap-[12px] mt-[20px] mb-[24px]">
-                                <InfoRow
-                                    label="Softcap"
-                                    value={`฿${fmt(project.softcap)}`}
-                                />
-                                <InfoRow
-                                    label="ลงทุนขั้นต่ำ"
-                                    value={project.min_invest_amount > 0 ? `฿${fmt(project.min_invest_amount)}` : "-"}
-                                />
-                                <InfoRow
-                                    label="ลงทุนสูงสุด"
-                                    value={project.max_invest_amount > 0 ? `฿${fmt(project.max_invest_amount)}` : "-"}
-                                />
-                                <InfoRow
-                                    label="ค่าธรรมเนียม Platform"
-                                    value={`${project.platform_fee}%`}
-                                />
+                                <div className="flex justify-between items-center text-[13px]">
+                                    <span className="text-muted-foreground">Softcap</span>
+                                    <span className="font-semibold text-foreground">฿{fmt(project.softcap)}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[13px]">
+                                    <span className="text-muted-foreground">ลงทุนขั้นต่ำ</span>
+                                    <span className="font-semibold text-foreground">
+                                        {project.min_invest_amount > 0 ? `฿${fmt(project.min_invest_amount)}` : "ยังไม่ได้กำหนด"}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-[13px]">
+                                    <span className="text-muted-foreground">ลงทุนสูงสุด</span>
+                                    <span className="font-semibold text-foreground">
+                                        {project.max_invest_amount > 0 ? `฿${fmt(project.max_invest_amount)}` : "ยังไม่ได้กำหนด"}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-[13px]">
+                                    <span className="text-muted-foreground">ค่าธรรมเนียม Platform</span>
+                                    <span className="font-semibold text-foreground">{project.platform_fee}%</span>
+                                </div>
                             </div>
-
                         </div>
 
                         {/* Creator Profile */}
-                        <div className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[16px]">
-                            <h3 className="text-[12px] text-muted-foreground font-medium">ผู้สร้างโปรเจกต์</h3>
-                            <div className="flex items-center gap-[12px]">
-                                <div className="w-[44px] h-[44px] rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[16px]">
-                                    {project.owner?.first_name?.[0] ?? "?"}
+                        <div className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[14px]">
+                            <h3 className="text-[13px] text-foreground font-semibold">ผู้สร้างโปรเจกต์</h3>
+                            <div className="flex items-center gap-[14px]">
+                                <div className="w-[48px] h-[48px] rounded-full bg-gray-200 overflow-hidden border border-border flex-shrink-0">
+                                    {project.owner?.picture ? (
+                                        <img src={project.owner.picture} alt="Creator" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-foreground font-bold text-[18px]">
+                                            {project.owner?.first_name?.[0] ?? "?"}
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[14px] font-bold text-foreground">{ownerName}</span>
+                                <div className="flex flex-col gap-[2px]">
+                                    <span className="text-[14px] font-bold text-foreground leading-tight">{ownerName}</span>
                                     <span className="text-[12px] text-muted-foreground">
-                                        {project.owner?.email ?? ""}
+                                        {project.owner?.student_profile?.university?.name_th ?? project.owner?.email ?? ""}
                                     </span>
                                 </div>
+                            </div>
+                            {project.owner?.student_profile?.bio && (
+                                <div>
+                                    <p className="text-[12px] text-muted-foreground">{project.owner.student_profile.bio}</p>
+                                </div>
+                            )}
+                            <div className="flex gap-[20px]">
+                                {project.owner?.student_card_verification?.status === "approved" && (
+                                    <span className="inline-flex items-center gap-[5px] border border-primary text-primary px-[10px] py-[4px] rounded-full text-[11px] font-medium">
+                                        <CheckCircle2 size={13} /> ยืนยันแล้ว
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -411,122 +466,95 @@ const AdminProjectDetail = () => {
     )
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── MilestoneTab ──────────────────────────────────────────────────────────────
+// (ใช้ component นี้แทน PreviewMilestone เพราะ PreviewMilestone อ่านจาก useProjectStore โดยตรง)
 
-const StoryTab = ({ html, risk }: { html: string; risk: string | null }) => {
-    const { processedHtml, toc } = useMemo(() => {
-        if (!html || typeof window === "undefined") return { processedHtml: "", toc: [] }
-        const doc = new DOMParser().parseFromString(html, "text/html")
-        const headings = Array.from(doc.querySelectorAll("h1, h2, h3"))
-        const tocList = headings.map((h, i) => {
-            const headingId = h.id || `heading-${i}`
-            h.id = headingId
-            return { id: headingId, text: h.textContent || "", level: Number(h.tagName.replace("H", "")) }
-        })
-        return { processedHtml: doc.body.innerHTML, toc: tocList }
-    }, [html])
-
-    if (!html && !risk) {
-        return (
-            <div className="flex items-center justify-center py-[60px] text-muted-foreground text-[14px]">
-                ไม่มีเรื่องราว
-            </div>
-        )
-    }
-
-    return (
-        <div className="flex flex-col md:flex-row gap-[40px] mt-[20px] items-start">
-            {toc.length > 0 && (
-                <div className="hidden md:block w-[200px] shrink-0 sticky top-[72px]">
-                    <div className="flex flex-col gap-[10px] border-l-2 border-border pl-[14px]">
-                        <p className="text-[13px] font-bold text-foreground">สารบัญ</p>
-                        {toc.map((item) => (
-                            <a
-                                key={item.id}
-                                href={`#${item.id}`}
-                                onClick={(e) => {
-                                    e.preventDefault()
-                                    document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" })
-                                }}
-                                className="text-[12px] text-muted-foreground hover:text-primary transition-colors"
-                                style={{ marginLeft: `${(item.level - 1) * 8}px` }}
-                            >
-                                {item.text}
-                            </a>
-                        ))}
-                    </div>
-                </div>
-            )}
-            <div className="flex-1 flex flex-col gap-[20px] min-w-0">
-                {html && (
-                    <div
-                        className="prose prose-slate max-w-[800px] text-foreground text-[15px] leading-relaxed [&_h1]:text-[24px] [&_h1]:font-bold [&_h2]:text-[20px] [&_h2]:font-bold [&_h3]:text-[18px] [&_h3]:font-bold [&_h1]:mb-[12px] [&_h2]:mb-[12px] [&_h3]:mb-[12px] [&_p]:mb-[12px] [&_ul]:mb-[12px] [&_li]:mb-[4px] [&_img]:rounded-[12px] [&_img]:my-[20px]"
-                        dangerouslySetInnerHTML={{ __html: processedHtml }}
-                    />
-                )}
-                {risk && (
-                    <div className="border border-[#FCD34D] bg-[#FEF3C7]/40 rounded-[12px] p-[20px] flex gap-[16px] max-w-[800px]">
-                        <div className="text-[#D97706] mt-1 shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                                <line x1="12" y1="9" x2="12" y2="13" />
-                                <line x1="12" y1="17" x2="12.01" y2="17" />
-                            </svg>
-                        </div>
-                        <div className="flex flex-col gap-[4px]">
-                            <h3 className="text-[14px] font-bold text-foreground">ความเสี่ยงและความท้าทาย</h3>
-                            <div
-                                className="text-[13px] text-muted-foreground leading-relaxed"
-                                dangerouslySetInnerHTML={{ __html: risk }}
-                            />
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    )
-}
+const thMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+const formatThDate = (d: Date) => `${d.getDate()} ${thMonths[d.getMonth()]} ${d.getFullYear() + 543}`
 
 const MilestoneTab = ({
     milestones,
     fundingGoal,
+    campaignDuration,
 }: {
     milestones: Milestone[]
     fundingGoal: number
+    campaignDuration: number
 }) => {
     if (milestones.length === 0) {
         return (
-            <div className="flex items-center justify-center py-[60px] border border-dashed border-border rounded-[16px] text-muted-foreground text-[14px] mt-[20px]">
-                ยังไม่ได้กำหนด Milestone
+            <div className="flex flex-col items-center justify-center gap-[12px] mt-[40px] p-[40px] border border-dashed border-border rounded-[16px] bg-white">
+                <span className="text-muted-foreground text-[14px]">ยังไม่ได้กำหนด Milestone</span>
             </div>
         )
     }
 
+    const sorted = milestones.slice().sort((a, b) => a.phase_no - b.phase_no)
+
+    // คำนวณวันเริ่ม/สิ้นสุดของแต่ละ phase เหมือน PreviewMilestone
+    const phaseDates = (() => {
+        const result: { start: Date; end: Date }[] = []
+        let cursor = new Date()
+        cursor.setDate(cursor.getDate() + campaignDuration)
+        for (const m of sorted) {
+            const duration = m.duration ?? 0
+            const start = new Date(cursor)
+            const end = new Date(cursor)
+            end.setDate(end.getDate() + duration)
+            result.push({ start, end })
+            cursor = new Date(end)
+        }
+        return result
+    })()
+
     return (
-        <div className="flex flex-col gap-[24px] mt-[20px] relative">
-            <div className="absolute left-[24px] top-[24px] bottom-[24px] w-[1px] bg-border hidden md:block" />
-            {milestones
-                .slice()
-                .sort((a, b) => a.phase_no - b.phase_no)
-                .map((m, idx) => {
-                    const amount = fundingGoal > 0 ? (fundingGoal * m.percent_release) / 100 : 0
-                    return (
-                        <div key={m.id} className="flex gap-[20px] relative z-10">
-                            <div
-                                className={`hidden md:flex shrink-0 w-[48px] h-[48px] rounded-full items-center justify-center font-bold text-[20px] shadow-sm ${
-                                    idx === 0 ? "bg-primary text-white" : "bg-white border border-border text-foreground"
-                                }`}
-                            >
-                                {m.phase_no}
-                            </div>
-                            <div className="flex-1 bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col xl:flex-row justify-between xl:items-start gap-[20px]">
-                                <div className="flex flex-col gap-[8px] flex-1">
-                                    <h3 className="text-[16px] font-bold text-foreground">{m.title}</h3>
-                                    {m.description && (
-                                        <p className="text-[14px] text-muted-foreground">{m.description}</p>
+        <div className="flex flex-col gap-[24px] mt-[20px] relative isolate w-full overflow-hidden">
+            <div className="absolute left-[24px] top-[24px] bottom-[24px] w-[1px] bg-border z-0 hidden md:block" />
+            {sorted.map((m, idx) => {
+                const amount = fundingGoal > 0 ? (fundingGoal * m.percent_release) / 100 : 0
+                const dates = phaseDates[idx]
+                const hasDates = dates && (m.duration ?? 0) > 0 && campaignDuration > 0
+                const criteria = (m.acceptance_criteria ?? "").split("\n").filter((c: string) => c.trim())
+
+                return (
+                    <div key={m.id} className="flex gap-[20px] relative z-10 w-full">
+                        <div
+                            className={`hidden md:flex shrink-0 w-[48px] h-[48px] rounded-full items-center justify-center font-bold text-[20px] shadow-sm ${
+                                idx === 0 ? "bg-primary text-white" : "bg-white border border-border text-foreground"
+                            }`}
+                        >
+                            {m.phase_no}
+                        </div>
+                        <div className="flex-1 bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[20px]">
+                            {/* Top row */}
+                            <div className="flex flex-col xl:flex-row justify-between xl:items-start gap-[20px]">
+                                <div className="flex flex-col gap-[12px] flex-1">
+                                    <div>
+                                        <h3 className="text-[16px] font-bold text-foreground">Phase {m.phase_no}: {m.title}</h3>
+                                        {m.description && (
+                                            <p className="text-[14px] text-muted-foreground mt-[4px]">{m.description}</p>
+                                        )}
+                                        {hasDates && (
+                                            <p className="inline-flex items-center gap-[5px] text-[12px] text-muted-foreground mt-[6px]">
+                                                <Calendar size={12} />
+                                                <span>กำหนดส่ง: {formatThDate(dates.start)} — {formatThDate(dates.end)}</span>
+                                            </p>
+                                        )}
+                                    </div>
+                                    {criteria.length > 0 && (
+                                        <div className="flex flex-col gap-[8px] mt-[8px]">
+                                            <span className="text-[12px] font-bold text-foreground">สิ่งที่ส่งมอบ:</span>
+                                            <div className="flex flex-wrap gap-[8px]">
+                                                {criteria.map((c: string, i: number) => (
+                                                    <span key={i} className="px-[12px] py-[4px] border border-border rounded-full text-[12px] text-foreground bg-white whitespace-nowrap">
+                                                        {c}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
-                                <div className="flex flex-row xl:flex-col items-center xl:items-end justify-between gap-[12px] shrink-0">
+                                <div className="flex flex-row xl:flex-col items-center xl:items-end justify-between xl:justify-start gap-[12px] shrink-0 mt-[10px] xl:mt-0">
                                     <span className="text-[20px] font-bold text-primary">
                                         {amount > 0 ? `฿${new Intl.NumberFormat("th-TH").format(amount)}` : `${m.percent_release}%`}
                                     </span>
@@ -535,53 +563,18 @@ const MilestoneTab = ({
                                     </span>
                                 </div>
                             </div>
+                            {/* Bottom row */}
+                            <div className="flex justify-end">
+                                <a href="#" className="text-[12px] text-primary hover:text-primary/70 transition-colors">
+                                    ดูรายละเอียดเพิ่มเติม
+                                </a>
+                            </div>
                         </div>
-                    )
-                })}
+                    </div>
+                )
+            })}
         </div>
     )
 }
-
-const FAQTab = ({ faqs }: { faqs: ProjectFAQ[] }) => {
-    const [openId, setOpenId] = useState<number | null>(null)
-
-    if (faqs.length === 0) {
-        return (
-            <div className="flex items-center justify-center py-[60px] text-muted-foreground text-[14px] mt-[20px]">
-                ไม่มีคำถาม
-            </div>
-        )
-    }
-
-    return (
-        <div className="flex flex-col gap-[12px] mt-[20px]">
-            {faqs.map((faq) => (
-                <div key={faq.id} className="bg-white border border-border rounded-[12px] overflow-hidden">
-                    <button
-                        onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
-                        className="w-full flex items-center justify-between px-[20px] py-[16px] text-left"
-                    >
-                        <span className="text-[14px] font-semibold text-foreground">{faq.question}</span>
-                        <span className="text-muted-foreground text-[18px] leading-none ml-[12px]">
-                            {openId === faq.id ? "−" : "+"}
-                        </span>
-                    </button>
-                    {openId === faq.id && (
-                        <div className="px-[20px] pb-[16px] text-[14px] text-muted-foreground leading-relaxed border-t border-border pt-[12px]">
-                            {faq.answer}
-                        </div>
-                    )}
-                </div>
-            ))}
-        </div>
-    )
-}
-
-const InfoRow = ({ label, value }: { label: string; value: string }) => (
-    <div className="flex items-center justify-between text-[13px]">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-semibold text-foreground">{value}</span>
-    </div>
-)
 
 export default AdminProjectDetail
