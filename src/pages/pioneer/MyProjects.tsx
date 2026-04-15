@@ -5,7 +5,7 @@ import { useProjectStore } from "../../store/useProjectStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import Swal from "sweetalert2";
 
-type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled";
+type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled" | "executing";
 
 const stateLabels: { type: StateType | "all"; label: string }[] = [
   { type: "funding", label: "กำลังระดมทุน" },
@@ -21,6 +21,7 @@ const stateTextMap: Record<StateType, string> = {
   draft: "แบบร่าง",
   closed: "เสร็จสิ้น",
   cancelled: "ถูกยกเลิก",
+  executing: "กำลังดำเนินการ",
 };
 
 const stateBadgeClass: Record<StateType, string> = {
@@ -29,6 +30,7 @@ const stateBadgeClass: Record<StateType, string> = {
   pending_review: "bg-[#F1F3F5] text-[#495057]",
   draft: "bg-white border border-border text-[#495057]",
   cancelled: "bg-[#EF4444] text-white",
+  executing: "bg-[#3B82F6] text-white",
 };
 
 const MyProjects = () => {
@@ -47,7 +49,7 @@ const MyProjects = () => {
 
   const stateCounts = useMemo(() => {
     const counts: Record<StateType, number> = {
-      funding: 0, pending_review: 0, draft: 0, closed: 0, cancelled: 0
+      funding: 0, pending_review: 0, draft: 0, closed: 0, cancelled: 0, executing: 0
     };
     projects.forEach(p => {
       if (p.state in counts) counts[p.state]++;
