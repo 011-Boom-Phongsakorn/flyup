@@ -154,12 +154,14 @@ const Step1Basics = () => {
     updateProjectInfo({ files: [...currentImages, ...previews] });
 
     // Upload ทีละไฟล์แล้วแทนที่ blob URL ด้วย server URL
+    toast.loading(`กำลังอัปโหลดรูปภาพ...`, { id: 'upload-images' })
     for (let i = 0; i < filesToUpload.length; i++) {
       const result = await uploadMediaToServer(filesToUpload[i]);
       if (result) {
         set_replaceFileUrl(previews[i].url, result.url, filesToUpload[i].name, result.mediaId);
       }
     }
+    toast.success('อัปโหลดรูปภาพสำเร็จ', { id: 'upload-images', duration: 2000 })
 
     triggerSaved();
     if (additionalImagesRef.current) additionalImagesRef.current.value = "";
@@ -197,19 +199,20 @@ const Step1Basics = () => {
     const blobUrl = URL.createObjectURL(file);
     updateProjectInfo({ video: { name: file.name, url: blobUrl, file } });
 
+    toast.loading('กำลังอัปโหลดวิดีโอ...', { id: 'upload-video' })
     const result = await uploadMediaToServer(file);
     if (result) {
       URL.revokeObjectURL(blobUrl);
       useProjectStore.setState((state) => ({
         currentProject: { ...state.currentProject, video: { id: result.mediaId, name: file.name, url: result.url } },
       }));
+      toast.success('อัปโหลดวิดีโอสำเร็จ', { id: 'upload-video', duration: 2000 })
       triggerSaved();
     } else {
-      // upload failed — remove local preview
       URL.revokeObjectURL(blobUrl);
       updateProjectInfo({ video: null });
       if (videoInputRef.current) videoInputRef.current.value = "";
-      toast.error("อัปโหลดวิดีโอไม่สำเร็จ กรุณาลองใหม่");
+      toast.error("อัปโหลดวิดีโอไม่สำเร็จ กรุณาลองใหม่", { id: 'upload-video' });
     }
   };
 
