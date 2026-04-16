@@ -390,7 +390,7 @@ function ProjectDetail() {
                     <div>
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                         <Users size={13} />
-                        <span className="font-semibold text-base text-foreground">{investorCount > 0 ? investorCount : '—'}</span>
+                        <span className="font-semibold text-base text-foreground">{investorCount}</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">ผู้สนับสนุน</p>
                     </div>
@@ -418,7 +418,13 @@ function ProjectDetail() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground font-bold">ลงทุนได้สูงสุด</span>
-                    <span className="text-foreground font-medium">{project?.max_invest_amount ? `${project.max_invest_amount.toLocaleString()}฿` : '—'}</span>
+                    <span className="text-foreground font-medium">{(() => {
+                      const remaining = Math.max(0, targetAmount - fundedAmount);
+                      const effectiveMax = project?.max_invest_amount && project.max_invest_amount > 0
+                        ? Math.min(project.max_invest_amount, remaining)
+                        : remaining;
+                      return effectiveMax > 0 ? `${effectiveMax.toLocaleString()}฿` : '—';
+                    })()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground font-bold">ค่าธรรมเนียม</span>
