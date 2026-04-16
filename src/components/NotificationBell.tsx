@@ -16,7 +16,9 @@ import useNotificationSSE from '../hooks/useNotificationSSE'
 
 function timeAgo(dateStr: string): string {
     const now = new Date()
-    const date = new Date(dateStr)
+    // normalize MySQL datetime format ("2024-01-15 10:30:00") to ISO ("2024-01-15T10:30:00")
+    const date = new Date(dateStr ?? '')
+    if (!dateStr || isNaN(date.getTime())) return ''
     const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000)
     const diffMin = Math.floor(diffSec / 60)
     const diffHour = Math.floor(diffMin / 60)
@@ -65,7 +67,7 @@ function NotificationItem({ notif, onRead }: { notif: Notification; onRead: (id:
                 </p>
                 <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
                     <Clock size={11} />
-                    <span>{timeAgo(notif.created_at)}</span>
+                    <span>{timeAgo(notif.CreatedAt)}</span>
                 </div>
             </div>
             {!notif.is_read && (
@@ -141,12 +143,11 @@ const NotificationBell = () => {
                             {unread > 0 && (
                                 <button
                                     onClick={markAllAsRead}
-                                    className="text-[11px] text-primary hover:underline"
+                                    className="text-[11px] text-primary hover:underline cursor-pointer"
                                 >
                                     อ่านทั้งหมด
                                 </button>
                             )}
-                            <BellIcon size={16} className="text-muted-foreground" />
                         </div>
                     </div>
 
