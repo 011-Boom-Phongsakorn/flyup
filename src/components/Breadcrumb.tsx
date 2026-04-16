@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react'
 import { Link, useParams, useLocation } from "react-router"
 import { ChevronRight, Eye, CloudCheck, Loader2 } from 'lucide-react'
 import { useProjectStore } from '../store/useProjectStore'
+import toast from 'react-hot-toast'
 
 interface BreadcrumbItems {
     title: string;
@@ -19,6 +21,17 @@ const Breadcrumb = () => {
     const { projectId } = useParams()
     const location = useLocation()
     const saveStatus = useProjectStore(s => s.saveStatus)
+    const savingToastId = useRef<string | undefined>(undefined)
+
+    useEffect(() => {
+        if (saveStatus === 'saving') {
+            savingToastId.current = toast.loading('กำลังบันทึก...', { id: 'save-status' })
+        } else if (saveStatus === 'saved') {
+            toast.success('บันทึกแล้ว', { id: 'save-status', duration: 2000 })
+        } else {
+            toast.dismiss('save-status')
+        }
+    }, [saveStatus])
 
     const currentStepNum = location.pathname.includes('/step/') ? Number(location.pathname.split('/').pop()) : 0;
 
