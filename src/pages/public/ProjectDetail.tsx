@@ -253,6 +253,7 @@ function ProjectDetail() {
                     <div className="space-y-6 px-0 sm:px-6">
                       {hasMilestones ? milestones.map((m, index) => {
                         const phaseNumber = m.phase_no || (index + 1);
+                        const criteria = ((m as any).acceptance_criteria ?? '').split('\n').filter((c: string) => c.trim());
                         return (
                           <div key={m.id || index} className="flex gap-4 sm:gap-6 items-start relative z-10">
                             <div className="w-10 h-10 sm:w-[44px] sm:h-[44px] mt-1 sm:mt-3 flex items-center justify-center flex-shrink-0 z-10 bg-background">
@@ -269,10 +270,16 @@ function ProjectDetail() {
                                 <div className="space-y-1">
                                   <h4 className="font-bold text-base sm:text-lg text-foreground">{m.title}</h4>
                                   <p className="text-sm text-muted-foreground whitespace-pre-line">{m.description}</p>
+                                  {/* Due dates */}
+                                  {(m as any).duration && (m as any).duration > 0 && (
+                                    <p className="inline-flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                      <Calendar size={12} /> กำหนดส่ง: {(m as any).duration} วัน
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="flex flex-col items-start sm:items-end gap-2 flex-shrink-0">
                                   <span className="text-primary font-bold text-lg sm:text-xl tracking-tight">
-                                    {m.percent_release}%
+                                    {targetAmount > 0 ? `฿${((targetAmount * m.percent_release) / 100).toLocaleString()}` : `${m.percent_release}%`}
                                   </span>
                                   <span className={`text-xs font-medium px-3 sm:px-4 py-1 rounded-full border ${m.status === "completed"
                                     ? "bg-primary text-white-foreground border-primary"
@@ -282,6 +289,24 @@ function ProjectDetail() {
                                   </span>
                                 </div>
                               </div>
+                              {/* Criteria chips */}
+                              {criteria.length > 0 && (
+                                <div className="mt-4">
+                                  <span className="text-xs font-bold text-foreground mb-2 block">สิ่งที่ส่งมอบ:</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {criteria.map((c: string, i: number) => (
+                                      <span key={i} className="px-3 py-1 border border-border rounded-full text-xs text-foreground bg-white whitespace-nowrap">
+                                        {c}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="flex justify-end mt-3">
+                                <Link to={`/projects/${id}/milestones`} className="text-xs text-primary hover:text-primary/70 transition-colors font-medium">
+                                  ดูรายละเอียดเพิ่มเติม →
+                                </Link>
+                              </div>
                             </div>
                           </div>
                         );
@@ -289,6 +314,17 @@ function ProjectDetail() {
                         <p className="text-center text-muted-foreground py-8">ยังไม่มี Milestone</p>
                       )}
                     </div>
+                    {/* View full roadmap button */}
+                    {hasMilestones && (
+                      <div className="flex justify-center mt-8">
+                        <Link
+                          to={`/projects/${id}/milestones`}
+                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/5 text-primary rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors border border-primary/20"
+                        >
+                          ดูแผนงาน Milestone ทั้งหมด →
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 )}
 
