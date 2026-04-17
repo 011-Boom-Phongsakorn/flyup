@@ -14,6 +14,32 @@ export interface OwnerProfile {
   project_count: number;
 }
 
+export interface PublicMilestone {
+  id: number;
+  project_id: number;
+  phase_no: number;
+  title: string;
+  description: string | null;
+  duration?: number;
+  due_date?: string | null;
+  acceptance_criteria: string | null;
+  type?: string[];
+  urls?: string[];
+  sort_order: number;
+  percent_release: number;
+  status: string;
+  // Submission info
+  submission_summary?: string | null;
+  submission_criteria?: string[];
+  submission_attachments?: string[];
+  submission_links?: string[];
+  submitted_at?: string | null;
+  // Voting info
+  voting_open?: boolean;
+  voting_opened_at?: string | null;
+  voting_closed_at?: string | null;
+}
+
 export interface PublicProject {
   id: number;
   owner_user_id: number;
@@ -40,7 +66,7 @@ export interface PublicProject {
   owner_profile: OwnerProfile | null;
   // These may come from detailed GET /projects/{id}
   media?: { id: number; type: string; url: string; sort_order: number }[];
-  milestones?: { id: number; phase_no: number; title: string; description: string; percent_release: number; status: string }[];
+  milestones?: PublicMilestone[];
   stories?: { id: number; title: string; body: string; sort_order: number }[];
   thumbnail_url?: string;
 }
