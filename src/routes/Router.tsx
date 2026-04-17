@@ -61,6 +61,8 @@ import AdminProfile from '@/pages/admin/AdminProfile'
 import AdminMilestoneApproval from '@/pages/admin/AdminMilestoneApproval'
 import AdminMilestoneDetail from '@/pages/admin/AdminMilestoneDetail'
 import AdminRefunds from '@/pages/admin/AdminRefunds';
+import AdminUniversities from '@/pages/admin/AdminUniversities';
+import AdminUniversityDetail from '@/pages/admin/AdminUniversityDetail';
 
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
@@ -172,6 +174,8 @@ const Router = () => {
                             <Route path='/admin/milestones' element={<AdminMilestoneApproval />} />
                             <Route path='/admin/milestones/:milestoneId' element={<AdminMilestoneDetail />} />
                             <Route path='/admin/refunds' element={<AdminRefunds />} />
+                            <Route path='/admin/universities' element={<AdminUniversities />} />
+                            <Route path='/admin/universities/:id' element={<AdminUniversityDetail />} />
                             <Route path='/admin/profile' element={<AdminProfile />} />
                         </Route>
                     </Route>
