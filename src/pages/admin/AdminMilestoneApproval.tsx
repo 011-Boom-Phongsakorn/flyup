@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { Loader2, Search, Milestone } from 'lucide-react'
+import { Loader2, Milestone } from 'lucide-react'
 import { useAdminStore } from '../../store/useAdminStore'
+import SearchBar from '../../components/admin/SearchBar'
+import StatusBadge from '../../components/admin/StatusBadge'
+import PageHeader from '../../components/admin/PageHeader'
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
     submitted: { label: 'รอตรวจสอบ', className: 'bg-amber-50 text-amber-600 border border-amber-200' },
@@ -29,29 +32,14 @@ const AdminMilestoneApproval = () => {
 
     return (
         <div className="flex flex-col gap-[16px]">
-            <div className="p-2.5">
-                <h1 className="font-semibold text-[24px]">ตรวจสอบ Milestone</h1>
-                <p className="text-[12px] text-muted-foreground">ตรวจสอบและอนุมัติหลักฐาน Milestone ที่ Pioneer ส่งเข้ามา</p>
-            </div>
+            <PageHeader title="ตรวจสอบ Milestone" subtitle="ตรวจสอบและอนุมัติหลักฐาน Milestone ที่ Pioneer ส่งเข้ามา" />
 
-            {/* Filter */}
-            <div className="flex items-center gap-[10px]">
-                <div className="relative flex-1 max-w-[320px]">
-                    <Search size={14} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="ค้นหาโปรเจกต์, Milestone หรือ Pioneer..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-[34px] pr-[12px] py-[8px] text-[13px] border border-border rounded-[8px] bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                </div>
-                {search && (
-                    <span className="text-[12px] text-muted-foreground">
-                        พบ {filtered.length} รายการ
-                    </span>
-                )}
-            </div>
+            <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder="ค้นหาโปรเจกต์, Milestone หรือ Pioneer..."
+                resultCount={filtered.length}
+            />
 
             {/* Table */}
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
@@ -110,9 +98,7 @@ const AdminMilestoneApproval = () => {
                                     <span className="text-[11px] text-muted-foreground truncate max-w-[90px]">{m.title}</span>
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
-                                    <span className={`rounded-full px-2.5 py-0.5 text-[12px] font-medium ${badge.className}`}>
-                                        {badge.label}
-                                    </span>
+                                    <StatusBadge label={badge.label} className={badge.className} />
                                 </div>
                                 <div className="h-14 flex justify-center items-center gap-[6px]">
                                     <span className="text-[11px] text-muted-foreground">{dateStr}</span>
