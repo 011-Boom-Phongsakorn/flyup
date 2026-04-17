@@ -158,7 +158,13 @@ const Preview = () => {
                         <div className="w-full mt-[10px]">
                             {activeTab === 'story' && <PreviewStory story={currentProject.story} risks={currentProject.risks} />}
                             {activeTab === 'milestone' && <PreviewMilestone milestones={currentProject.milestones ?? []} />}
-                            {activeTab === 'update' && <PreviewUpdate updates={updates} />}
+                            {activeTab === 'update' && (
+                                <PreviewUpdate
+                                    updates={updates}
+                                    creatorName={`${authUser?.first_name ?? ''} ${authUser?.last_name ?? ''}`.trim() || 'ผู้พัฒนาโปรเจกต์'}
+                                    creatorAvatar={(authUser?.picture as string) || undefined}
+                                />
+                            )}
                             {activeTab === 'comment' && <PreviewComment comments={threads} />}
                             {activeTab === 'question' && <PreviewQuestion questions={faqs} />}
                         </div>

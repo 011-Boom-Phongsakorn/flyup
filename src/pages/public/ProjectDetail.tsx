@@ -338,7 +338,7 @@ function ProjectDetail() {
                           <span>{new Date(u.created_at).toLocaleDateString('th-TH')}</span>
                         </div>
                         <h4 className="font-semibold text-sm text-foreground leading-snug">{u.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{u.content}</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{u.body}</p>
                       </div>
                     )) : (
                       <p className="text-center text-muted-foreground py-8">ยังไม่มีอัปเดต</p>

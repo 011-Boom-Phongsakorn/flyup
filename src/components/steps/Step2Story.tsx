@@ -6,12 +6,19 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
 import Youtube from '@tiptap/extension-youtube'
-import { SquarePlay, List, ImageIcon, Plus, ChevronDown, Check, X, Link as LinkIcon, Maximize, AlignLeft, AlignRight, Unlink } from 'lucide-react'
+import { SquarePlay, List, ImageIcon, Plus, ChevronDown, Check, X, Link as LinkIcon, Maximize, AlignLeft, AlignRight, Unlink, HelpCircle, Trash2, Edit2 } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
 import { useProjectStore } from '../../store/useProjectStore'
 import { useParams } from 'react-router'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
+
+interface FAQ {
+  id: number
+  question: string
+  answer: string
+  sort_order: number
+}
 
 // ✅ Custom Image Extension ที่รองรับการแนบลิงก์ (href) และจับรูปภาพจัด Align
 const CustomImage = Image.extend({
@@ -65,6 +72,10 @@ const Step2Story = () => {
   const { projectId } = useParams()
   const { currentProject, updateProjectInfo, updateProject, saveStory, setSaveStatus } = useProjectStore()
 
+  const isFundingOrLater = !!currentProject.state &&
+    currentProject.state !== 'draft' &&
+    currentProject.state !== 'pending_review'
+
   const triggerSaved = () => {
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 2500);
@@ -76,6 +87,71 @@ const Step2Story = () => {
   const [risks, setRisks] = useState(currentProject.risks || '')
   const risksRef = useRef<HTMLTextAreaElement>(null)
   const hasInitializedRef = useRef(false)
+
+  // FAQ state
+  const [faqs, setFaqs] = useState<FAQ[]>([])
+  const [faqForm, setFaqForm] = useState({ question: '', answer: '' })
+  const [isSavingFaq, setIsSavingFaq] = useState(false)
+  const [editingFaqId, setEditingFaqId] = useState<number | null>(null)
+  const [editFaqForm, setEditFaqForm] = useState({ question: '', answer: '' })
+
+  useEffect(() => {
+    if (isFundingOrLater && projectId) {
+      api.get(`/projects/${projectId}/faqs`)
+        .then(res => setFaqs(res.data?.data ?? []))
+        .catch(() => {})
+    }
+  }, [isFundingOrLater, projectId])
+
+  const handleAddFaq = async () => {
+    if (!faqForm.question.trim() || !faqForm.answer.trim()) {
+      toast.error('กรุณากรอกคำถามและคำตอบ')
+      return
+    }
+    setIsSavingFaq(true)
+    try {
+      const res = await api.post(`/pioneer/projects/${projectId}/faqs`, {
+        question: faqForm.question,
+        answer: faqForm.answer,
+        sort_order: faqs.length + 1,
+      })
+      setFaqs(prev => [...prev, res.data?.data])
+      setFaqForm({ question: '', answer: '' })
+      toast.success('เพิ่ม FAQ สำเร็จ')
+    } catch {
+      toast.error('เพิ่ม FAQ ไม่สำเร็จ')
+    } finally {
+      setIsSavingFaq(false)
+    }
+  }
+
+  const handleUpdateFaq = async (id: number) => {
+    if (!editFaqForm.question.trim() || !editFaqForm.answer.trim()) {
+      toast.error('กรุณากรอกคำถามและคำตอบ')
+      return
+    }
+    try {
+      await api.patch(`/pioneer/projects/faqs/${id}`, {
+        question: editFaqForm.question,
+        answer: editFaqForm.answer,
+      })
+      setFaqs(prev => prev.map(f => f.id === id ? { ...f, ...editFaqForm } : f))
+      setEditingFaqId(null)
+      toast.success('แก้ไข FAQ สำเร็จ')
+    } catch {
+      toast.error('แก้ไข FAQ ไม่สำเร็จ')
+    }
+  }
+
+  const handleDeleteFaq = async (id: number) => {
+    try {
+      await api.delete(`/pioneer/projects/faqs/${id}`)
+      setFaqs(prev => prev.filter(f => f.id !== id))
+      toast.success('ลบ FAQ สำเร็จ')
+    } catch {
+      toast.error('ลบ FAQ ไม่สำเร็จ')
+    }
+  }
 
   // ✅ State สำหรับลิงก์บนรูปภาพ
   const [imageLinkInputOpen, setImageLinkInputOpen] = useState(false)
@@ -592,6 +668,106 @@ const Step2Story = () => {
           <p className='text-[12px] text-muted-foreground'>*ระบุความเสี่ยงที่อาจเกิดขึ้น  เพื่อให้ผู้สนับสนุนได้รับทราบข้อมูลที่ครบถ้วน  *</p>
         </div>
       </div>
+
+      {/* FAQ Section — แสดงเมื่อผ่าน funding ขึ้นไปแล้ว */}
+      {isFundingOrLater && (
+        <div className='flex flex-col p-[30px] bg-white-foreground rounded-[12px] gap-[20px]'>
+          <div className='flex items-center gap-[8px]'>
+            <HelpCircle size={18} className='text-foreground' />
+            <h2 className='text-[18px] font-semibold text-foreground'>คำถามที่พบบ่อย (FAQ)</h2>
+          </div>
+          <p className='text-[13px] text-muted-foreground -mt-[10px]'>ตอบคำถามที่ผู้สนับสนุนมักสงสัย เพื่อสร้างความเชื่อมั่น</p>
+
+          {/* List existing FAQs */}
+          {faqs.length > 0 && (
+            <div className='flex flex-col gap-[12px]'>
+              {faqs.map(faq => (
+                <div key={faq.id} className='border border-border rounded-[10px] p-[16px] flex flex-col gap-[10px] bg-background'>
+                  {editingFaqId === faq.id ? (
+                    <>
+                      <input
+                        value={editFaqForm.question}
+                        onChange={e => setEditFaqForm(p => ({ ...p, question: e.target.value }))}
+                        placeholder='คำถาม'
+                        className='border border-border rounded-[8px] px-[12px] py-[8px] text-[14px] outline-none focus:border-primary transition-colors bg-white'
+                      />
+                      <textarea
+                        value={editFaqForm.answer}
+                        onChange={e => setEditFaqForm(p => ({ ...p, answer: e.target.value }))}
+                        placeholder='คำตอบ'
+                        rows={3}
+                        className='border border-border rounded-[8px] px-[12px] py-[8px] text-[14px] outline-none focus:border-primary transition-colors bg-white resize-none'
+                      />
+                      <div className='flex gap-[8px]'>
+                        <button
+                          onClick={() => handleUpdateFaq(faq.id)}
+                          className='flex items-center gap-[4px] text-[13px] text-green-600 hover:text-green-700 font-medium'
+                        >
+                          <Check size={14} /> บันทึก
+                        </button>
+                        <button
+                          onClick={() => setEditingFaqId(null)}
+                          className='flex items-center gap-[4px] text-[13px] text-muted-foreground hover:text-foreground'
+                        >
+                          <X size={14} /> ยกเลิก
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className='flex items-start justify-between gap-[8px]'>
+                        <p className='font-semibold text-foreground text-[14px]'>Q: {faq.question}</p>
+                        <div className='flex gap-[8px] shrink-0'>
+                          <button
+                            onClick={() => { setEditingFaqId(faq.id); setEditFaqForm({ question: faq.question, answer: faq.answer }) }}
+                            className='text-muted-foreground hover:text-primary transition-colors'
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFaq(faq.id)}
+                            className='text-muted-foreground hover:text-error transition-colors'
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <p className='text-[14px] text-muted-foreground'>A: {faq.answer}</p>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new FAQ */}
+          <div className='flex flex-col gap-[10px] border border-dashed border-border rounded-[10px] p-[16px]'>
+            <p className='text-[13px] font-medium text-foreground'>เพิ่มคำถามใหม่</p>
+            <input
+              value={faqForm.question}
+              onChange={e => setFaqForm(p => ({ ...p, question: e.target.value }))}
+              placeholder='คำถาม เช่น "โปรเจกต์จะเสร็จเมื่อไหร่?"'
+              className='border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors bg-background'
+            />
+            <textarea
+              value={faqForm.answer}
+              onChange={e => setFaqForm(p => ({ ...p, answer: e.target.value }))}
+              placeholder='คำตอบ'
+              rows={3}
+              className='border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors bg-background resize-none'
+            />
+            <button
+              onClick={handleAddFaq}
+              disabled={isSavingFaq}
+              className='self-start flex items-center gap-[6px] bg-primary hover:bg-primary-hover text-white px-[16px] py-[8px] rounded-[8px] text-[14px] font-medium transition-colors disabled:opacity-50'
+            >
+              <Plus size={15} />
+              {isSavingFaq ? 'กำลังบันทึก...' : 'เพิ่ม FAQ'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <StepNavigation />
     </div>
   )
