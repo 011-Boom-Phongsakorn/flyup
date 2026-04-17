@@ -110,7 +110,10 @@ const Investment = () => {
   const projectTitle = project?.title || "กำลังโหลด...";
   const revenueShare = project?.profit_share_pct || 0;
   const minAmount = project?.min_invest_amount || 1000;
-  const maxAmount = project?.max_invest_amount || 14000;
+  const remaining = Math.max(0, (project?.funding_goal || 0) - (project?.current_funding || 0));
+  const maxAmount = project?.max_invest_amount && project.max_invest_amount > 0
+    ? Math.min(project.max_invest_amount, remaining > 0 ? remaining : project.max_invest_amount)
+    : remaining > 0 ? remaining : 14000;
   const platformFeeRate = (project?.platform_fee || 5) / 100;
   const vatRate = 0.07;
 
@@ -174,7 +177,7 @@ const Investment = () => {
   };
 
   return (
-    <div className="h-full min-h-[calc(100vh-200px)] w-full flex-1 bg-[url('/bg-investment.png')] bg-cover bg-center bg-no-repeat bg-fixed flex flex-col pt-24 relative before:absolute before:inset-0 before:bg-white/40 before:pointer-events-none">
+    <div className="h-full min-h-screen w-full flex-1 bg-[url('/bg-investment.png')] bg-cover bg-center bg-no-repeat bg-fixed flex flex-col pt-24 relative before:absolute before:inset-0 before:bg-white/30 before:pointer-events-none">
       <Toaster position="top-right" />
       <ContractModal isOpen={showContract} onClose={() => setShowContract(false)} />
 
@@ -256,37 +259,37 @@ const Investment = () => {
 
             {/* Stepper */}
             <div className="mb-10 relative px-4 max-w-xl mx-auto w-full">
-              <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-border -z-10 -translate-y-1/2 rounded-full" />
+              <div className="absolute top-[20px] left-[15%] right-[15%] h-[2px] bg-border -z-10 rounded-full" />
               <div
-                className="absolute top-1/2 left-0 h-[2px] bg-primary -z-10 -translate-y-1/2 transition-all duration-300 rounded-full"
-                style={{ width: step === 1 ? '10%' : step === 2 ? '50%' : '100%' }}
+                className="absolute top-[20px] left-[15%] h-[2px] bg-primary -z-10 transition-all duration-300 rounded-full"
+                style={{ width: step === 1 ? '0%' : step === 2 ? '35%' : '70%' }}
               />
 
               <div className="flex justify-between text-xs sm:text-sm font-medium">
                 <div className="flex flex-col items-center gap-2">
-                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-colors ${step >= 1 ? 'bg-primary text-white-foreground shadow-md' : 'bg-background text-muted-foreground border-2 border-border'}`}>
-                    <FileText size={16} />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${step >= 1 ? 'bg-primary text-white shadow-lg' : 'bg-white text-muted-foreground border-2 border-border'}`}>
+                    <FileText size={18} />
                   </div>
-                  <span className={step >= 1 ? 'text-foreground' : 'text-muted-foreground'}>เงื่อนไข</span>
+                  <span className={`font-bold ${step >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>เงื่อนไข</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
-                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-colors ${step >= 2 ? 'bg-primary text-white-foreground shadow-md' : 'bg-background text-muted-foreground border-2 border-border'}`}>
-                    <CheckCircle2 size={16} />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${step >= 2 ? 'bg-primary text-white shadow-lg' : 'bg-white text-muted-foreground border-2 border-border'}`}>
+                    <CheckCircle2 size={18} />
                   </div>
-                  <span className={step >= 2 ? 'text-foreground' : 'text-muted-foreground'}>จำนวนเงิน</span>
+                  <span className={`font-bold ${step >= 2 ? 'text-primary' : 'text-muted-foreground'}`}>จำนวนเงิน</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
-                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-colors ${step >= 3 ? 'bg-primary text-white-foreground shadow-md' : 'bg-background text-muted-foreground border-2 border-border'}`}>
-                    <QrCode size={16} />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${step >= 3 ? 'bg-primary text-white shadow-lg' : 'bg-white text-muted-foreground border-2 border-border'}`}>
+                    <QrCode size={18} />
                   </div>
-                  <span className={step >= 3 ? 'text-foreground' : 'text-muted-foreground'}>ชำระเงิน</span>
+                  <span className={`font-bold ${step >= 3 ? 'text-primary' : 'text-muted-foreground'}`}>ชำระเงิน</span>
                 </div>
               </div>
             </div>
 
             {/* Content Cards */}
-            <div className="bg-card w-full rounded-[24px] rounded-tl-[24px] p-5 sm:p-8 shadow-xl border border-white/50 relative overflow-hidden backdrop-blur-sm bg-white/90">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-[image:var(--gradient-primary)]" />
+            <div className="bg-white w-full rounded-[32px] p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-white/60 relative overflow-hidden backdrop-blur-md">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-primary" />
 
               {/* Step 1: Conditions */}
               {step === 1 && (
@@ -296,29 +299,33 @@ const Investment = () => {
                     <h2 className="text-xl font-bold text-foreground">เงื่อนไขการลงทุน</h2>
                   </div>
 
-                  <div className="bg-background rounded-2xl p-5 sm:p-6 mb-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border mb-4">
-                      <span className="font-bold text-foreground">สัญญาการลงทุน</span>
-                      <span className="hidden sm:block text-muted-foreground">—</span>
-                      <span className="font-bold text-foreground mt-1 sm:mt-0">โปรเจกต์ {projectTitle}</span>
+                  <div className="bg-[#F8F9FA] rounded-2xl p-5 sm:p-6 mb-6">
+                    <div className="grid grid-cols-[1.2fr_0.3fr_1.5fr] gap-4 py-2 border-b border-border/50 items-center">
+                      <span className="font-bold text-foreground text-sm">สัญญาการลงทุน</span>
+                      <span className="text-muted-foreground text-center">—</span>
+                      <span className="font-bold text-foreground text-sm text-right">โปรเจกต์ {projectTitle}</span>
                     </div>
 
-                    <div className="space-y-4 text-sm">
-                      <div className="flex justify-between items-center">
+                    <div className="divide-y divide-border/30 text-sm">
+                      <div className="grid grid-cols-[1.2fr_0.3fr_1.5fr] gap-4 py-4 items-center">
                         <span className="text-muted-foreground">สัดส่วนกำไรที่จะได้รับ</span>
-                        <span className="font-bold text-primary text-base">{revenueShare}%</span>
+                        <span className="text-muted-foreground text-center"></span>
+                        <span className="font-bold text-primary text-right">{revenueShare}%</span>
                       </div>
-                      <div className="flex justify-between items-center">
+                      <div className="grid grid-cols-[1.2fr_0.3fr_1.5fr] gap-4 py-4 items-center">
                         <span className="text-muted-foreground">จำนวนเงินลงทุนขั้นต่ำ</span>
-                        <span className="font-medium text-foreground">฿{minAmount.toLocaleString()}</span>
+                        <span className="text-muted-foreground text-center"></span>
+                        <span className="font-bold text-foreground text-right">฿{minAmount.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center">
+                      <div className="grid grid-cols-[1.2fr_0.3fr_1.5fr] gap-4 py-4 items-center">
                         <span className="text-muted-foreground">จำนวนเงินลงทุนสูงสุด</span>
-                        <span className="font-medium text-foreground">฿{maxAmount.toLocaleString()}</span>
+                        <span className="text-muted-foreground text-center"></span>
+                        <span className="font-bold text-foreground text-right">฿{maxAmount.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between items-center">
+                      <div className="grid grid-cols-[1.2fr_0.3fr_1.5fr] gap-4 py-4 items-center">
                         <span className="text-muted-foreground">ค่าธรรมเนียมแพลตฟอร์ม</span>
-                        <span className="font-medium text-foreground">{(platformFeeRate * 100).toFixed(0)}%</span>
+                        <span className="text-muted-foreground text-center"></span>
+                        <span className="font-bold text-foreground text-right">{(platformFeeRate * 100).toFixed(0)}%</span>
                       </div>
                     </div>
                   </div>
@@ -341,15 +348,24 @@ const Investment = () => {
                     </div>
                   </div>
 
-                  <label className="flex items-center gap-3 p-4 border border-border rounded-xl cursor-pointer hover:bg-background transition-colors mb-6 group">
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 rounded border-border text-primary focus:ring-primary cursor-pointer accent-primary"
-                      checked={agreed}
-                      onChange={(e) => setAgreed(e.target.checked)}
-                    />
-                    <span className="text-sm text-foreground font-medium select-none group-hover:text-primary transition-colors">
-                      ข้าพเจ้าได้อ่านและ<span className="underline decoration-primary underline-offset-4">ยอมรับสัญญาการลงทุนและเงื่อนไข</span>ข้างต้นแล้ว
+                  <label className="flex items-center gap-3 p-5 bg-[#F8F9FA] rounded-[18px] cursor-pointer hover:bg-[#F1F3F5] transition-all mb-8 group border border-transparent hover:border-primary/20">
+                    <div className="relative flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        className="peer h-6 w-6 cursor-pointer appearance-none rounded-md border-2 border-border bg-white checked:bg-primary checked:border-primary transition-all"
+                        checked={agreed}
+                        onChange={(e) => setAgreed(e.target.checked)}
+                      />
+                      {agreed && (
+                        <div className="pointer-events-none absolute text-white">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" stroke="currentColor" strokeWidth="1">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-sm text-foreground font-medium select-none">
+                      ข้าพเจ้าได้อ่านและ<span className="font-bold text-foreground mx-1">ยอมรับสัญญาการลงทุนและเงื่อนไข</span>ข้างต้นแล้ว
                     </span>
                   </label>
 
@@ -378,56 +394,57 @@ const Investment = () => {
                           onChange={(e) => {
                             const val = e.target.value.replace(/[^0-9]/g, "");
                             setAmount(val ? Number(val).toLocaleString() : "");
-                          }}
+                           }}
                           placeholder={`ขั้นต่ำ ${minAmount.toLocaleString()}`}
-                          className="w-full pl-8 pr-4 py-3.5 rounded-xl border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-placeholder font-medium text-foreground"
+                          className="w-full pl-10 pr-4 py-5 rounded-[20px] border-2 border-[#E9ECEF] focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none transition-all placeholder:text-[#ADB5BD] font-bold text-2xl text-foreground"
                         />
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-3">
                       {[1000, 5000, 10000, 50000].map(val => (
                         <button
                           key={val}
                           onClick={() => setAmount(val.toLocaleString())}
-                          className="px-4 py-2 text-xs sm:text-sm border border-border rounded-xl font-medium text-foreground bg-background hover:border-primary hover:text-primary transition-all shadow-sm"
+                          className="px-6 py-3 border border-border rounded-[14px] font-bold text-foreground bg-white hover:border-primary hover:text-primary transition-all shadow-sm hover:shadow-md active:scale-95"
                         >
                           ฿{val.toLocaleString()}
                         </button>
                       ))}
                       <button
                         onClick={() => setAmount(maxAmount.toLocaleString())}
-                        className="px-4 py-2 text-xs sm:text-sm border border-border rounded-xl font-medium text-foreground bg-background hover:border-primary hover:text-primary transition-all shadow-sm"
+                        className="px-6 py-3 border border-primary/30 rounded-[14px] font-bold text-primary bg-primary/5 hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
                       >
                         สูงสุด
                       </button>
                     </div>
 
-                    <div className="bg-primary-light/40 rounded-2xl p-5 border border-primary/10">
-                      <h4 className="font-bold text-foreground mb-4">สรุปรายการ</h4>
-                      <div className="space-y-3 text-sm">
+                    <div className="bg-[#F8F9FA] rounded-[24px] p-6 border border-border/40">
+                      <h4 className="font-bold text-foreground mb-4 flex items-center gap-2">
+                         <span className="w-1.5 h-1.5 rounded-full bg-primary" /> สรุปรายการ
+                      </h4>
+                      <div className="space-y-4 text-sm">
                         <div className="flex justify-between items-center text-muted-foreground">
                           <span>ลงทุน</span>
-                          <span className="font-medium text-foreground">฿{(parsedAmount || 0).toLocaleString()}</span>
+                          <span className="font-bold text-foreground">฿{(parsedAmount || 0).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center text-muted-foreground">
-                          <span>ค่าธรรมเนียม</span>
-                          <span className="font-medium text-foreground">฿{fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span>ค่าธรรมเนียมแพลตฟอร์ม</span>
+                          <span className="font-bold text-foreground text-error">฿{fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between items-center text-muted-foreground">
                           <span>ภาษีมูลค่าเพิ่ม {(vatRate * 100).toFixed(0)}%(VAT)</span>
-                          <span className="font-medium text-foreground">฿{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="font-bold text-foreground text-error">฿{vat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
-                        <div className="flex justify-between items-center text-muted-foreground">
-                          <span>มูลค่าที่ลงทุน</span>
-                          <span className="font-medium text-foreground">฿{investedValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <div className="flex justify-between items-center text-muted-foreground pt-1 italic">
+                          <span>มูลค่าที่โปรเจกต์จะได้รับ</span>
+                          <span className="font-bold text-success/80">฿{investedValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="pt-4 border-t border-border/50 flex justify-between items-center">
+                          <span className="font-bold text-foreground">ยอดชำระรวม</span>
+                          <span className="font-black text-primary text-2xl">฿{(parsedAmount || 0).toLocaleString()}</span>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2 px-1">
-                      <span className="font-bold text-foreground">ยอดรวมทั้งหมด</span>
-                      <span className="font-bold text-primary text-xl">฿{(parsedAmount || 0).toLocaleString()}</span>
                     </div>
 
                     <button

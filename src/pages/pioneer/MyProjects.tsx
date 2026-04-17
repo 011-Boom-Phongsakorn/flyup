@@ -72,7 +72,10 @@ const MyProjects = () => {
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PAGE_SIZE));
   const pagedProjects = filteredProjects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleView = (id: number) => navigate(`/preview/${id}`);
+  const handleView = (id: number, state: StateType) => {
+    const useDetail = state === 'funding' || state === 'executing' || state === 'closed';
+    navigate(useDetail ? `/projects/${id}` : `/preview/${id}`);
+  };
   const handleEdit = (id: number) => navigate(`/project/overview/${id}`);
   const handleCreate = async () => {
     const studentApproved = authUser?.student_card_verification?.status === 'approved'
@@ -246,7 +249,7 @@ const MyProjects = () => {
               <div
                 key={project.id}
                 className="bg-white border border-border rounded-[16px] p-[20px] flex gap-[20px] shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => handleView(project.id)}
+                onClick={() => handleView(project.id, project.state)}
               >
                 {/* Thumbnail */}
                 <div className="w-[64px] h-[64px] bg-[#E1E4E8] rounded-[12px] shrink-0 mt-[4px] overflow-hidden">
@@ -306,7 +309,7 @@ const MyProjects = () => {
                     {/* Right Actions */}
                     <div className="flex items-center gap-[8px] shrink-0 mt-[10px] lg:mt-0">
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleView(project.id); }}
+                        onClick={(e) => { e.stopPropagation(); handleView(project.id, project.state); }}
                         className="flex items-center justify-center gap-[6px] px-[16px] py-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] transition-colors rounded-[8px] text-[13px] font-medium text-foreground cursor-pointer"
                       >
                         <Eye size={16} /> ดู

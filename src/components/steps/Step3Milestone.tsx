@@ -1,17 +1,28 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { useProjectStore, type Milestone } from '../../store/useProjectStore'
 import { Plus, Trash2, Upload, Video, X, Loader2 } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
 import toast from 'react-hot-toast'
-import { useParams } from 'react-router'
+import { useParams, useSearchParams } from 'react-router'
 import api from '../../services/api'
 
 const Step3Milestone = () => {
   const { projectId } = useParams()
-  const [activePhase, setActivePhase] = useState(0) // 0-3
+  const [searchParams, setSearchParams] = useSearchParams()
+  const phaseParam = Number(searchParams.get('phase') ?? '1')
+  const activePhase = Math.min(Math.max(phaseParam - 1, 0), 3)
+  const setActivePhase = (idx: number) => setSearchParams({ phase: String(idx + 1) }, { replace: true })
+  const pendingFocusIdx = useRef<number | null>(null)
+  const savedSnapshot = useRef<Record<number, string>>(
+    Object.fromEntries(
+      useProjectStore.getState().currentProject.milestones.map((m, i) => [i, JSON.stringify(m)])
+    )
+  )
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
+  const criteriaRefs = useRef<(HTMLInputElement | null)[]>([])
   // ✅ ดึง currentProject มาก่อน แล้วค่อยเข้าถึง milestones
   const { currentProject, updateMilestone, saveMilestonePhase, setSaveStatus } = useProjectStore()
 
@@ -20,8 +31,12 @@ const Step3Milestone = () => {
     setTimeout(() => setSaveStatus('idle'), 2500);
   };
 
-  const savePhase = async (phaseIndex: number) => {
+  const savePhaseIfChanged = async (phaseIndex: number) => {
     if (!projectId) return;
+    const milestone = useProjectStore.getState().currentProject.milestones[phaseIndex]
+    const current = JSON.stringify(milestone)
+    if (savedSnapshot.current[phaseIndex] === current) return
+    savedSnapshot.current[phaseIndex] = current
     setSaveStatus('saving');
     await saveMilestonePhase(Number(projectId), phaseIndex);
     triggerSaved();
@@ -51,6 +66,10 @@ const Step3Milestone = () => {
   })()
   const activePhaseDates = phaseDates[activePhase]
   const showDates = (currentProject.campaignDuration || 0) > 0 && (currentData.duration || 0) > 0
+  const maxTotalDays = (currentProject.projectDuration || 0) * 30
+  const usedDays = currentProject.milestones.reduce((sum, m) => sum + (m.duration || 0), 0)
+  const remainingDays = maxTotalDays - usedDays
+  const isOverLimit = maxTotalDays > 0 && usedDays > maxTotalDays
 
   useEffect(() => {
     if (descriptionRef.current) {
@@ -58,6 +77,14 @@ const Step3Milestone = () => {
       descriptionRef.current.style.height = descriptionRef.current.scrollHeight + 'px'
     }
   }, [currentData.description])
+
+  useEffect(() => {
+    if (pendingFocusIdx.current !== null) {
+      criteriaRefs.current[pendingFocusIdx.current]?.focus()
+      pendingFocusIdx.current = null
+    }
+  }, [currentData.criteria])
+
 
   // 1. ฟังก์ชันอัปเดตข้อมูลทั่วไปของ Milestone
   const handleChange = <K extends keyof Milestone>(field: K, value: Milestone[K]) => {
@@ -156,16 +183,19 @@ const Step3Milestone = () => {
     }))
 
     // upload ทีละไฟล์แล้วแทนที่ blob URL
+    toast.loading('กำลังอัปโหลดไฟล์...', { id: 'upload-milestone-files' })
     for (let i = 0; i < files.length; i++) {
       const serverUrl = await uploadOneFile(files[i])
       if (serverUrl) {
         replaceFileBlobUrl(previews[i].url, serverUrl, files[i].name, phase)
       } else {
         removeFileBlobUrl(previews[i].url, phase)
-        toast.error(`อัปโหลด ${files[i].name} ไม่สำเร็จ`)
+        toast.error(`อัปโหลด ${files[i].name} ไม่สำเร็จ`, { id: 'upload-milestone-files' })
+        return
       }
     }
-    await savePhase(phase)
+    toast.success('อัปโหลดไฟล์สำเร็จ', { id: 'upload-milestone-files', duration: 2000 })
+    await savePhaseIfChanged(phase)
   }
 
   // 3. อัปโหลดวิดีโอ (append ต่อรายการเดิม)
@@ -196,13 +226,15 @@ const Step3Milestone = () => {
       },
     }))
 
+    toast.loading('กำลังอัปโหลดวิดีโอ...', { id: 'upload-milestone-video' })
     const serverUrl = await uploadOneFile(file)
     if (serverUrl) {
       replaceVideoBlobUrl(blobUrl, serverUrl, file.name, phase)
-      await savePhase(phase)
+      toast.success('อัปโหลดวิดีโอสำเร็จ', { id: 'upload-milestone-video', duration: 2000 })
+      await savePhaseIfChanged(phase)
     } else {
       removeVideoBlobUrl(blobUrl, phase)
-      toast.error(`อัปโหลด ${file.name} ไม่สำเร็จ`)
+      toast.error(`อัปโหลด ${file.name} ไม่สำเร็จ`, { id: 'upload-milestone-video' })
     }
   }
 
@@ -213,7 +245,7 @@ const Step3Milestone = () => {
     if (!f) return
     if (f.url?.startsWith('blob:')) URL.revokeObjectURL(f.url)
     updateMilestone(activePhase, { files: files.filter((_, i) => i !== index) })
-    await savePhase(activePhase)
+    await savePhaseIfChanged(activePhase)
   }
 
   // ลบวิดีโอ แล้ว save เพื่ออัปเดต url ใน backend
@@ -223,7 +255,7 @@ const Step3Milestone = () => {
     if (!v) return
     if (v.url?.startsWith('blob:')) URL.revokeObjectURL(v.url)
     updateMilestone(activePhase, { videos: videos.filter((_, i) => i !== index) })
-    await savePhase(activePhase)
+    await savePhaseIfChanged(activePhase)
   }
 
   return (
@@ -276,7 +308,7 @@ const Step3Milestone = () => {
                 type="text"
                 value={currentData.title}
                 onChange={(e) => handleChange('title', e.target.value)}
-                onBlur={() => { savePhase(activePhase) }}
+                onBlur={() => { savePhaseIfChanged(activePhase) }}
                 className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-[14px]"
               />
             </div>
@@ -293,7 +325,7 @@ const Step3Milestone = () => {
                   e.target.style.height = 'auto'
                   e.target.style.height = e.target.scrollHeight + 'px'
                 }}
-                onBlur={() => { savePhase(activePhase) }}
+                onBlur={() => { savePhaseIfChanged(activePhase) }}
                 className="w-full p-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none overflow-hidden text-[14px]"
               />
             </div>
@@ -324,13 +356,18 @@ const Step3Milestone = () => {
                 onChange={(e) => handleChange('duration', Number(e.target.value))}
                 onBlur={() => {
                   const maxDays = (currentProject.projectDuration || 0) * 30;
-                  if (maxDays > 0 && currentData.duration > maxDays) {
-                    toast.error(`ระยะเวลา Milestone ต้องไม่เกินระยะเวลาโปรเจกต์ (${maxDays} วัน / ${currentProject.projectDuration} เดือน)`);
-                    updateMilestone(activePhase, { duration: maxDays });
-                    savePhase(activePhase);
-                    return;
+                  if (maxDays > 0) {
+                    const otherDays = currentProject.milestones
+                      .reduce((sum, m, i) => sum + (i !== activePhase ? (m.duration || 0) : 0), 0);
+                    const maxForThisPhase = Math.max(1, maxDays - otherDays);
+                    if ((currentData.duration || 0) > maxForThisPhase) {
+                      toast.error(`ปรับ Phase ${activePhase + 1} เป็น ${maxForThisPhase} วัน (Phase อื่นใช้ไปแล้ว ${otherDays} วัน)`);
+                      updateMilestone(activePhase, { duration: maxForThisPhase });
+                      savePhaseIfChanged(activePhase);
+                      return;
+                    }
                   }
-                  savePhase(activePhase);
+                  savePhaseIfChanged(activePhase);
                 }}
                 className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px]"
               />
@@ -341,6 +378,16 @@ const Step3Milestone = () => {
               )}
               {!currentProject.campaignDuration && (
                 <p className="text-[12px] text-muted-foreground">กำหนดระยะเวลาระดมทุนใน Step 1 เพื่อคำนวณวันที่</p>
+              )}
+              {maxTotalDays > 0 && (
+                <p className={`text-[12px] font-medium ${isOverLimit ? 'text-red-500' : remainingDays === 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  รวมทุก Phase: {usedDays} / {maxTotalDays} วัน
+                  {isOverLimit
+                    ? ` (เกิน ${usedDays - maxTotalDays} วัน)`
+                    : remainingDays > 0
+                    ? ` (เหลือ ${remainingDays} วัน)`
+                    : ' (ครบแล้ว)'}
+                </p>
               )}
             </div>
           </div>
@@ -378,6 +425,7 @@ const Step3Milestone = () => {
                 <div key={cIdx} className="flex items-center gap-[12px]">
                   <span className="text-[14px] font-bold text-foreground w-[16px]">{cIdx + 1}.</span>
                   <input
+                    ref={el => { criteriaRefs.current[cIdx] = el }}
                     type="text"
                     value={item}
                     onChange={(e) => {
@@ -385,7 +433,33 @@ const Step3Milestone = () => {
                       newCriteria[cIdx] = e.target.value;
                       handleChange('criteria', newCriteria);
                     }}
-                    onBlur={() => { savePhase(activePhase) }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (currentData.criteria.length < 10) {
+                          const newCriteria = [...currentData.criteria];
+                          newCriteria.splice(cIdx + 1, 0, '');
+                          pendingFocusIdx.current = cIdx + 1;
+                          handleChange('criteria', newCriteria);
+                        } else {
+                          toast.error('คุณสามารถระบุเกณฑ์การยอมรับได้สูงสุด 10 ข้อ');
+                        }
+                      }
+                    }}
+                    onPaste={(e) => {
+                      const text = e.clipboardData.getData('text');
+                      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+                      if (lines.length <= 1) return;
+                      e.preventDefault();
+                      const before = currentData.criteria.slice(0, cIdx);
+                      const after = currentData.criteria.slice(cIdx + 1);
+                      const merged = [...before, ...lines, ...after].slice(0, 10);
+                      handleChange('criteria', merged);
+                      if (before.length + lines.length + after.length > 10) {
+                        toast.error('ตัดให้เหลือ 10 ข้อ (สูงสุดที่รองรับ)');
+                      }
+                    }}
+                    onBlur={() => { savePhaseIfChanged(activePhase) }}
                     className="flex-grow h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all text-[14px]"
                   />
                   {/* ปุ่มลบเกณฑ์ถังขยะ (แสดงเฉพาะเมื่อมีมากกว่า 1 ข้อ ไม่งั้นให้เหลือ 1 ไว้เสมอ) */}

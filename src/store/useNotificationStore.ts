@@ -10,8 +10,8 @@ export interface Notification {
     is_read: boolean
     related_id?: number
     related_type?: string
-    created_at: string
-    updated_at: string
+    CreatedAt: string
+    UpdatedAt: string
 }
 
 interface NotificationStore {
