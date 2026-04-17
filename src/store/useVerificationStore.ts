@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import api from '../services/api'
 import toast from 'react-hot-toast'
-import { AxiosError } from 'axios'
 
 export interface VerifUser {
     email: string
