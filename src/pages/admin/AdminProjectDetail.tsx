@@ -9,84 +9,13 @@ import {
     Users,
     Clock,
     Shield,
-    Calendar,
 } from "lucide-react"
-import api from "../../services/api"
 import toast from "react-hot-toast"
 import { AxiosError } from "axios"
+import { useAdminStore } from "../../store/useAdminStore"
 import PreviewStory from "../../components/preview/PreviewStory"
 import { PreviewUpdate, PreviewQuestion, PreviewComment } from "../../components/preview/PreviewMisc"
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-interface ProjectMedia {
-    id: number
-    type: string | string[]
-    url: string
-    sort_order: number
-}
-
-interface Milestone {
-    id: number
-    phase_no: number
-    title: string
-    description: string | null
-    percent_release: number
-    status: string
-    duration?: number
-    acceptance_criteria?: string | null
-}
-
-interface StorySection {
-    id: number
-    title: string
-    body: string
-    sort_order: number
-}
-
-interface ProjectFAQ {
-    id: number
-    question: string
-    answer: string
-}
-
-interface ProjectOwner {
-    first_name: string
-    last_name: string
-    email: string
-    picture?: string | null
-    student_profile?: {
-        bio?: string | null
-        university?: {
-            name_th?: string | null
-        } | null
-    } | null
-    student_card_verification?: {
-        status?: string | null
-    } | null
-}
-
-interface AdminProjectDetail {
-    id: number
-    title: string
-    description: string | null
-    risk: string | null
-    state: string
-    funding_goal: number
-    softcap: number
-    current_funding: number
-    profit_share_pct: number
-    min_invest_amount: number
-    max_invest_amount: number
-    duration_days: number
-    duration_months: number
-    platform_fee: number
-    CreatedAt: string
-    owner: ProjectOwner | null
-    media: ProjectMedia[]
-    milestones: Milestone[]
-    stories: StorySection[]
-    faqs: ProjectFAQ[]
-}
+import MilestoneTab from "../../components/admin/MilestoneTab"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) => new Intl.NumberFormat("th-TH").format(n)
@@ -98,40 +27,34 @@ const AdminProjectDetail = () => {
     const { id } = useParams()
     const navigate = useNavigate()
 
-    const [project, setProject] = useState<AdminProjectDetail | null>(null)
-    const [updates, setUpdates] = useState<{ id: number; title: string; content: string; created_at: string }[]>([])
-    const [threads, setThreads] = useState<{ id: number; title: string; body: string; user_name: string; created_at: string }[]>([])
-    const [isLoading, setIsLoading] = useState(true)
+    const {
+        projectDetail: project,
+        projectUpdates: updates,
+        projectThreads: threads,
+        isProjectDetailLoading: isLoading,
+        fetchAdminProjectDetail,
+        approveProject,
+        rejectProject,
+    } = useAdminStore()
+
     const [actionLoading, setActionLoading] = useState<"approve" | "reject" | null>(null)
     const [selectedMedia, setSelectedMedia] = useState(0)
     const [activeTab, setActiveTab] = useState<Tab>("story")
 
     useEffect(() => {
         if (!id) return
-        setIsLoading(true)
-        Promise.all([
-            api.get(`/admin/projects/${id}/detail/pending-review`),
-            api.get(`/projects/${id}/updates`).catch(() => ({ data: { data: [] } })),
-            api.get(`/projects/${id}/threads`).catch(() => ({ data: { data: [] } })),
-        ])
-            .then(([projRes, updatesRes, threadsRes]) => {
-                setProject(projRes.data?.data ?? null)
-                setUpdates(updatesRes.data?.data ?? [])
-                setThreads(threadsRes.data?.data ?? [])
-            })
-            .catch(() => toast.error("โหลดข้อมูลไม่สำเร็จ"))
-            .finally(() => setIsLoading(false))
-    }, [id])
+        fetchAdminProjectDetail(id).catch(() => toast.error("โหลดข้อมูลไม่สำเร็จ"))
+    }, [id, fetchAdminProjectDetail])
 
     const handleAction = async (action: "approve" | "reject") => {
         if (!project) return
         setActionLoading(action)
         try {
             if (action === "approve") {
-                await api.patch(`/admin/projects/${project.id}/approve`)
+                await approveProject(project.id)
                 toast.success("อนุมัติโปรเจกต์สำเร็จ")
             } else {
-                await api.patch(`/admin/projects/${project.id}/reject`)
+                await rejectProject(project.id)
                 toast.success("ปฏิเสธโปรเจกต์แล้ว")
             }
             navigate("/admin/projects-approval")
@@ -462,117 +385,6 @@ const AdminProjectDetail = () => {
                     </div>
                 </div>
             </main>
-        </div>
-    )
-}
-
-// ── MilestoneTab ──────────────────────────────────────────────────────────────
-// (ใช้ component นี้แทน PreviewMilestone เพราะ PreviewMilestone อ่านจาก useProjectStore โดยตรง)
-
-const thMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
-const formatThDate = (d: Date) => `${d.getDate()} ${thMonths[d.getMonth()]} ${d.getFullYear() + 543}`
-
-const MilestoneTab = ({
-    milestones,
-    fundingGoal,
-    campaignDuration,
-}: {
-    milestones: Milestone[]
-    fundingGoal: number
-    campaignDuration: number
-}) => {
-    if (milestones.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center gap-[12px] mt-[40px] p-[40px] border border-dashed border-border rounded-[16px] bg-white">
-                <span className="text-muted-foreground text-[14px]">ยังไม่ได้กำหนด Milestone</span>
-            </div>
-        )
-    }
-
-    const sorted = milestones.slice().sort((a, b) => a.phase_no - b.phase_no)
-
-    // คำนวณวันเริ่ม/สิ้นสุดของแต่ละ phase เหมือน PreviewMilestone
-    const phaseDates = (() => {
-        const result: { start: Date; end: Date }[] = []
-        let cursor = new Date()
-        cursor.setDate(cursor.getDate() + campaignDuration)
-        for (const m of sorted) {
-            const duration = m.duration ?? 0
-            const start = new Date(cursor)
-            const end = new Date(cursor)
-            end.setDate(end.getDate() + duration)
-            result.push({ start, end })
-            cursor = new Date(end)
-        }
-        return result
-    })()
-
-    return (
-        <div className="flex flex-col gap-[24px] mt-[20px] relative isolate w-full overflow-hidden">
-            <div className="absolute left-[24px] top-[24px] bottom-[24px] w-[1px] bg-border z-0 hidden md:block" />
-            {sorted.map((m, idx) => {
-                const amount = fundingGoal > 0 ? (fundingGoal * m.percent_release) / 100 : 0
-                const dates = phaseDates[idx]
-                const hasDates = dates && (m.duration ?? 0) > 0 && campaignDuration > 0
-                const criteria = (m.acceptance_criteria ?? "").split("\n").filter((c: string) => c.trim())
-
-                return (
-                    <div key={m.id} className="flex gap-[20px] relative z-10 w-full">
-                        <div
-                            className={`hidden md:flex shrink-0 w-[48px] h-[48px] rounded-full items-center justify-center font-bold text-[20px] shadow-sm ${
-                                idx === 0 ? "bg-primary text-white" : "bg-white border border-border text-foreground"
-                            }`}
-                        >
-                            {m.phase_no}
-                        </div>
-                        <div className="flex-1 bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[20px]">
-                            {/* Top row */}
-                            <div className="flex flex-col xl:flex-row justify-between xl:items-start gap-[20px]">
-                                <div className="flex flex-col gap-[12px] flex-1">
-                                    <div>
-                                        <h3 className="text-[16px] font-bold text-foreground">Phase {m.phase_no}: {m.title}</h3>
-                                        {m.description && (
-                                            <p className="text-[14px] text-muted-foreground mt-[4px]">{m.description}</p>
-                                        )}
-                                        {hasDates && (
-                                            <p className="inline-flex items-center gap-[5px] text-[12px] text-muted-foreground mt-[6px]">
-                                                <Calendar size={12} />
-                                                <span>กำหนดส่ง: {formatThDate(dates.start)} — {formatThDate(dates.end)}</span>
-                                            </p>
-                                        )}
-                                    </div>
-                                    {criteria.length > 0 && (
-                                        <div className="flex flex-col gap-[8px] mt-[8px]">
-                                            <span className="text-[12px] font-bold text-foreground">สิ่งที่ส่งมอบ:</span>
-                                            <div className="flex flex-wrap gap-[8px]">
-                                                {criteria.map((c: string, i: number) => (
-                                                    <span key={i} className="px-[12px] py-[4px] border border-border rounded-full text-[12px] text-foreground bg-white whitespace-nowrap">
-                                                        {c}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex flex-row xl:flex-col items-center xl:items-end justify-between xl:justify-start gap-[12px] shrink-0 mt-[10px] xl:mt-0">
-                                    <span className="text-[20px] font-bold text-primary">
-                                        {amount > 0 ? `฿${new Intl.NumberFormat("th-TH").format(amount)}` : `${m.percent_release}%`}
-                                    </span>
-                                    <span className="px-[12px] py-[4px] rounded-full text-[12px] font-medium border bg-white text-foreground border-border">
-                                        รอดำเนินการ
-                                    </span>
-                                </div>
-                            </div>
-                            {/* Bottom row */}
-                            <div className="flex justify-end">
-                                <a href="#" className="text-[12px] text-primary hover:text-primary/70 transition-colors">
-                                    ดูรายละเอียดเพิ่มเติม
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                )
-            })}
         </div>
     )
 }

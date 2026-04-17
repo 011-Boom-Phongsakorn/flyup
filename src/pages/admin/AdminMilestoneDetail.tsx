@@ -4,81 +4,42 @@ import {
     ChevronLeft, Loader2, CheckCircle, XCircle,
     Calendar, ExternalLink, FileText, CheckCircle2, Circle,
 } from 'lucide-react'
-import api from '../../services/api'
-import toast from 'react-hot-toast'
 import { AxiosError } from 'axios'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface EvidenceLink {
-    name: string
-    url: string
-}
-
-interface EvidenceFile {
-    id: number
-    url: string
-    file_name: string
-}
-
-interface MilestoneDetail {
-    id: number
-    phase_no: number
-    title: string
-    description: string
-    start_date: string
-    end_date: string
-    funding_goal: number
-    acceptance_criteria: string
-    status: string
-    progress_pct: number
-    admin_note?: string
-    submitted_at?: string
-    project_id: number
-    project_title: string
-    owner?: {
-        first_name: string
-        last_name: string
-        email: string
-    }
-    evidence_files?: EvidenceFile[]
-    evidence_links?: EvidenceLink[]
-    checked_criteria?: boolean[]
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+import toast from 'react-hot-toast'
+import { useAdminStore } from '../../store/useAdminStore'
+import InfoCard from '../../components/admin/InfoCard'
 
 const fmt = (d: string) =>
     d ? new Date(d).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
 
 const fmtBaht = (v: number) => `฿${v.toLocaleString('th-TH')}`
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 const AdminMilestoneDetail = () => {
     const { milestoneId } = useParams<{ milestoneId: string }>()
     const navigate = useNavigate()
 
-    const [milestone, setMilestone] = useState<MilestoneDetail | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
+    const {
+        milestoneDetail: milestone,
+        isMilestoneDetailLoading: isLoading,
+        fetchAdminMilestoneDetail,
+        approveAdminMilestone,
+        rejectAdminMilestone,
+    } = useAdminStore()
+
     const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | null>(null)
     const [rejectNote, setRejectNote] = useState('')
     const [showRejectForm, setShowRejectForm] = useState(false)
 
     useEffect(() => {
         if (!milestoneId) return
-        setIsLoading(true)
-        api.get(`/admin/milestones/${milestoneId}`)
-            .then((res) => setMilestone(res.data?.data ?? null))
-            .catch(() => toast.error('โหลดข้อมูลไม่สำเร็จ'))
-            .finally(() => setIsLoading(false))
-    }, [milestoneId])
+        fetchAdminMilestoneDetail(milestoneId).catch(() => toast.error('โหลดข้อมูลไม่สำเร็จ'))
+    }, [milestoneId, fetchAdminMilestoneDetail])
 
     const handleApprove = async () => {
         if (!milestoneId) return
         setActionLoading('approve')
         try {
-            await api.patch(`/admin/milestones/${milestoneId}/approve`)
+            await approveAdminMilestone(milestoneId)
             toast.success('อนุมัติ Milestone สำเร็จ')
             navigate('/admin/milestones')
         } catch (error) {
@@ -97,7 +58,7 @@ const AdminMilestoneDetail = () => {
         }
         setActionLoading('reject')
         try {
-            await api.patch(`/admin/milestones/${milestoneId}/reject`, { note: rejectNote })
+            await rejectAdminMilestone(milestoneId, rejectNote)
             toast.success('ปฏิเสธ Milestone แล้ว')
             navigate('/admin/milestones')
         } catch (error) {
@@ -155,7 +116,6 @@ const AdminMilestoneDetail = () => {
                     )}
                 </div>
 
-                {/* Action buttons (only for submitted) */}
                 {milestone.status === 'submitted' && !showRejectForm && (
                     <div className="flex items-center gap-[8px] shrink-0">
                         <button
@@ -308,24 +268,5 @@ const AdminMilestoneDetail = () => {
         </div>
     )
 }
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-const InfoCard = ({
-    label,
-    value,
-    icon,
-}: {
-    label: string
-    value: string
-    icon?: React.ReactNode
-}) => (
-    <div className="bg-white border border-border rounded-[12px] p-[16px]">
-        <p className="text-[11px] text-muted-foreground mb-[4px] flex items-center gap-[4px]">
-            {icon} {label}
-        </p>
-        <p className="text-[14px] font-semibold text-foreground">{value}</p>
-    </div>
-)
 
 export default AdminMilestoneDetail

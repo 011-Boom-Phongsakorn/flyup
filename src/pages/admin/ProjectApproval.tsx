@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { Loader2, Search } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useAdminStore } from '../../store/useAdminStore'
+import SearchBar from '../../components/admin/SearchBar'
+import PageHeader from '../../components/admin/PageHeader'
 
 const ProjectApproval = () => {
     const { pendingProjects, isLoading, fetchPendingProjects } = useAdminStore()
@@ -19,29 +21,14 @@ const ProjectApproval = () => {
 
     return (
         <div className="flex flex-col gap-[16px]">
-            <div className="p-2.5">
-                <h1 className="font-semibold text-[24px]">ตรวจสอบโปรเจกต์</h1>
-                <p className="text-[12px] text-muted-foreground">ตรวจสอบและอนุมัติโปรเจกต์ใหม่ที่ส่งเข้ามา</p>
-            </div>
+            <PageHeader title="ตรวจสอบโปรเจกต์" subtitle="ตรวจสอบและอนุมัติโปรเจกต์ใหม่ที่ส่งเข้ามา" />
 
-            {/* Filter */}
-            <div className="flex items-center gap-[10px]">
-                <div className="relative flex-1 max-w-[320px]">
-                    <Search size={14} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="ค้นหาโปรเจกต์หรือ Pioneer..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-[34px] pr-[12px] py-[8px] text-[13px] border border-border rounded-[8px] bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                </div>
-                {search && (
-                    <span className="text-[12px] text-muted-foreground">
-                        พบ {filtered.length} รายการ
-                    </span>
-                )}
-            </div>
+            <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder="ค้นหาโปรเจกต์หรือ Pioneer..."
+                resultCount={filtered.length}
+            />
 
             {/* Table */}
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">

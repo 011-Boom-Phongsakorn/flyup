@@ -1,29 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Loader2, Search, RotateCcw, CheckCircle, Clock } from 'lucide-react'
-import api from '../../services/api'
-import toast from 'react-hot-toast'
+import { Loader2, RotateCcw, CheckCircle, Clock } from 'lucide-react'
 import { AxiosError } from 'axios'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface RefundRequest {
-    id: number
-    amount: number
-    status: string
-    requested_at: string
-    approved_at?: string
-    project?: {
-        id: number
-        title: string
-    }
-    booster?: {
-        first_name: string
-        last_name: string
-        email: string
-    }
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+import toast from 'react-hot-toast'
+import { useRefundStore } from '../../store/useRefundStore'
+import SearchBar from '../../components/admin/SearchBar'
+import StatusBadge from '../../components/admin/StatusBadge'
+import PageHeader from '../../components/admin/PageHeader'
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
     pending:  { label: 'รอดำเนินการ', className: 'bg-amber-50 text-amber-600 border border-amber-200', icon: <Clock size={12} /> },
@@ -33,38 +15,19 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
 const fmtDate = (d: string) =>
     d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 const AdminRefunds = () => {
-    const [refunds, setRefunds] = useState<RefundRequest[]>([])
-    const [isLoading, setIsLoading] = useState(true)
+    const { refunds, isLoading, fetchRefunds, approveRefund } = useRefundStore()
     const [search, setSearch] = useState('')
     const [approvingId, setApprovingId] = useState<number | null>(null)
 
-    const fetchRefunds = async () => {
-        setIsLoading(true)
-        try {
-            const res = await api.get('/admin/investments/refund-requests')
-            setRefunds(res.data.data ?? [])
-        } catch {
-            toast.error('โหลดข้อมูลไม่สำเร็จ')
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
     useEffect(() => {
         fetchRefunds()
-    }, [])
+    }, [fetchRefunds])
 
     const handleApprove = async (id: number) => {
         setApprovingId(id)
         try {
-            await api.patch(`/admin/investments/${id}/approve-refund`)
-            toast.success('อนุมัติการคืนเงินสำเร็จ')
-            setRefunds((prev) =>
-                prev.map((r) => r.id === id ? { ...r, status: 'approved', approved_at: new Date().toISOString() } : r)
-            )
+            await approveRefund(id)
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
             toast.error(msg || 'เกิดข้อผิดพลาด')
@@ -83,42 +46,19 @@ const AdminRefunds = () => {
         )
     })
 
-    const pendingCount = refunds.filter((r) => r.status === 'pending').length
-
     return (
         <div className="flex flex-col gap-[16px]">
-            <div className="p-2.5">
-                <div className="flex items-center gap-[10px]">
-                    <h1 className="font-semibold text-[24px]">การคืนเงิน</h1>
-                    {pendingCount > 0 && (
-                        <span className="px-[8px] py-[2px] rounded-full bg-amber-100 text-amber-700 text-[12px] font-semibold">
-                            {pendingCount} รายการรอดำเนินการ
-                        </span>
-                    )}
-                </div>
-                <p className="text-[12px] text-muted-foreground">รายการขอคืนเงินจาก Booster ที่รอการอนุมัติ</p>
-            </div>
+            <PageHeader title="การคืนเงิน" subtitle="รายการขอคืนเงินจาก Booster ที่รอการอนุมัติ" />
 
-            {/* Search */}
-            <div className="flex items-center gap-[10px]">
-                <div className="relative flex-1 max-w-[320px]">
-                    <Search size={14} className="absolute left-[12px] top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="ค้นหาโปรเจกต์หรือ Booster..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-[34px] pr-[12px] py-[8px] text-[13px] border border-border rounded-[8px] bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                </div>
-                {search && (
-                    <span className="text-[12px] text-muted-foreground">พบ {filtered.length} รายการ</span>
-                )}
-            </div>
+            <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder="ค้นหาโปรเจกต์หรือ Booster..."
+                resultCount={filtered.length}
+            />
 
             {/* Table */}
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
-                {/* Header */}
                 <div className="grid grid-cols-7 bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">
                     <div className="text-center">ลำดับ</div>
                     <div className="col-span-2">โปรเจกต์</div>
@@ -128,7 +68,6 @@ const AdminRefunds = () => {
                     <div className="text-center">จัดการ</div>
                 </div>
 
-                {/* Body */}
                 {isLoading ? (
                     <div className="flex justify-center items-center py-16">
                         <Loader2 className="animate-spin text-muted-foreground" size={28} />
@@ -171,9 +110,7 @@ const AdminRefunds = () => {
                                     ฿{r.amount.toLocaleString('th-TH')}
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
-                                    <span className={`flex items-center gap-[4px] rounded-full px-2.5 py-0.5 text-[12px] font-medium ${status.className}`}>
-                                        {status.icon} {status.label}
-                                    </span>
+                                    <StatusBadge label={status.label} className={status.className} icon={status.icon} />
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
                                     {isPending ? (
