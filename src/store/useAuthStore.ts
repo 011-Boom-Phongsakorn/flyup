@@ -46,6 +46,8 @@ interface DecodedUser extends Record<string, unknown> {
     phone?: string;
     address?: string;
     picture?: string;
+    google_sub?: string;
+    has_password?: boolean;
     student_profile?: StudentProfile;
     bank_account?: BankAccount;
     student_card_verification?: CardVerification;
@@ -150,6 +152,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
                 toast.error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่')
             } else if (errorMessage === 'please verify email') {
                 toast.error('กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
+            } else if (err?.response?.data?.login_method === 'google') {
+                toast.error('บัญชีผู้ใช้นี้ลงทะเบียนด้วย Google กรุณาเข้าสู่ระบบด้วย Google')
             } else {
                 toast.error('อีเมล์หรือรหัสผ่านไม่ถูกต้อง')
             }
