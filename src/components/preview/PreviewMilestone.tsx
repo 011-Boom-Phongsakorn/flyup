@@ -1,10 +1,12 @@
 import { Calendar } from 'lucide-react';
 import { useProjectStore } from '../../store/useProjectStore';
+import { Link, useParams } from 'react-router';
 
 interface MilestonePreviewItem {
   title: string;
-  description?: string;
+  description?: string | null;
   criteria?: string[];
+  duration?: number;
 }
 
 interface PreviewMilestoneProps {
@@ -16,6 +18,7 @@ const formatThDate = (d: Date) => `${d.getDate()} ${thMonths[d.getMonth()]} ${d.
 
 const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
 
+  const { projectId } = useParams();
   const { currentProject } = useProjectStore()
 
   const fundingGoal = currentProject.fundingGoal || 0
@@ -77,12 +80,17 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
                     {m.description && (
                       <p className="text-[14px] text-muted-foreground mt-[4px]">{m.description}</p>
                     )}
-                    {hasDates && (
+                    {hasDates ? (
                       <p className="inline-flex items-center gap-[5px] text-[12px] text-muted-foreground mt-[6px]">
                         <Calendar size={12} />
                         <span>กำหนดส่ง: {formatThDate(dates.start)} — {formatThDate(dates.end)}</span>
                       </p>
-                    )}
+                    ) : (m.duration ?? 0) > 0 ? (
+                      <p className="inline-flex items-center gap-[5px] text-[12px] text-muted-foreground mt-[6px]">
+                        <Calendar size={12} />
+                        <span>กำหนดส่ง: {m.duration} วัน</span>
+                      </p>
+                    ) : null}
                   </div>
 
                   {(m.criteria ?? []).filter(c => c).length > 0 && (
@@ -100,7 +108,7 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
                 </div>
 
                 <div className="flex flex-row xl:flex-col items-center xl:items-end justify-between xl:justify-start gap-[12px] shrink-0 mt-[10px] xl:mt-0">
-                  <span className="text-[20px] font-bold text-primary">{fundingGoal > 0 ? `฿${(fundingGoal * phasePercents[phaseIndex]).toLocaleString('th-TH')}` : 'กรุณากำหนดเป้าหมายเงินทุนก่อน'}฿</span>
+                  <span className="text-[20px] font-bold text-primary">{fundingGoal > 0 ? `฿${(fundingGoal * phasePercents[phaseIndex]).toLocaleString('th-TH')}` : 'กรุณากำหนดเป้าหมายเงินทุนก่อน'}</span>
                   <span className="px-[12px] py-[4px] rounded-full text-[12px] font-medium border bg-white text-foreground border-border">
                     รอดำเนินการ
                   </span>
@@ -109,17 +117,27 @@ const PreviewMilestone = ({ milestones }: PreviewMilestoneProps) => {
 
               {/* Bottom row: link ล่างขวา */}
               <div className="flex justify-end">
-                <a
-                  href="#"
-                  className="text-[12px] text-primary hover:text-primary/70 transition-colors"
+                <Link
+                  to={`/preview/${projectId}/milestones`}
+                  className="text-[12px] text-primary hover:text-primary/70 transition-colors font-medium"
                 >
-                  ดูรายละเอียดเพิ่มเติม
-                </a>
+                  ดูรายละเอียดเพิ่มเติม →
+                </Link>
               </div>
             </div>
           </div>
         );
       })}
+
+      <div className="flex justify-center mt-4">
+        <Link
+          to={`/preview/${projectId}/milestones`}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/5 text-primary rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors border border-primary/20"
+        >
+          ดูแผนงาน Milestone ทั้งหมด →
+        </Link>
+      </div>
+
     </div>
   );
 };

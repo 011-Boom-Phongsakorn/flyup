@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/store/useAuthStore'
-import { House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone, Wallet, MessageSquareWarning, ShieldBan, RotateCcw, FileText, Users, LogOut, UserRound } from 'lucide-react'
+import { House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone, Wallet, MessageSquareWarning, ShieldBan, RotateCcw, FileText, Users, LogOut, UserRound, GraduationCap } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 
 const menu = [
@@ -15,6 +15,7 @@ const menu = [
     { icon: <RotateCcw size={20} />, title: 'คืนเงิน', path: '/admin/refunds' },
     { icon: <FileText size={20} />, title: 'บันทึกการตรวจสอบ', path: '/' },
     { icon: <Users size={20} />, title: 'จัดการผู้ใช้', path: '/' },
+    { icon: <GraduationCap size={20} />, title: 'จัดการมหาวิทยาลัย', path: '/admin/universities' },
     { icon: <UserRound size={20} />, title: 'โปรไฟล์', path: '/admin/profile' },
 ]
 

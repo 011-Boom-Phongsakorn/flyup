@@ -16,6 +16,7 @@ import ProjectDetail from '../pages/public/ProjectDetail';
 import Investment from '../pages/public/Investment';
 import ForgotPassword from '../pages/public/ForgotPassword';
 import ResetPassword from '../pages/public/ResetPassword';
+import MilestoneDetail from '../pages/public/MilestoneDetail';
 
 import { Loader2 } from 'lucide-react';
 
@@ -35,6 +36,7 @@ import MilestonePage from '../pages/pioneer/MilestonePage'
 import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
 import PioneerMeetings from '../pages/pioneer/Meetings';
 import CancelProjectRequest from '../pages/pioneer/CancelProjectRequest';
+import PreviewMilestoneDetail from '../pages/pioneer/PreviewMilestoneDetail';
 
 // Admin
 import AdminLayout from '../layouts/AdminLayout';
@@ -61,6 +63,8 @@ import AdminProfile from '@/pages/admin/AdminProfile'
 import AdminMilestoneApproval from '@/pages/admin/AdminMilestoneApproval'
 import AdminMilestoneDetail from '@/pages/admin/AdminMilestoneDetail'
 import AdminRefunds from '@/pages/admin/AdminRefunds';
+import AdminUniversities from '@/pages/admin/AdminUniversities';
+import AdminUniversityDetail from '@/pages/admin/AdminUniversityDetail';
 
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
@@ -121,6 +125,7 @@ const Router = () => {
                         <Route path='/verify' element={<VerifyEmail />} />
                         <Route path='/projects/:id' element={<ProjectDetail />} />
                         <Route path='/projects/:id/invest' element={<Investment />} />
+                        <Route path='/projects/:id/milestones' element={<MilestoneDetail />} />
                     </Route>
 
                     <Route element={<PioneerGuard />}>
@@ -135,6 +140,7 @@ const Router = () => {
                         </Route>
                         <Route element={<MainLayout />}>
                             <Route path='/preview/:projectId' element={<Preview />} />
+                            <Route path='/preview/:projectId/milestones' element={<PreviewMilestoneDetail />} />
                             <Route path='/project/overview/:projectId' element={<ProjectOverview />} />
                             <Route path='/project/overview/:projectId/step' element={<ProjectStageLayout />}>
                                 <Route index element={<Navigate to="1" replace />} />
@@ -172,6 +178,8 @@ const Router = () => {
                             <Route path='/admin/milestones' element={<AdminMilestoneApproval />} />
                             <Route path='/admin/milestones/:milestoneId' element={<AdminMilestoneDetail />} />
                             <Route path='/admin/refunds' element={<AdminRefunds />} />
+                            <Route path='/admin/universities' element={<AdminUniversities />} />
+                            <Route path='/admin/universities/:id' element={<AdminUniversityDetail />} />
                             <Route path='/admin/profile' element={<AdminProfile />} />
                         </Route>
                     </Route>
