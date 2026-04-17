@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router';
 
 interface MilestonePreviewItem {
   title: string;
-  description?: string;
+  description?: string | null;
   criteria?: string[];
   duration?: number;
 }

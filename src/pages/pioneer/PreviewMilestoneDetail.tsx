@@ -16,7 +16,7 @@ import {
   File,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
-import { useProjectStore, type Milestone as MilestoneType, type ProjectMedia } from "../../store/useProjectStore";
+import { useProjectStore, type Milestone as MilestoneType } from "../../store/useProjectStore";
 
 // ─── File type detection ────────────────────────────────────────────────────
 const IMAGE_EXT = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".avif"];
