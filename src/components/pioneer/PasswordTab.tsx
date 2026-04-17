@@ -3,8 +3,14 @@ import { Lock, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 import { AxiosError } from "axios";
+import { useAuthStore } from "../../store/useAuthStore";
 
 const PasswordTab = () => {
+  const { authUser, checkAuth } = useAuthStore();
+  const hasPassword = authUser?.has_password ?? true;
+  const hasGoogleSub = !!authUser?.google_sub;
+  const isSettingPassword = !hasPassword && hasGoogleSub;
+
   const [form, setForm] = useState({ current: "", newPass: "", confirm: "" });
   const [show, setShow] = useState({ current: false, newPass: false, confirm: false });
   const [isSaving, setIsSaving] = useState(false);
@@ -24,11 +30,17 @@ const PasswordTab = () => {
     }
     setIsSaving(true);
     try {
-      await api.put("/user/change-password", {
-        old_password: form.current,
-        new_password: form.newPass,
-      });
-      toast.success("เปลี่ยนรหัสผ่านสำเร็จ");
+      if (isSettingPassword) {
+        await api.post("/user/set-password", { new_password: form.newPass });
+        toast.success("ตั้งรหัสผ่านสำเร็จ");
+        await checkAuth();
+      } else {
+        await api.put("/user/change-password", {
+          old_password: form.current,
+          new_password: form.newPass,
+        });
+        toast.success("เปลี่ยนรหัสผ่านสำเร็จ");
+      }
       setForm({ current: "", newPass: "", confirm: "" });
     } catch (error) {
       const msg = error instanceof AxiosError ? error.response?.data?.message : null;
@@ -44,18 +56,31 @@ const PasswordTab = () => {
     }
   };
 
-  const fields: { key: keyof typeof form; label: string }[] = [
-    { key: "current", label: "รหัสผ่านปัจจุบัน" },
-    { key: "newPass", label: "รหัสผ่านใหม่" },
-    { key: "confirm", label: "ยืนยันรหัสผ่านใหม่" },
-  ];
+  const fields: { key: keyof typeof form; label: string }[] = isSettingPassword
+    ? [
+        { key: "newPass", label: "รหัสผ่านใหม่" },
+        { key: "confirm", label: "ยืนยันรหัสผ่านใหม่" },
+      ]
+    : [
+        { key: "current", label: "รหัสผ่านปัจจุบัน" },
+        { key: "newPass", label: "รหัสผ่านใหม่" },
+        { key: "confirm", label: "ยืนยันรหัสผ่านใหม่" },
+      ];
+
+  const title = isSettingPassword ? "ตั้งรหัสผ่าน" : "เปลี่ยนรหัสผ่าน";
 
   return (
     <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col gap-[20px]">
       <div className="flex items-center gap-[8px]">
         <Lock size={18} className="text-foreground" />
-        <h2 className="font-semibold text-foreground">เปลี่ยนรหัสผ่าน</h2>
+        <h2 className="font-semibold text-foreground">{title}</h2>
       </div>
+
+      {isSettingPassword && (
+        <p className="text-[13px] text-muted-foreground -mt-[8px]">
+          บัญชีของคุณใช้ Google เข้าสู่ระบบ คุณสามารถตั้งรหัสผ่านเพื่อใช้เข้าสู่ระบบด้วยอีเมลได้
+        </p>
+      )}
 
       {fields.map(({ key, label }) => (
         <div key={key} className="flex flex-col gap-[6px]">
@@ -85,7 +110,7 @@ const PasswordTab = () => {
         className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-[8px]"
       >
         <Lock size={16} />
-        {isSaving ? "กำลังบันทึก..." : "เปลี่ยนรหัสผ่าน"}
+        {isSaving ? "กำลังบันทึก..." : title}
       </button>
     </div>
   );
