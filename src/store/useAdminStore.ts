@@ -90,6 +90,32 @@ export interface AdminMilestoneDetail {
     checked_criteria?: boolean[]
 }
 
+export interface UniversityDomain {
+    id: number
+    university_id: number
+    domain: string
+    is_active: boolean
+}
+
+export interface University {
+    id: number
+    name_th: string | null
+    name_en: string | null
+    province: string | null
+    domains: UniversityDomain[]
+}
+
+export interface CreateUniversityRequest {
+    name_th: string
+    name_en: string
+    province: string
+}
+
+export interface UniversityDomainRequest {
+    domain?: string
+    is_active?: boolean
+}
+
 interface AdminStore {
     // Lists
     pendingProjects: PendingProject[]
@@ -114,6 +140,19 @@ interface AdminStore {
     fetchAdminMilestoneDetail: (milestoneId: string) => Promise<void>
     approveAdminMilestone: (milestoneId: string) => Promise<void>
     rejectAdminMilestone: (milestoneId: string, reason: string) => Promise<void>
+
+    // Universities
+    universities: University[]
+    universityDetail: University | null
+    isUniversitiesLoading: boolean
+    fetchUniversities: () => Promise<void>
+    fetchUniversity: (id: string) => Promise<void>
+    createUniversity: (data: CreateUniversityRequest) => Promise<void>
+    updateUniversity: (id: string, data: CreateUniversityRequest) => Promise<void>
+    deleteUniversity: (id: string) => Promise<void>
+    createUniversityDomain: (id: string, data: UniversityDomainRequest) => Promise<void>
+    updateUniversityDomain: (domainId: string, data: UniversityDomainRequest) => Promise<void>
+    deleteUniversityDomain: (domainId: string) => Promise<void>
 }
 
 export const useAdminStore = create<AdminStore>((set) => ({
@@ -195,5 +234,54 @@ export const useAdminStore = create<AdminStore>((set) => ({
 
     rejectAdminMilestone: async (milestoneId, reason) => {
         await api.patch(`/admin/projects/milestones/${milestoneId}/reject`, { reason })
+    },
+
+    // Universities
+    universities: [],
+    universityDetail: null,
+    isUniversitiesLoading: false,
+
+    fetchUniversities: async () => {
+        set({ isUniversitiesLoading: true })
+        try {
+            const res = await api.get('/admin/universities')
+            set({ universities: res.data.data ?? [] })
+        } finally {
+            set({ isUniversitiesLoading: false })
+        }
+    },
+
+    fetchUniversity: async (id) => {
+        set({ isUniversitiesLoading: true, universityDetail: null })
+        try {
+            const res = await api.get(`/admin/university/${id}`)
+            set({ universityDetail: res.data?.data ?? null })
+        } finally {
+            set({ isUniversitiesLoading: false })
+        }
+    },
+
+    createUniversity: async (data: CreateUniversityRequest) => {
+        await api.post('/admin/create-university', data)
+    },
+
+    updateUniversity: async (id: string, data: CreateUniversityRequest) => {
+        await api.put(`/admin/update-university/${id}`, data)
+    },
+
+    deleteUniversity: async (id: string) => {
+        await api.delete(`/admin/delete-university/${id}`)
+    },
+
+    createUniversityDomain: async (id: string, data: UniversityDomainRequest) => {
+        await api.post(`/admin/create-university-domain/${id}`, data)
+    },
+
+    updateUniversityDomain: async (domainId: string, data: UniversityDomainRequest) => {
+        await api.put(`/admin/update-university-domain/${domainId}`, data)
+    },
+
+    deleteUniversityDomain: async (domainId: string) => {
+        await api.delete(`/admin/delete-university-domain/${domainId}`)
     },
 }))
