@@ -31,7 +31,7 @@ const PasswordTab = () => {
     setIsSaving(true);
     try {
       if (isSettingPassword) {
-        await api.post("/user/set-password", { new_password: form.newPass });
+        await api.put("/user/add-password", { new_password: form.newPass });
         toast.success("ตั้งรหัสผ่านสำเร็จ");
         await checkAuth();
       } else {

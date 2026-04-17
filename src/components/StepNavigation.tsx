@@ -1,5 +1,6 @@
 import { Link, useParams, useLocation } from "react-router";
 import { ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { useProjectStore } from '../store/useProjectStore';
 
 interface StepNavigationProps {
   onSubmit?: () => void;
@@ -10,10 +11,15 @@ interface StepNavigationProps {
 const StepNavigation = ({ onSubmit, disableSubmit, disableNext }: StepNavigationProps = {}) => {
   const { projectId } = useParams();
   const location = useLocation();
-  
+  const currentProject = useProjectStore(s => s.currentProject);
+
   // 1. ดึงหมายเลข Step ปัจจุบันจาก URL (ถ้าดึงไม่ได้ให้เป็น 1)
   const currentStep = Number(location.pathname.split('/').pop()) || 1;
-  const totalSteps = 4; // กำหนดจำนวน Step ทั้งหมดที่มี
+
+  const isFundingOrLater = !!currentProject.state &&
+    currentProject.state !== 'draft' &&
+    currentProject.state !== 'pending_review';
+  const totalSteps = isFundingOrLater ? 5 : 4;
 
   // 2. เงื่อนไขสำหรับปุ่ม "ย้อนกลับ"
   // ถ้าอยู่ Step 1 ให้กลับไปหน้า Overview, ถ้าอยู่ Step อื่นให้ลบ 1
