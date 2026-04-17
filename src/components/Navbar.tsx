@@ -3,6 +3,7 @@ import { Search, Menu, X, LayoutDashboard, ChevronDown, Settings, LogOut } from 
 import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuthStore } from '../store/useAuthStore';
 import { usePublicProjectStore } from '../store/usePublicProjectStore';
+import NotificationBell from './NotificationBell';
 
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=400';
 
@@ -166,10 +167,11 @@ const Navbar = () => {
                                 <Link to={`/${authUser?.role}/dashboard`} className="flex items-center justify-center w-11 h-11 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white rounded-full transition-all shadow-sm active:scale-95">
                                     <LayoutDashboard size={22} />
                                 </Link>
+                                <NotificationBell />
                                 <div className="relative" ref={profileMenuRef}>
                                     <button
                                         onClick={() => setShowProfileMenu(prev => !prev)}
-                                        className="relative flex items-center justify-center focus:outline-none hover:opacity-90 transition-opacity"
+                                        className="relative flex items-center justify-center focus:outline-none hover:opacity-90 transition-opacity cursor-pointer"
                                     >
                                         <img
                                             src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
@@ -245,16 +247,19 @@ const Navbar = () => {
                                 />
                             </div>
                             {authUser && (
-                                <button
-                                    onClick={() => setShowProfileMenu(prev => !prev)}
-                                    className="flex-shrink-0 w-[48px] h-[48px] rounded-full overflow-hidden border-2 border-transparent focus:outline-none"
-                                >
-                                    <img
-                                        src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
-                                        alt="Profile"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </button>
+                                <>
+                                    <NotificationBell />
+                                    <button
+                                        onClick={() => setShowProfileMenu(prev => !prev)}
+                                        className="flex-shrink-0 w-[48px] h-[48px] rounded-full overflow-hidden border-2 border-transparent focus:outline-none"
+                                    >
+                                        <img
+                                            src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </button>
+                                </>
                             )}
                         </div>
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { useProjectStore, type Milestone } from '../../store/useProjectStore'
 import { Plus, Trash2, Upload, Video, X, Loader2 } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
@@ -12,7 +12,12 @@ const Step3Milestone = () => {
   const phaseParam = Number(searchParams.get('phase') ?? '1')
   const activePhase = Math.min(Math.max(phaseParam - 1, 0), 3)
   const setActivePhase = (idx: number) => setSearchParams({ phase: String(idx + 1) }, { replace: true })
-  const [focusCriteriaIdx, setFocusCriteriaIdx] = useState<number | null>(null)
+  const pendingFocusIdx = useRef<number | null>(null)
+  const savedSnapshot = useRef<Record<number, string>>(
+    Object.fromEntries(
+      useProjectStore.getState().currentProject.milestones.map((m, i) => [i, JSON.stringify(m)])
+    )
+  )
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -26,8 +31,12 @@ const Step3Milestone = () => {
     setTimeout(() => setSaveStatus('idle'), 2500);
   };
 
-  const savePhase = async (phaseIndex: number) => {
+  const savePhaseIfChanged = async (phaseIndex: number) => {
     if (!projectId) return;
+    const milestone = useProjectStore.getState().currentProject.milestones[phaseIndex]
+    const current = JSON.stringify(milestone)
+    if (savedSnapshot.current[phaseIndex] === current) return
+    savedSnapshot.current[phaseIndex] = current
     setSaveStatus('saving');
     await saveMilestonePhase(Number(projectId), phaseIndex);
     triggerSaved();
@@ -70,11 +79,11 @@ const Step3Milestone = () => {
   }, [currentData.description])
 
   useEffect(() => {
-    if (focusCriteriaIdx !== null) {
-      criteriaRefs.current[focusCriteriaIdx]?.focus()
-      setFocusCriteriaIdx(null)
+    if (pendingFocusIdx.current !== null) {
+      criteriaRefs.current[pendingFocusIdx.current]?.focus()
+      pendingFocusIdx.current = null
     }
-  }, [focusCriteriaIdx, currentData.criteria])
+  }, [currentData.criteria])
 
 
   // 1. ฟังก์ชันอัปเดตข้อมูลทั่วไปของ Milestone
@@ -186,7 +195,7 @@ const Step3Milestone = () => {
       }
     }
     toast.success('อัปโหลดไฟล์สำเร็จ', { id: 'upload-milestone-files', duration: 2000 })
-    await savePhase(phase)
+    await savePhaseIfChanged(phase)
   }
 
   // 3. อัปโหลดวิดีโอ (append ต่อรายการเดิม)
@@ -222,7 +231,7 @@ const Step3Milestone = () => {
     if (serverUrl) {
       replaceVideoBlobUrl(blobUrl, serverUrl, file.name, phase)
       toast.success('อัปโหลดวิดีโอสำเร็จ', { id: 'upload-milestone-video', duration: 2000 })
-      await savePhase(phase)
+      await savePhaseIfChanged(phase)
     } else {
       removeVideoBlobUrl(blobUrl, phase)
       toast.error(`อัปโหลด ${file.name} ไม่สำเร็จ`, { id: 'upload-milestone-video' })
@@ -236,7 +245,7 @@ const Step3Milestone = () => {
     if (!f) return
     if (f.url?.startsWith('blob:')) URL.revokeObjectURL(f.url)
     updateMilestone(activePhase, { files: files.filter((_, i) => i !== index) })
-    await savePhase(activePhase)
+    await savePhaseIfChanged(activePhase)
   }
 
   // ลบวิดีโอ แล้ว save เพื่ออัปเดต url ใน backend
@@ -246,7 +255,7 @@ const Step3Milestone = () => {
     if (!v) return
     if (v.url?.startsWith('blob:')) URL.revokeObjectURL(v.url)
     updateMilestone(activePhase, { videos: videos.filter((_, i) => i !== index) })
-    await savePhase(activePhase)
+    await savePhaseIfChanged(activePhase)
   }
 
   return (
@@ -299,7 +308,7 @@ const Step3Milestone = () => {
                 type="text"
                 value={currentData.title}
                 onChange={(e) => handleChange('title', e.target.value)}
-                onBlur={() => { savePhase(activePhase) }}
+                onBlur={() => { savePhaseIfChanged(activePhase) }}
                 className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-[14px]"
               />
             </div>
@@ -316,7 +325,7 @@ const Step3Milestone = () => {
                   e.target.style.height = 'auto'
                   e.target.style.height = e.target.scrollHeight + 'px'
                 }}
-                onBlur={() => { savePhase(activePhase) }}
+                onBlur={() => { savePhaseIfChanged(activePhase) }}
                 className="w-full p-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none overflow-hidden text-[14px]"
               />
             </div>
@@ -354,11 +363,11 @@ const Step3Milestone = () => {
                     if ((currentData.duration || 0) > maxForThisPhase) {
                       toast.error(`ปรับ Phase ${activePhase + 1} เป็น ${maxForThisPhase} วัน (Phase อื่นใช้ไปแล้ว ${otherDays} วัน)`);
                       updateMilestone(activePhase, { duration: maxForThisPhase });
-                      savePhase(activePhase);
+                      savePhaseIfChanged(activePhase);
                       return;
                     }
                   }
-                  savePhase(activePhase);
+                  savePhaseIfChanged(activePhase);
                 }}
                 className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px]"
               />
@@ -430,8 +439,8 @@ const Step3Milestone = () => {
                         if (currentData.criteria.length < 10) {
                           const newCriteria = [...currentData.criteria];
                           newCriteria.splice(cIdx + 1, 0, '');
+                          pendingFocusIdx.current = cIdx + 1;
                           handleChange('criteria', newCriteria);
-                          setFocusCriteriaIdx(cIdx + 1);
                         } else {
                           toast.error('คุณสามารถระบุเกณฑ์การยอมรับได้สูงสุด 10 ข้อ');
                         }
@@ -450,7 +459,7 @@ const Step3Milestone = () => {
                         toast.error('ตัดให้เหลือ 10 ข้อ (สูงสุดที่รองรับ)');
                       }
                     }}
-                    onBlur={() => { savePhase(activePhase) }}
+                    onBlur={() => { savePhaseIfChanged(activePhase) }}
                     className="flex-grow h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all text-[14px]"
                   />
                   {/* ปุ่มลบเกณฑ์ถังขยะ (แสดงเฉพาะเมื่อมีมากกว่า 1 ข้อ ไม่งั้นให้เหลือ 1 ไว้เสมอ) */}

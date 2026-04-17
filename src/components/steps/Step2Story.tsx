@@ -580,9 +580,12 @@ const Step2Story = () => {
               e.target.style.height = 'auto'
               e.target.style.height = e.target.scrollHeight + 'px'
             }}
-            onBlur={() => {
+            onBlur={async () => {
+              if (risks === (currentProject.risks || '')) return;
+              setSaveStatus('saving');
               updateProjectInfo({ risks });
-              if (projectId) updateProject(Number(projectId), { risks });
+              if (projectId) await updateProject(Number(projectId), { risks });
+              triggerSaved();
             }}
             rows={3}
             className="w-full border border-border bg-background p-[12px] rounded-[8px] resize-none focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50 overflow-hidden"/>
