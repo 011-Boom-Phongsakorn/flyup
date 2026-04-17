@@ -6,7 +6,8 @@ import api from '../services/api';
 export interface ProjectUpdate {
   id: number;
   title: string;
-  content: string;
+  body: string;
+  posted_by: number;
   created_at: string;
 }
 

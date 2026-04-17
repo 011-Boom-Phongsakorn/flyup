@@ -127,7 +127,7 @@ interface AdminStore {
 
     // Project detail
     projectDetail: AdminProjectDetail | null
-    projectUpdates: { id: number; title: string; content: string; created_at: string }[]
+    projectUpdates: { id: number; title: string; body: string; posted_by: number; created_at: string }[]
     projectThreads: { id: number; title: string; body: string; user_name: string; created_at: string }[]
     isProjectDetailLoading: boolean
     fetchAdminProjectDetail: (id: string) => Promise<void>

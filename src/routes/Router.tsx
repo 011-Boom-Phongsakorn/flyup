@@ -31,6 +31,7 @@ import Step1Basics from '../components/steps/Step1Basics';
 import Step2Story from '../components/steps/Step2Story';
 import Step3Milestone from '../components/steps/Step3Milestone';
 import Step4Agreement from '../components/steps/Step4Agreement';
+import Step5Updates from '../components/steps/Step5Updates';
 import Preview from '../pages/pioneer/Preview'
 import MilestonePage from '../pages/pioneer/MilestonePage'
 import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
@@ -148,6 +149,7 @@ const Router = () => {
                                 <Route path='2' element={<Step2Story />} />
                                 <Route path='3' element={<Step3Milestone />} />
                                 <Route path='4' element={<Step4Agreement />} />
+                                <Route path='5' element={<Step5Updates />} />
                             </Route>
                         </Route>
                     </Route>

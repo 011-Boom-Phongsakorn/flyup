@@ -253,7 +253,7 @@ function ProjectDetail() {
                     <div className="space-y-6 px-0 sm:px-6">
                       {hasMilestones ? milestones.map((m, index) => {
                         const phaseNumber = m.phase_no || (index + 1);
-                        const criteria = ((m as any).acceptance_criteria ?? '').split('\n').filter((c: string) => c.trim());
+                        const criteria = (m.acceptance_criteria ?? '').split('\n').filter((c: string) => c.trim());
                         return (
                           <div key={m.id || index} className="flex gap-4 sm:gap-6 items-start relative z-10">
                             <div className="w-10 h-10 sm:w-[44px] sm:h-[44px] mt-1 sm:mt-3 flex items-center justify-center flex-shrink-0 z-10 bg-background">
@@ -271,9 +271,9 @@ function ProjectDetail() {
                                   <h4 className="font-bold text-base sm:text-lg text-foreground">{m.title}</h4>
                                   <p className="text-sm text-muted-foreground whitespace-pre-line">{m.description}</p>
                                   {/* Due dates */}
-                                  {(m as any).duration && (m as any).duration > 0 && (
+                                  {m.duration && m.duration > 0 && (
                                     <p className="inline-flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                      <Calendar size={12} /> กำหนดส่ง: {(m as any).duration} วัน
+                                      <Calendar size={12} /> กำหนดส่ง: {m.duration} วัน
                                     </p>
                                   )}
                                 </div>
@@ -338,7 +338,7 @@ function ProjectDetail() {
                           <span>{new Date(u.created_at).toLocaleDateString('th-TH')}</span>
                         </div>
                         <h4 className="font-semibold text-sm text-foreground leading-snug">{u.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{u.content}</p>
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{u.body}</p>
                       </div>
                     )) : (
                       <p className="text-center text-muted-foreground py-8">ยังไม่มีอัปเดต</p>
