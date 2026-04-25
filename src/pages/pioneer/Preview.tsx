@@ -56,7 +56,7 @@ const Preview = () => {
             {/* Header (Exit Preview Button) */}
             <div className="w-full flex justify-end p-[20px] max-w-7xl mx-auto">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/pioneer/dashboard/projects')}
                     className="border border-border bg-white text-foreground px-[20px] py-[8px] rounded-[6px] text-[14px] font-medium hover:bg-gray-50 transition-all duration-200 cursor-pointer"
                 >
                     ออกจากดูตัวอย่าง

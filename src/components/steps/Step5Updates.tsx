@@ -143,7 +143,7 @@ const Step5Updates = () => {
             ยังไม่มีอัปเดต — เพิ่มอัปเดตแรกได้เลย
           </div>
         ) : (
-          updates.map(u => (
+          updates.map((u, idx) => (
             <div key={u.id} className="bg-white-foreground border border-border rounded-[12px] p-[20px] flex flex-col gap-[10px]">
               {editingId === u.id ? (
                 <>
@@ -176,6 +176,9 @@ const Step5Updates = () => {
                 </>
               ) : (
                 <>
+                  <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wide">
+                    อัปเดต #{updates.length - idx}
+                  </span>
                   <div className="flex items-start justify-between gap-[8px]">
                     <h4 className="font-semibold text-foreground text-[15px]">{u.title}</h4>
                     <div className="flex gap-[8px] shrink-0">
