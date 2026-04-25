@@ -63,6 +63,12 @@ import BoosterProfile from '../pages/booster/Profile';
 import AdminProfile from '@/pages/admin/AdminProfile'
 import AdminMilestoneApproval from '@/pages/admin/AdminMilestoneApproval'
 import AdminMilestoneDetail from '@/pages/admin/AdminMilestoneDetail'
+import AdminProjectMilestonesOverview from '@/pages/admin/AdminProjectMilestonesOverview'
+import AdminDisbursements from '@/pages/admin/AdminDisbursements'
+import AdminProjectSuspension from '@/pages/admin/AdminProjectSuspension'
+import AdminUserManagement from '@/pages/admin/AdminUserManagement'
+import AdminComplaints from '@/pages/admin/AdminComplaints'
+import AdminAuditLogs from '@/pages/admin/AdminAuditLogs'
 import AdminRefunds from '@/pages/admin/AdminRefunds';
 import AdminUniversities from '@/pages/admin/AdminUniversities';
 import AdminUniversityDetail from '@/pages/admin/AdminUniversityDetail';
@@ -176,10 +182,16 @@ const Router = () => {
                             <Route path='/admin/dashboard' element={<AdminDashboard />} />
                             <Route path='/admin/projects-approval' element={<ProjectApproval />} />
                             <Route path='/admin/projects/:id' element={<AdminProjectDetail />} />
+                            <Route path='/admin/projects/:id/milestones-overview' element={<AdminProjectMilestonesOverview />} />
                             <Route path='/admin/verifications' element={<VerificationApproval />} />
                             <Route path='/admin/milestones' element={<AdminMilestoneApproval />} />
                             <Route path='/admin/milestones/:milestoneId' element={<AdminMilestoneDetail />} />
                             <Route path='/admin/refunds' element={<AdminRefunds />} />
+                            <Route path='/admin/disbursements' element={<AdminDisbursements />} />
+                            <Route path='/admin/projects-suspension' element={<AdminProjectSuspension />} />
+                            <Route path='/admin/users' element={<AdminUserManagement />} />
+                            <Route path='/admin/complaints' element={<AdminComplaints />} />
+                            <Route path='/admin/audit-logs' element={<AdminAuditLogs />} />
                             <Route path='/admin/universities' element={<AdminUniversities />} />
                             <Route path='/admin/universities/:id' element={<AdminUniversityDetail />} />
                             <Route path='/admin/profile' element={<AdminProfile />} />

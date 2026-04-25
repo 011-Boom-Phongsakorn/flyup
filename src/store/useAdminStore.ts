@@ -33,6 +33,7 @@ export interface AdminProjectDetail {
     description: string | null
     risk: string | null
     state: string
+    category?: { id: number; name: string } | null
     funding_goal: number
     softcap: number
     current_funding: number

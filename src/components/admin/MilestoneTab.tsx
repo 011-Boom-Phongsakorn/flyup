@@ -1,4 +1,5 @@
 import { Calendar } from 'lucide-react'
+import { Link } from 'react-router'
 
 export interface MilestoneItem {
     id: number
@@ -18,10 +19,12 @@ const MilestoneTab = ({
     milestones,
     fundingGoal,
     campaignDuration,
+    projectId,
 }: {
     milestones: MilestoneItem[]
     fundingGoal: number
     campaignDuration: number
+    projectId: number | string
 }) => {
     if (milestones.length === 0) {
         return (
@@ -104,9 +107,12 @@ const MilestoneTab = ({
                                 </div>
                             </div>
                             <div className="flex justify-end">
-                                <a href="#" className="text-[12px] text-primary hover:text-primary/70 transition-colors">
+                                <Link
+                                    to={`/admin/projects/${projectId}/milestones-overview`}
+                                    className="text-[12px] text-primary hover:text-primary/70 transition-colors"
+                                >
                                     ดูรายละเอียดเพิ่มเติม
-                                </a>
+                                </Link>
                             </div>
                         </div>
                     </div>
