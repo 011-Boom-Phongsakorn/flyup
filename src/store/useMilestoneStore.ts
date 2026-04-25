@@ -38,6 +38,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
       const proj = projRes.data?.data ?? {}
       const fundingGoal: number = proj.funding_goal ?? 0
       const baseDate: Date | null = proj.funded_at ? new Date(proj.funded_at) : null
+      const projectState: string = proj.state ?? ''
 
       const raw: {
         id?: number
@@ -83,6 +84,15 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
           admin_note: bm.admin_note,
         }
       })
+
+      if (projectState === 'executing') {
+        const nextIdx = milestones.findIndex(
+          m => m.status !== 'completed' && m.status !== 'approved'
+        )
+        if (nextIdx >= 0 && milestones[nextIdx].status === 'pending') {
+          milestones[nextIdx] = { ...milestones[nextIdx], status: 'in_progress' }
+        }
+      }
 
       set({ projectTitle: proj.title ?? '', milestones })
 

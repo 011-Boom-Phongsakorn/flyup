@@ -64,14 +64,14 @@ const StepNavigation = ({ onSubmit, disableSubmit, disableNext }: StepNavigation
           <ChevronRight size={16} />
         </Link>
         )
-      ) : (
+      ) : isFundingOrLater ? null : (
         // ถ้าเป็น Step สุดท้าย เปลี่ยนเป็นปุ่ม Button แทน Link เพื่อเอาไว้ Submit ฟอร์ม
-        <button 
+        <button
           onClick={onSubmit || (() => console.log("ส่งคำขอแล้ว!"))}
           disabled={disableSubmit}
           className={`px-[20px] h-[38px] flex items-center justify-center gap-[6px] rounded-[12px] transition-all duration-200 ${
-            disableSubmit 
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+            disableSubmit
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-primary hover:bg-primary-hover text-white'
           }`}
         >
