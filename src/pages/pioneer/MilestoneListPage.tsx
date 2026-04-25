@@ -5,6 +5,7 @@ import { useProjectStore, type ProjectSummary } from '../../store/useProjectStor
 
 const STATE_LABEL: Record<string, string> = {
   funding:        'กำลังระดมทุน',
+  executing:      'กำลังดำเนินการ',
   closed:         'เสร็จสิ้น',
   pending_review: 'รอตรวจสอบ',
   draft:          'แบบร่าง',
@@ -13,13 +14,14 @@ const STATE_LABEL: Record<string, string> = {
 
 const STATE_BADGE: Record<string, string> = {
   funding:        'bg-[#8B5CF6] text-white',
+  executing:      'bg-[#3B82F6] text-white',
   closed:         'bg-[#2BA88E] text-white',
   pending_review: 'bg-[#F5A623] text-white',
   draft:          'bg-[#F1F3F5] text-[#6C757D]',
   cancelled:      'bg-[#EF4444] text-white',
 }
 
-const MILESTONE_ELIGIBLE = ['funding', 'closed']
+const MILESTONE_ELIGIBLE = ['funding', 'executing', 'closed']
 
 const ProjectRow = ({ project }: { project: ProjectSummary }) => {
   const navigate = useNavigate()

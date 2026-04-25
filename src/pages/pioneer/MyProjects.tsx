@@ -237,10 +237,10 @@ const MyProjects = () => {
         <div className="flex flex-col gap-[16px]">
           {pagedProjects.map((project) => {
             const hasEdit = project.state === 'draft' || project.state === 'funding';
-            const hasMilestone = project.state === 'funding';
+            const hasMilestone = project.state === 'funding' || project.state === 'executing';
             const hasDelete = project.state === 'draft';
             const hasCancel = project.state === 'pending_review';
-            const hasCancelRequest = project.state === 'funding' || project.state === 'closed';
+            const hasCancelRequest = project.state === 'funding' || project.state === 'closed' || project.state === 'executing';
             const progress = project.funding_goal > 0
               ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
               : 0;
