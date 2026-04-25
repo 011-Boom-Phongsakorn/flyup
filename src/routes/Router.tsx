@@ -16,6 +16,7 @@ import ProjectDetail from '../pages/public/ProjectDetail';
 import Investment from '../pages/public/Investment';
 import ForgotPassword from '../pages/public/ForgotPassword';
 import ResetPassword from '../pages/public/ResetPassword';
+import MilestoneDetail from '../pages/public/MilestoneDetail';
 
 import { Loader2 } from 'lucide-react';
 
@@ -30,11 +31,13 @@ import Step1Basics from '../components/steps/Step1Basics';
 import Step2Story from '../components/steps/Step2Story';
 import Step3Milestone from '../components/steps/Step3Milestone';
 import Step4Agreement from '../components/steps/Step4Agreement';
+import Step5Updates from '../components/steps/Step5Updates';
 import Preview from '../pages/pioneer/Preview'
 import MilestonePage from '../pages/pioneer/MilestonePage'
 import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
 import PioneerMeetings from '../pages/pioneer/Meetings';
 import CancelProjectRequest from '../pages/pioneer/CancelProjectRequest';
+import PreviewMilestoneDetail from '../pages/pioneer/PreviewMilestoneDetail';
 
 // Admin
 import AdminLayout from '../layouts/AdminLayout';
@@ -60,6 +63,12 @@ import BoosterProfile from '../pages/booster/Profile';
 import AdminProfile from '@/pages/admin/AdminProfile'
 import AdminMilestoneApproval from '@/pages/admin/AdminMilestoneApproval'
 import AdminMilestoneDetail from '@/pages/admin/AdminMilestoneDetail'
+import AdminProjectMilestonesOverview from '@/pages/admin/AdminProjectMilestonesOverview'
+import AdminDisbursements from '@/pages/admin/AdminDisbursements'
+import AdminProjectSuspension from '@/pages/admin/AdminProjectSuspension'
+import AdminUserManagement from '@/pages/admin/AdminUserManagement'
+import AdminComplaints from '@/pages/admin/AdminComplaints'
+import AdminAuditLogs from '@/pages/admin/AdminAuditLogs'
 import AdminRefunds from '@/pages/admin/AdminRefunds';
 import AdminUniversities from '@/pages/admin/AdminUniversities';
 import AdminUniversityDetail from '@/pages/admin/AdminUniversityDetail';
@@ -123,6 +132,7 @@ const Router = () => {
                         <Route path='/verify' element={<VerifyEmail />} />
                         <Route path='/projects/:id' element={<ProjectDetail />} />
                         <Route path='/projects/:id/invest' element={<Investment />} />
+                        <Route path='/projects/:id/milestones' element={<MilestoneDetail />} />
                     </Route>
 
                     <Route element={<PioneerGuard />}>
@@ -137,6 +147,7 @@ const Router = () => {
                         </Route>
                         <Route element={<MainLayout />}>
                             <Route path='/preview/:projectId' element={<Preview />} />
+                            <Route path='/preview/:projectId/milestones' element={<PreviewMilestoneDetail />} />
                             <Route path='/project/overview/:projectId' element={<ProjectOverview />} />
                             <Route path='/project/overview/:projectId/step' element={<ProjectStageLayout />}>
                                 <Route index element={<Navigate to="1" replace />} />
@@ -144,6 +155,7 @@ const Router = () => {
                                 <Route path='2' element={<Step2Story />} />
                                 <Route path='3' element={<Step3Milestone />} />
                                 <Route path='4' element={<Step4Agreement />} />
+                                <Route path='5' element={<Step5Updates />} />
                             </Route>
                         </Route>
                     </Route>
@@ -170,10 +182,16 @@ const Router = () => {
                             <Route path='/admin/dashboard' element={<AdminDashboard />} />
                             <Route path='/admin/projects-approval' element={<ProjectApproval />} />
                             <Route path='/admin/projects/:id' element={<AdminProjectDetail />} />
+                            <Route path='/admin/projects/:id/milestones-overview' element={<AdminProjectMilestonesOverview />} />
                             <Route path='/admin/verifications' element={<VerificationApproval />} />
                             <Route path='/admin/milestones' element={<AdminMilestoneApproval />} />
                             <Route path='/admin/milestones/:milestoneId' element={<AdminMilestoneDetail />} />
                             <Route path='/admin/refunds' element={<AdminRefunds />} />
+                            <Route path='/admin/disbursements' element={<AdminDisbursements />} />
+                            <Route path='/admin/projects-suspension' element={<AdminProjectSuspension />} />
+                            <Route path='/admin/users' element={<AdminUserManagement />} />
+                            <Route path='/admin/complaints' element={<AdminComplaints />} />
+                            <Route path='/admin/audit-logs' element={<AdminAuditLogs />} />
                             <Route path='/admin/universities' element={<AdminUniversities />} />
                             <Route path='/admin/universities/:id' element={<AdminUniversityDetail />} />
                             <Route path='/admin/profile' element={<AdminProfile />} />

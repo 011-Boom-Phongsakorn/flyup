@@ -33,6 +33,7 @@ export interface AdminProjectDetail {
     description: string | null
     risk: string | null
     state: string
+    category?: { id: number; name: string } | null
     funding_goal: number
     softcap: number
     current_funding: number
@@ -127,7 +128,7 @@ interface AdminStore {
 
     // Project detail
     projectDetail: AdminProjectDetail | null
-    projectUpdates: { id: number; title: string; content: string; created_at: string }[]
+    projectUpdates: { id: number; title: string; body: string; posted_by: number; created_at: string }[]
     projectThreads: { id: number; title: string; body: string; user_name: string; created_at: string }[]
     isProjectDetailLoading: boolean
     fetchAdminProjectDetail: (id: string) => Promise<void>

@@ -1,4 +1,4 @@
-import { FileText, Sparkles, CheckCircle2, Target, Check, type LucideIcon } from 'lucide-react';
+import { FileText, Sparkles, CheckCircle2, Target, Megaphone, Check, type LucideIcon } from 'lucide-react';
 import { useProjectStore, type Project } from '../store/useProjectStore';
 import { useNavigate, useParams } from 'react-router';
 
@@ -13,7 +13,7 @@ interface StepItems {
   isComplete: (p: Project, projectId?: string) => boolean;
 }
 
-const steps: StepItems[] = [
+const baseSteps: StepItems[] = [
   {
     id: 1,
     title: 'ข้อมูลพื้นฐาน',
@@ -46,31 +46,48 @@ const steps: StepItems[] = [
   },
 ];
 
+const updateStep: StepItems = {
+  id: 5,
+  title: 'อัปเดต',
+  icon: Megaphone,
+  isComplete: () => false,
+};
+
 const Stepper = ({ currentStep }: StepperProps) => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const currentProject = useProjectStore(s => s.currentProject);
 
+  const isFundingOrLater = !!currentProject.state &&
+    currentProject.state !== 'draft' &&
+    currentProject.state !== 'pending_review';
+
+  const steps = isFundingOrLater ? [...baseSteps, updateStep] : baseSteps;
+  const n = steps.length;
+  const halfW = 100 / (2 * n);   // % offset to center of first/last step
+  const gapW = 100 / n;           // % width of each segment gap
+
   const completionList = steps.map(s => s.isComplete(currentProject, projectId));
 
   return (
     <div className="w-full max-w-[542px] mx-auto pb-8 pt-[120px] h-[219px] px-[10px]">
-
       <div className="relative flex justify-between items-start">
         {/* base gray line */}
-        <div className="absolute top-[22px] left-[12.5%] right-[12.5%] h-[2px] bg-muted" />
+        <div
+          className="absolute top-[22px] h-[2px] bg-muted"
+          style={{ left: `${halfW}%`, right: `${halfW}%` }}
+        />
 
-        {/* colored segments — one per gap between steps */}
+        {/* colored segments */}
         {steps.slice(0, -1).map((_, idx) => {
-          // segment is colored when the step on its left is the current active step or earlier
           const segmentActive = idx + 1 <= currentStep - 1;
           return (
             <div
               key={idx}
               className="absolute top-[22px] h-[2px] transition-all duration-500"
               style={{
-                left: `${12.5 + idx * 25}%`,
-                width: '25%',
+                left: `${halfW + idx * gapW}%`,
+                width: `${gapW}%`,
                 backgroundColor: segmentActive ? 'var(--color-primary)' : 'transparent',
               }}
             />
@@ -87,7 +104,8 @@ const Stepper = ({ currentStep }: StepperProps) => {
             <button
               key={step.id}
               onClick={() => navigate(`/project/overview/${projectId}/step/${step.id}`)}
-              className="relative flex flex-col items-center gap-3 w-1/4 z-10 cursor-pointer"
+              className="relative flex flex-col items-center gap-3 z-10 cursor-pointer"
+              style={{ width: `${100 / n}%` }}
             >
               <div
                 className={`w-[44px] h-[44px] rounded-full flex items-center justify-center transition-all duration-300 ${

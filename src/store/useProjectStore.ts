@@ -28,6 +28,7 @@ export interface Project {
     category: string;
     categoryId: number;
     storyId?: number;     // backend ID ของ story section
+    state?: string;       // e.g. 'draft' | 'pending_review' | 'funding' | 'executing' | 'closed'
     fundingGoal: number;
     projectDuration: number;
     softCap: number;
@@ -236,6 +237,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     description: d.description ?? '',
                     category: d.category ?? '',
                     categoryId,
+                    state: d.state ?? '',
                     fundingGoal: d.funding_goal ?? 0,
                     projectDuration: d.duration_months ?? 0,
                     softCap: d.softcap ?? 0,

@@ -56,7 +56,7 @@ const Preview = () => {
             {/* Header (Exit Preview Button) */}
             <div className="w-full flex justify-end p-[20px] max-w-7xl mx-auto">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/pioneer/dashboard/projects')}
                     className="border border-border bg-white text-foreground px-[20px] py-[8px] rounded-[6px] text-[14px] font-medium hover:bg-gray-50 transition-all duration-200 cursor-pointer"
                 >
                     ออกจากดูตัวอย่าง
@@ -158,7 +158,13 @@ const Preview = () => {
                         <div className="w-full mt-[10px]">
                             {activeTab === 'story' && <PreviewStory story={currentProject.story} risks={currentProject.risks} />}
                             {activeTab === 'milestone' && <PreviewMilestone milestones={currentProject.milestones ?? []} />}
-                            {activeTab === 'update' && <PreviewUpdate updates={updates} />}
+                            {activeTab === 'update' && (
+                                <PreviewUpdate
+                                    updates={updates}
+                                    creatorName={`${authUser?.first_name ?? ''} ${authUser?.last_name ?? ''}`.trim() || 'ผู้พัฒนาโปรเจกต์'}
+                                    creatorAvatar={(authUser?.picture as string) || undefined}
+                                />
+                            )}
                             {activeTab === 'comment' && <PreviewComment comments={threads} />}
                             {activeTab === 'question' && <PreviewQuestion questions={faqs} />}
                         </div>
