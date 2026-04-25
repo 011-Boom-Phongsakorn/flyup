@@ -44,6 +44,10 @@ const Step3Milestone = () => {
   const fundingGoal = currentProject.fundingGoal || 0
   const phasePercents = [0.15, 0.20, 0.30, 0.35]
 
+  const isDurationLocked = !!currentProject.state &&
+    currentProject.state !== 'draft' &&
+    currentProject.state !== 'pending_review'
+
   const currentData = currentProject.milestones[activePhase]
 
   // คำนวณวันเริ่ม/สิ้นสุดของแต่ละ phase (เหมือน PreviewMilestone)
@@ -353,6 +357,7 @@ const Step3Milestone = () => {
                 type="number"
                 min={1}
                 value={currentData.duration || ''}
+                disabled={isDurationLocked}
                 onChange={(e) => handleChange('duration', Number(e.target.value))}
                 onBlur={() => {
                   const maxDays = (currentProject.projectDuration || 0) * 30;
@@ -369,8 +374,12 @@ const Step3Milestone = () => {
                   }
                   savePhaseIfChanged(activePhase);
                 }}
-                className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px]"
+                className={isDurationLocked
+                  ? "w-full h-[40px] px-3 bg-[#F3F4F6] border border-[#E5E7EB] rounded-[8px] outline-none text-[14px] text-muted-foreground cursor-not-allowed opacity-70"
+                  : "w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px]"
+                }
               />
+              {isDurationLocked && <p className="text-[11px] text-amber-600">🔒 วันที่/ระยะเวลาแก้ไม่ได้หลังเข้าสู่การระดมทุน</p>}
               {showDates && activePhaseDates && (
                 <p className="text-[12px] text-muted-foreground">
                   เริ่ม {formatThDate(activePhaseDates.start)} — สิ้นสุด {formatThDate(activePhaseDates.end)}
