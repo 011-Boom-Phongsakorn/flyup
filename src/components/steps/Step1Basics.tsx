@@ -17,6 +17,11 @@ const Step1Basics = () => {
   const parseNum = (s: string) => Number(s.replace(/,/g, '')) || 0;
   const numVal = (field: string, n: number) => activeField === field ? (n > 0 ? String(n) : '') : formatNum(n);
 
+  const isLocked = !!currentProject.state &&
+    currentProject.state !== 'draft' &&
+    currentProject.state !== 'pending_review';
+  const lockedInputCls = 'border border-border bg-[#F3F4F6] h-[38px] px-[12px] rounded-[6px] text-muted-foreground cursor-not-allowed opacity-70';
+
   const [allCategories, setAllCategories] = useState<{ id: number; name: string }[]>([]);
 
   const [localData, setLocalData] = useState(() => ({
@@ -250,10 +255,12 @@ const Step1Basics = () => {
             <label className="text-foreground text-[14px]">ชื่อโปรเจกต์ <span className="text-error">*</span></label>
             <input
               value={localData.title}
-              onBlur={() => handleAutoSave('title', localData.title)}
-              onChange={(e) => setLocalData({ ...localData, title: e.target.value })}
+              onBlur={() => !isLocked && handleAutoSave('title', localData.title)}
+              onChange={(e) => !isLocked && setLocalData({ ...localData, title: e.target.value })}
               type="text"
-              className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
+              disabled={isLocked}
+              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
+            {isLocked && <p className="text-[11px] text-amber-600">🔒 ชื่อโปรเจกต์ไม่สามารถแก้ไขได้หลังเข้าสู่การระดมทุน</p>}
           </div>
           <p className="text-[12px] text-muted-foreground">*การตั้งชื่อโปรเจกต์ควรเน้นความสั้นและจดจำง่ายในทันที่ เพื่อให้ชื่อโปรเจกต์ของคุณดูโดดเด่นและค้นหาได้รวดเร็ว*</p>
           <div className="flex flex-col gap-[4px]">
@@ -312,7 +319,14 @@ const Step1Basics = () => {
       </div>
 
       <div className="flex flex-col bg-white-foreground rounded-[12px] p-[30px] gap-[13px]">
-        <h1 className="text-foreground text-[24px] font-semibold">การระดมทุน</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-foreground text-[24px] font-semibold">การระดมทุน</h1>
+          {isLocked && (
+            <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-[10px] py-[4px] rounded-full">
+              🔒 ล็อกแล้ว — แก้ไขไม่ได้หลังเข้าสู่การระดมทุน
+            </span>
+          )}
+        </div>
         <form className="flex flex-col gap-[20px]">
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">เป้าหมายเงินทุน (บาท) <span className="text-error">*</span></label>
@@ -338,7 +352,8 @@ const Step1Basics = () => {
                 }
                 triggerSaved();
               }}
-              className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
+              disabled={isLocked}
+              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
           </div>
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">ระยะเวลาโปรเจกต์ (เดือน) <span className="text-error">*</span></label>
@@ -358,7 +373,8 @@ const Step1Basics = () => {
                 }
                 handleAutoSave('projectDuration', val);
               }}
-              className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
+              disabled={isLocked}
+              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
           </div>
           <div className="grid grid-cols-1 gap-[20px] md:grid-cols-3 md:gap-[20px]">
             <div className="flex flex-col gap-[4px]">
@@ -386,7 +402,8 @@ const Step1Basics = () => {
                   }
                   handleAutoSave('softCap', localData.softCap);
                 }}
-                className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
+                disabled={isLocked}
+              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
             </div>
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">ระยะเวลาระดมทุน (1-60 วัน) <span className="text-error">*</span></label>
@@ -407,7 +424,8 @@ const Step1Basics = () => {
                   }
                   handleAutoSave('campaignDuration', val);
                 }}
-                className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
+                disabled={isLocked}
+              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
             </div>
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">ส่วนแบ่งกำไร (%) <span className="text-error">*</span></label>
@@ -433,7 +451,8 @@ const Step1Basics = () => {
                   }
                   handleAutoSave('revenueShare', val);
                 }}
-                className="border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50" />
+                disabled={isLocked}
+              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
             </div>
           </div>
           <div className="flex flex-col gap-[4px]">

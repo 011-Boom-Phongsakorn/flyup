@@ -168,9 +168,16 @@ const AdminProjectDetail = () => {
             <main className="max-w-7xl mx-auto px-[20px] pt-[32px]">
                 {/* Project Header */}
                 <div className="flex flex-col gap-[10px] mb-[30px]">
-                    <span className="inline-flex w-fit items-center px-[12px] py-[4px] rounded-full border border-border bg-white text-[12px] font-medium text-foreground">
-                        รอตรวจสอบ
-                    </span>
+                    <div className="flex items-center gap-[8px] flex-wrap">
+                        <span className="inline-flex w-fit items-center px-[12px] py-[4px] rounded-full border border-border bg-white text-[12px] font-medium text-foreground">
+                            รอตรวจสอบ
+                        </span>
+                        {project.category?.name && (
+                            <span className="inline-flex w-fit items-center px-[12px] py-[4px] rounded-full border border-border bg-white text-[12px] font-medium text-foreground">
+                                {project.category.name}
+                            </span>
+                        )}
+                    </div>
                     <h1 className="text-[36px] font-bold text-foreground leading-tight">
                         {project.title}
                     </h1>
@@ -263,6 +270,7 @@ const AdminProjectDetail = () => {
                                     milestones={project.milestones}
                                     fundingGoal={project.funding_goal}
                                     campaignDuration={project.duration_days || (project.duration_months * 30)}
+                                    projectId={project.id}
                                 />
                             )}
                             {activeTab === "update" && (
