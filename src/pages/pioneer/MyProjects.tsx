@@ -236,7 +236,7 @@ const MyProjects = () => {
       ) : (
         <div className="flex flex-col gap-[16px]">
           {pagedProjects.map((project) => {
-            const hasEdit = project.state === 'draft' || project.state === 'funding';
+            const hasEdit = project.state === 'draft' || project.state === 'funding' || project.state === 'executing';
             const hasMilestone = project.state === 'funding' || project.state === 'executing';
             const hasDelete = project.state === 'draft';
             const hasCancel = project.state === 'pending_review';
