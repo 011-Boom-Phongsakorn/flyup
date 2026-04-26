@@ -96,7 +96,7 @@ const AdminGuard = () => {
 }
 
 const Router = () => {
-    const { authUser, checkAuth, isCheckingAuth, loginWithGoogleToken } = useAuthStore()
+    const { authUser, checkAuth, isCheckingAuth, loginWithGoogleToken, selectRole } = useAuthStore()
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
@@ -111,8 +111,17 @@ const Router = () => {
         checkAuth()
     }, [checkAuth, loginWithGoogleToken])
 
+    const hasUniversityDomain = !!authUser?.student_profile?.university;
 
-    const showRoleModal = authUser?.role === 'pending'
+    useEffect(() => {
+        // If user is pending but their email domain isn't in our university DB,
+        // automatically default them to Booster.
+        if (authUser?.role === 'pending' && !hasUniversityDomain) {
+            selectRole('booster');
+        }
+    }, [authUser?.role, hasUniversityDomain, selectRole])
+
+    const showRoleModal = authUser?.role === 'pending' && hasUniversityDomain;
 
     if (isCheckingAuth && !authUser) {
         return (
