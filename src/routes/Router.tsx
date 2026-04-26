@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import GoogleRoleModal from '../components/GoogleRoleModal';
 
 // Layouts
@@ -111,15 +111,8 @@ const Router = () => {
         checkAuth()
     }, [checkAuth, loginWithGoogleToken])
 
-    const [showRoleModal, setShowRoleModal] = useState(false)
 
-    useEffect(() => {
-        if (authUser && authUser.role === 'pending') {
-            setShowRoleModal(true)
-        } else {
-            setShowRoleModal(false)
-        }
-    }, [authUser])
+    const showRoleModal = authUser?.role === 'pending'
 
     if (isCheckingAuth && !authUser) {
         return (
@@ -210,7 +203,7 @@ const Router = () => {
                     </Route>
 
                 </Routes>
-                <GoogleRoleModal open={showRoleModal} onClose={() => setShowRoleModal(false)} />
+                <GoogleRoleModal open={showRoleModal} onClose={() => {}} />
                 <Toaster
                     position='bottom-right'
                     containerStyle={{ bottom: 24, right: 24 }}
