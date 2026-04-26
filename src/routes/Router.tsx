@@ -114,12 +114,14 @@ const Router = () => {
     const hasUniversityDomain = !!authUser?.student_profile?.university;
 
     useEffect(() => {
-        // If user is pending but their email domain isn't in our university DB,
-        // automatically default them to Booster.
+        // Wait for /user/me to populate student_profile before deciding —
+        // JWT alone doesn't contain student_profile.university, so checking
+        // hasUniversityDomain too early would incorrectly default to booster.
+        if (isCheckingAuth) return;
         if (authUser?.role === 'pending' && !hasUniversityDomain) {
             selectRole('booster');
         }
-    }, [authUser?.role, hasUniversityDomain, selectRole])
+    }, [authUser?.role, hasUniversityDomain, selectRole, isCheckingAuth])
 
     const showRoleModal = authUser?.role === 'pending' && hasUniversityDomain;
 
