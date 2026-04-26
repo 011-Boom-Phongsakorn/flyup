@@ -1,4 +1,4 @@
-import { Users, X, Loader2 } from "lucide-react"
+import { Users, Loader2 } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import { useAuthStore } from "../store/useAuthStore"
 
