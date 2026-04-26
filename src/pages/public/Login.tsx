@@ -4,7 +4,6 @@ import { toast } from "react-hot-toast";
 import { Link } from "react-router";
 import { FcGoogle } from "react-icons/fc";
 import { Loader, Eye, EyeOff } from "lucide-react";
-import GoogleRoleModal from "../../components/GoogleRoleModal";
 
 
 interface LoginFromData {
@@ -16,7 +15,6 @@ const Login = () => {
     const { login, isLoggingIn } = useAuthStore()
     const [errors, setErrors] = useState<{ [key: string]: boolean }>({})
     const [showPassword, setShowPassword] = useState(false)
-    const [showRoleModal, setShowRoleModal] = useState(false)
     const [formData, setFormData] = useState<LoginFromData>({
         email: '',
         password: ''
@@ -83,7 +81,7 @@ const Login = () => {
                         <img src="./flyup-logo.png" alt="flyup-logo.png" />
                         <h1 className="text-foreground text-[24px] font-semibold">ยินดีต้อนรับกลับ</h1>
                         <p className="text-muted-foreground text-[14px] font-medium">เข้าสู่ระบบบัญชี FlyUp ของคุณ</p>
-                        <button type="button" onClick={() => setShowRoleModal(true)} className="flex items-center gap-[8px] mt-[24px] mb-[8px] h-[40px] bg-background border border-border rounded-[12px] justify-center w-full cursor-pointer hover:bg-muted transition-colors"><FcGoogle size={32} />เข้าสู่ระบบด้วย Google</button>
+                        <button type="button" onClick={() => window.location.href = `${import.meta.env.VITE_BASE_URL}/auth/google`} className="flex items-center gap-[8px] mt-[24px] mb-[8px] h-[40px] bg-background border border-border rounded-[12px] justify-center w-full cursor-pointer hover:bg-muted transition-colors"><FcGoogle size={32} />เข้าสู่ระบบด้วย Google</button>
                         <div className="flex items-center w-full gap-4 mb-[6px]">
                             <div className="flex-grow h-px bg-border"></div>
                             <span className="text-muted-foreground text-sm font-medium">หรือ</span>
@@ -122,7 +120,6 @@ const Login = () => {
                 </div>
             </div>
         </div>
-        <GoogleRoleModal open={showRoleModal} onClose={() => setShowRoleModal(false)} />
         </div>
     )
 }
