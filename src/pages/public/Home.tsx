@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router';
 import {
   ChevronRight,
@@ -83,8 +83,6 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 };
 
 // ─── Home Page ──────────────────────────────────────────────────────────────
-
-const NOW = Date.now();
 
 const Home = () => {
   const {
