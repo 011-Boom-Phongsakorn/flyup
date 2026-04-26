@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import GoogleRoleModal from '../components/GoogleRoleModal';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
@@ -110,6 +111,16 @@ const Router = () => {
         checkAuth()
     }, [checkAuth, loginWithGoogleToken])
 
+    const [showRoleModal, setShowRoleModal] = useState(false)
+
+    useEffect(() => {
+        if (authUser && authUser.role === 'pending') {
+            setShowRoleModal(true)
+        } else {
+            setShowRoleModal(false)
+        }
+    }, [authUser])
+
     if (isCheckingAuth && !authUser) {
         return (
             <div className="flex items-center justify-center h-screen">
@@ -199,6 +210,7 @@ const Router = () => {
                     </Route>
 
                 </Routes>
+                <GoogleRoleModal open={showRoleModal} onClose={() => setShowRoleModal(false)} />
                 <Toaster
                     position='bottom-right'
                     containerStyle={{ bottom: 24, right: 24 }}

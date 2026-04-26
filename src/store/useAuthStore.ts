@@ -75,10 +75,12 @@ interface AuthStore {
     isCheckingAuth: boolean;
     isRegistering: boolean;
     isLoggingIn: boolean;
+    isSelectingRole: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
     loginWithGoogleToken: (token: string) => void;
     logout: () => Promise<void>;
+    selectRole: (role: 'pioneer' | 'booster') => Promise<boolean>;
     isSendingReset: boolean;
     isResetting: boolean;
     forgotPassword: (email: string) => Promise<boolean>;
@@ -90,6 +92,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     isCheckingAuth: true,
     isRegistering: false,
     isLoggingIn: false,
+    isSelectingRole: false,
     isSendingReset: false,
     isResetting: false,
     checkAuth: async () => {
@@ -169,6 +172,30 @@ export const useAuthStore = create<AuthStore>((set) => ({
         } finally {
             localStorage.removeItem('auth_token')
             set({ authUser: null })
+        }
+    },
+    selectRole: async (role) => {
+        set({ isSelectingRole: true })
+        try {
+            const res = await api.patch('/user/role', { role })
+            const token: string = res.data?.token
+            if (token) {
+                localStorage.setItem('auth_token', token)
+            }
+            const meRes = await api.get('/user/me')
+            set({ authUser: meRes.data.data })
+            return true
+        } catch (error: unknown) {
+            const err = error instanceof AxiosError ? error : null;
+            const msg = err?.response?.data?.error || err?.response?.data?.message
+            if (msg?.includes('domain') || msg?.includes('university')) {
+                toast.error('อีเมลนี้ไม่ใช่อีเมลมหาวิทยาลัยที่รองรับ')
+            } else {
+                toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่')
+            }
+            return false
+        } finally {
+            set({ isSelectingRole: false })
         }
     },
     forgotPassword: async (email) => {
