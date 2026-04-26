@@ -506,13 +506,23 @@ const Step3Milestone = () => {
               <div className="flex flex-wrap gap-2">
                 {currentData.files?.map((f, i) => {
                   const uploading = f.url?.startsWith('blob:');
+                  const lowerName = (f.name || '').toLowerCase();
+                  const lowerUrl = (f.url || '').toLowerCase();
+                  const isImage = /\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i.test(lowerName) ||
+                    /\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i.test(lowerUrl) ||
+                    lowerUrl.includes('/image/upload/') ||
+                    lowerUrl.startsWith('blob:');
+                  const isExcel = /\.(xlsx?|csv)$/i.test(lowerName);
+                  const isPdf = /\.pdf$/i.test(lowerName);
+                  const isDoc = /\.(docx?)$/i.test(lowerName);
+                  const fileIcon = isExcel ? '📊' : isPdf ? '📄' : isDoc ? '📝' : '📎';
                   return (
                     <div key={i} className="flex items-center gap-[10px] px-3 py-1.5 rounded-full text-xs">
                       <div className="relative w-[50px] h-[50px]">
-                        {f.url ? (
+                        {isImage && f.url ? (
                           <img src={f.url} className="w-[50px] h-[50px] object-cover rounded" alt="preview" />
                         ) : (
-                          <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#F8F9FB] rounded text-[20px]">📊</div>
+                          <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#F8F9FB] rounded text-[20px]">{fileIcon}</div>
                         )}
                         {uploading && (
                           <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded">
