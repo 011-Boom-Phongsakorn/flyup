@@ -18,6 +18,7 @@ import { useNavigate, Link, useParams } from "react-router";
 import { usePublicProjectStore } from "../../store/usePublicProjectStore";
 import { useProjectDetailStore } from "../../store/useProjectDetailStore";
 import { useAuthStore } from "../../store/useAuthStore";
+import ComplaintModal from "../../components/ComplaintModal";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ function ProjectDetail() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>("story");
   const [selectedImage, setSelectedImage] = useState(0);
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
 
   const { currentPublicProject, isDetailLoading, fetchPublicProjectById } = usePublicProjectStore();
   const { updates, threads, faqs, investorCount: actualInvestorCount, fetchAll } = useProjectDetailStore();
@@ -480,7 +482,18 @@ function ProjectDetail() {
                     <TrendingUp size={16} />
                     ลงทุนโปรเจคต์นี้
                   </button>
-                  <button className="w-11 h-11 rounded-xl border border-border flex items-center justify-center text-placeholder hover:text-muted-foreground transition-colors flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        toast.error('กรุณาเข้าสู่ระบบก่อนร้องเรียน');
+                        navigate('/login');
+                        return;
+                      }
+                      setShowComplaintModal(true);
+                    }}
+                    title="ร้องเรียนโปรเจกต์นี้"
+                    className="w-11 h-11 rounded-xl border border-border flex items-center justify-center text-placeholder hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors flex-shrink-0"
+                  >
                     <Flag size={16} />
                   </button>
                 </div>
@@ -524,6 +537,14 @@ function ProjectDetail() {
           </div>
         </div>
       </div>
+
+      {showComplaintModal && project && (
+        <ComplaintModal
+          projectId={project.id}
+          projectTitle={project.title}
+          onClose={() => setShowComplaintModal(false)}
+        />
+      )}
     </div>
   );
 }
