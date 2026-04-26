@@ -80,12 +80,16 @@ export interface Category {
 
 interface PublicProjectState {
   publicProjects: PublicProject[];
+  recommendedProjects: PublicProject[];
+  newProjects: PublicProject[];
+  endingProjects: PublicProject[];
   currentPublicProject: PublicProject | null;
   categories: Category[];
   isLoading: boolean;
   isDetailLoading: boolean;
 
   fetchPublicProjects: () => Promise<void>;
+  fetchHomeProjects: () => Promise<void>;
   fetchPublicProjectById: (id: number) => Promise<void>;
   fetchProjectsByCategory: (categoryId: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
@@ -95,6 +99,9 @@ interface PublicProjectState {
 
 export const usePublicProjectStore = create<PublicProjectState>((set) => ({
   publicProjects: [],
+  recommendedProjects: [],
+  newProjects: [],
+  endingProjects: [],
   currentPublicProject: null,
   categories: [],
   isLoading: false,
@@ -122,6 +129,48 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
       set({ publicProjects: projects });
     } catch (error) {
       console.error('fetchPublicProjects:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchHomeProjects: async () => {
+    set({ isLoading: true });
+    try {
+      const [recRes, newRes, endRes] = await Promise.all([
+        api.get('/projects/recommend'),
+        api.get('/projects/new'),
+        api.get('/projects/ending')
+      ]);
+
+      const processProjects = async (projectsRaw: PublicProject[]) => {
+        return Promise.all(
+          projectsRaw.map(async (p) => {
+            try {
+              const detailRes = await api.get(`/projects/${p.id}`);
+              const media: { type: string | string[]; url: string; sort_order: number }[] = detailRes.data?.data?.media ?? [];
+              const firstImage = media
+                .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
+                .sort((a, b) => a.sort_order - b.sort_order)[0];
+              return { ...p, thumbnail_url: firstImage?.url };
+            } catch {
+              return p;
+            }
+          })
+        );
+      };
+
+      const recommended = await processProjects(recRes.data?.data ?? []);
+      const newP = await processProjects(newRes.data?.data ?? []);
+      const ending = await processProjects(endRes.data?.data ?? []);
+
+      set({
+        recommendedProjects: recommended,
+        newProjects: newP,
+        endingProjects: ending
+      });
+    } catch (error) {
+      console.error('fetchHomeProjects:', error);
     } finally {
       set({ isLoading: false });
     }
