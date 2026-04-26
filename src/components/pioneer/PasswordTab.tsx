@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lock, Eye, EyeOff, Check, Circle } from "lucide-react";
+import { Lock, Eye, EyeOff, CheckCircle, Circle } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 import { AxiosError } from "axios";
@@ -26,7 +26,7 @@ const PasswordTab = () => {
     { label: "ตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว", ok: /[A-Z]/.test(newPass) },
     { label: "พิมพ์เล็ก 1 ตัว", ok: /[a-z]/.test(newPass) },
     { label: "ตัวเลข 1 ตัว", ok: /[0-9]/.test(newPass) },
-    { label: "อักษรพิเศษ 1 ตัว", ok: /[^A-Za-z0-9]/.test(newPass) },
+    { label: "อักษรพิเศษ 1 ตัว", ok: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+/.test(newPass) },
     { label: "ไม่ต่ำกว่า 8 ตัว", ok: newPass.length >= 8 },
   ];
   const allChecksPass = checks.every((c) => c.ok);
@@ -113,17 +113,22 @@ const PasswordTab = () => {
               {show[key] ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-          {key === "newPass" && (
-            <div className="grid grid-cols-2 gap-x-[16px] gap-y-[6px] mt-[8px] p-[12px] border border-border rounded-[8px] bg-muted/30">
+          {key === "newPass" && newPass.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[10px] gap-y-[6px] mt-[4px] bg-muted/30 p-[12px] rounded-[8px] border border-border/50">
               {checks.map((c) => (
-                <div
-                  key={c.label}
-                  className={`flex items-center gap-[6px] text-[13px] ${
-                    c.ok ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  {c.ok ? <Check size={14} /> : <Circle size={14} />}
-                  <span>{c.label}</span>
+                <div key={c.label} className="flex items-center gap-[6px]">
+                  {c.ok ? (
+                    <CheckCircle size={14} className="text-green-500 shrink-0" />
+                  ) : (
+                    <Circle size={14} className="text-muted-foreground shrink-0" />
+                  )}
+                  <span
+                    className={`text-[12px] leading-tight ${
+                      c.ok ? "text-green-500" : "text-muted-foreground"
+                    }`}
+                  >
+                    {c.label}
+                  </span>
                 </div>
               ))}
             </div>
