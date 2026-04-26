@@ -87,44 +87,25 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 const NOW = Date.now();
 
 const Home = () => {
-  const { publicProjects, isLoading, fetchPublicProjects } = usePublicProjectStore();
+  const {
+    publicProjects, // Keep for stats
+    recommendedProjects,
+    newProjects,
+    endingProjects,
+    isLoading,
+    fetchHomeProjects,
+    fetchPublicProjects
+  } = usePublicProjectStore();
 
   useEffect(() => {
-    fetchPublicProjects();
-  }, [fetchPublicProjects]);
+    fetchHomeProjects();
+    fetchPublicProjects(); // To get total count and sum for stats
+  }, [fetchHomeProjects, fetchPublicProjects]);
 
-  const { recommendedMain, recommendedList, hotProjects, newProjects } = useMemo(() => {
-    const sorted = [...publicProjects].sort((a, b) => b.id - a.id);
-
-    // Hot = progress >= 60%
-    const hot = sorted
-      .filter(p => getProgress(p) >= 60)
-      .slice(0, 3)
-      .map(p => ({ ...p, isHot: true }));
-
-    // New = created within 14 days
-    const twoWeeks = 14 * 24 * 60 * 60 * 1000;
-    const recent = sorted
-      .filter(p => (NOW - new Date(p.created_at).getTime()) < twoWeeks)
-      .filter(p => !hot.find(h => h.id === p.id))
-      .slice(0, 3)
-      .map(p => ({ ...p, isNew: true }));
-
-    // Recommended = first available project for hero, next 3 for sidebar
-    const hotIds = new Set(hot.map(h => h.id));
-    const newIds = new Set(recent.map(n => n.id));
-    const remaining = sorted.filter(p => !hotIds.has(p.id) && !newIds.has(p.id));
-
-    const main = remaining[0] || sorted[0] || null;
-    const list = remaining.slice(1, 4).length > 0 ? remaining.slice(1, 4) : sorted.slice(1, 4);
-
-    return {
-      recommendedMain: main,
-      recommendedList: list,
-      hotProjects: hot.length > 0 ? hot : sorted.slice(0, 3).map(p => ({ ...p, isHot: true })),
-      newProjects: recent.length > 0 ? recent : sorted.slice(0, 3).map(p => ({ ...p, isNew: true })),
-    };
-  }, [publicProjects]);
+  const recommendedMain = recommendedProjects[0] || null;
+  const recommendedList = recommendedProjects.slice(1, 4);
+  const hotProjects = endingProjects.map(p => ({ ...p, isHot: true }));
+  const newProjectsList = newProjects.map(p => ({ ...p, isNew: true }));
 
   return (
     <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900 pb-20">
@@ -277,9 +258,9 @@ const Home = () => {
               ดูทั้งหมด <ChevronRight size={16} />
             </Link>
           </div>
-          {newProjects.length > 0 ? (
+          {newProjectsList.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {newProjects.map(project => <ProjectCard key={project.id} project={project} />)}
+              {newProjectsList.map(project => <ProjectCard key={project.id} project={project} />)}
             </div>
           ) : (
             <p className="text-center text-muted-foreground py-8">ยังไม่มีโปรเจกต์ใหม่</p>
