@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router'
 import { Megaphone, Plus, Trash2, Edit2, Check, X } from 'lucide-react'
 import api from '../../services/api'
@@ -22,11 +22,7 @@ const Step5Updates = () => {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState({ title: '', content: '' })
 
-  useEffect(() => {
-    fetchUpdates()
-  }, [projectId])
-
-  const fetchUpdates = async () => {
+  const fetchUpdates = useCallback(async () => {
     if (!projectId) return
     try {
       const res = await api.get(`/projects/${projectId}/updates`)
@@ -36,7 +32,11 @@ const Step5Updates = () => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [projectId])
+
+  useEffect(() => {
+    fetchUpdates()
+  }, [fetchUpdates])
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.content.trim()) {
