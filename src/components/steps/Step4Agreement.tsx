@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Eye, Send } from "lucide-react";
 import StepNavigation from "../StepNavigation";
 import { useProjectStore } from "../../store/useProjectStore";
@@ -19,21 +19,18 @@ const Step4Agreement = () => {
     currentProject.state !== 'pending_review';
 
   // State สำหรับเก็บค่าการยอมรับข้อตกลงและเงื่อนไข — sync กับ localStorage
-  const [isAgreed, setIsAgreed] = useState(() => {
-    if (alreadySubmitted) return true;
-    return projectId ? localStorage.getItem(`agreed_${projectId}`) === 'true' : false;
-  });
+  const [localAgreed, setLocalAgreed] = useState(() =>
+    projectId ? localStorage.getItem(`agreed_${projectId}`) === 'true' : false
+  );
+
+  // ถ้าโปรเจกต์ผ่าน draft/pending_review ไปแล้ว = ยอมรับไปก่อนหน้านี้แล้วเสมอ
+  const isAgreed = alreadySubmitted || localAgreed;
 
   const handleAgreedChange = (checked: boolean) => {
     if (alreadySubmitted) return;
-    setIsAgreed(checked);
+    setLocalAgreed(checked);
     if (projectId) localStorage.setItem(`agreed_${projectId}`, String(checked));
   };
-
-  // Sync เมื่อ state โหลดมาทีหลัง (currentProject เริ่มเป็นค่าว่างก่อน fetch)
-  useEffect(() => {
-    if (alreadySubmitted) setIsAgreed(true);
-  }, [alreadySubmitted]);
 
   // State สำหรับเปิด/ปิด Modal ยืนยันการส่งโปรเจกต์
   const [showModal, setShowModal] = useState(false);
