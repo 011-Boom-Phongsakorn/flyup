@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, Check, Circle } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 import { AxiosError } from "axios";
@@ -7,7 +7,9 @@ import { useAuthStore } from "../../store/useAuthStore";
 
 const PasswordTab = () => {
   const { authUser, checkAuth } = useAuthStore();
-  const hasPassword = authUser?.has_password ?? true;
+  // Fallback when backend doesn't send has_password: assume Google-only users
+  // (google_sub set, no has_password field) still need to set a password.
+  const hasPassword = authUser?.has_password ?? !authUser?.google_sub;
   const hasGoogleSub = !!authUser?.google_sub;
   const isSettingPassword = !hasPassword && hasGoogleSub;
 
@@ -19,13 +21,23 @@ const PasswordTab = () => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const newPass = form.newPass;
+  const checks = [
+    { label: "ตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว", ok: /[A-Z]/.test(newPass) },
+    { label: "พิมพ์เล็ก 1 ตัว", ok: /[a-z]/.test(newPass) },
+    { label: "ตัวเลข 1 ตัว", ok: /[0-9]/.test(newPass) },
+    { label: "อักษรพิเศษ 1 ตัว", ok: /[^A-Za-z0-9]/.test(newPass) },
+    { label: "ไม่ต่ำกว่า 8 ตัว", ok: newPass.length >= 8 },
+  ];
+  const allChecksPass = checks.every((c) => c.ok);
+
   const handleSubmit = async () => {
-    if (form.newPass !== form.confirm) {
-      toast.error("รหัสผ่านใหม่ไม่ตรงกัน");
+    if (!allChecksPass) {
+      toast.error("รหัสผ่านใหม่ยังไม่ผ่านเงื่อนไขที่กำหนด");
       return;
     }
-    if (form.newPass.length < 8) {
-      toast.error("รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร");
+    if (form.newPass !== form.confirm) {
+      toast.error("รหัสผ่านใหม่ไม่ตรงกัน");
       return;
     }
     setIsSaving(true);
@@ -101,6 +113,21 @@ const PasswordTab = () => {
               {show[key] ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+          {key === "newPass" && (
+            <div className="grid grid-cols-2 gap-x-[16px] gap-y-[6px] mt-[8px] p-[12px] border border-border rounded-[8px] bg-muted/30">
+              {checks.map((c) => (
+                <div
+                  key={c.label}
+                  className={`flex items-center gap-[6px] text-[13px] ${
+                    c.ok ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  {c.ok ? <Check size={14} /> : <Circle size={14} />}
+                  <span>{c.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ))}
 
