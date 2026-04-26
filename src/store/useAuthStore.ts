@@ -177,7 +177,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     selectRole: async (role) => {
         set({ isSelectingRole: true })
         try {
-            const res = await api.put('/user/select-role', { role })
+            const res = await api.patch('/user/role', { role })
             const token: string = res.data?.token
             if (token) {
                 localStorage.setItem('auth_token', token)
