@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, Send } from "lucide-react";
 import StepNavigation from "../StepNavigation";
 import { useProjectStore } from "../../store/useProjectStore";
@@ -13,15 +13,27 @@ const Step4Agreement = () => {
   const allMilestonesComplete = currentProject.milestones?.length === 4 &&
     currentProject.milestones.every(m => !!m.title && !!m.description && m.duration > 0);
 
+  // ถ้าโปรเจกต์ผ่านสถานะ draft/pending_review ไปแล้ว แสดงว่ายอมรับข้อตกลงไปก่อนหน้านี้แล้ว
+  const alreadySubmitted = !!currentProject.state &&
+    currentProject.state !== 'draft' &&
+    currentProject.state !== 'pending_review';
+
   // State สำหรับเก็บค่าการยอมรับข้อตกลงและเงื่อนไข — sync กับ localStorage
-  const [isAgreed, setIsAgreed] = useState(() =>
-    projectId ? localStorage.getItem(`agreed_${projectId}`) === 'true' : false
-  );
+  const [isAgreed, setIsAgreed] = useState(() => {
+    if (alreadySubmitted) return true;
+    return projectId ? localStorage.getItem(`agreed_${projectId}`) === 'true' : false;
+  });
 
   const handleAgreedChange = (checked: boolean) => {
+    if (alreadySubmitted) return;
     setIsAgreed(checked);
     if (projectId) localStorage.setItem(`agreed_${projectId}`, String(checked));
   };
+
+  // Sync เมื่อ state โหลดมาทีหลัง (currentProject เริ่มเป็นค่าว่างก่อน fetch)
+  useEffect(() => {
+    if (alreadySubmitted) setIsAgreed(true);
+  }, [alreadySubmitted]);
 
   // State สำหรับเปิด/ปิด Modal ยืนยันการส่งโปรเจกต์
   const [showModal, setShowModal] = useState(false);
@@ -110,16 +122,20 @@ const Step4Agreement = () => {
 
             {/* ปุ่ม Checkbox สำหรับกดยอมรับข้อตกลง */}
             <div className="mt-[20px]">
-              <label className="flex items-center gap-[12px] cursor-pointer border border-border rounded-[8px] p-[16px] hover:border-primary transition-colors">
+              <label className={`flex items-center gap-[12px] border border-border rounded-[8px] p-[16px] transition-colors ${alreadySubmitted ? 'bg-[#F3F4F6] cursor-not-allowed' : 'cursor-pointer hover:border-primary'}`}>
                 <input
                   type="checkbox"
                   checked={isAgreed}
+                  disabled={alreadySubmitted}
                   onChange={(e) => handleAgreedChange(e.target.checked)}
-                  className="w-5 h-5 accent-primary rounded cursor-pointer"
+                  className="w-5 h-5 accent-primary rounded cursor-pointer disabled:cursor-not-allowed"
                 />
                 <span className="text-[14px] text-foreground font-medium">
                   ข้าพเจ้าได้อ่านและยอมรับข้อตกลงและเงื่อนไขการสร้างโปรเจกต์บนแพลตฟอร์ม FlyUp แล้ว
                 </span>
+                {alreadySubmitted && (
+                  <span className="ml-auto text-[11px] text-emerald-600 font-medium">✓ ยอมรับแล้ว</span>
+                )}
               </label>
             </div>
           </div>
