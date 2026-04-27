@@ -125,9 +125,14 @@ const Investment = () => {
   const revenueShare = project?.profit_share_pct || 0;
   const minAmount = project?.min_invest_amount || 1000;
   const remaining = Math.max(0, (project?.funding_goal || 0) - (project?.current_funding || 0));
-  const maxAmount = project?.max_invest_amount && project.max_invest_amount > 0
-    ? Math.min(project.max_invest_amount, remaining > 0 ? remaining : project.max_invest_amount)
-    : remaining > 0 ? remaining : 14000;
+  // เพดานต่อรายการของ payment gateway (Stripe จำกัดที่ ~999,999.99 — ตั้ง 500,000 ตามมาตรฐาน fintech ไทย)
+  const MAX_PER_TRANSACTION = 500_000;
+  const maxAmount = Math.min(
+    MAX_PER_TRANSACTION,
+    project?.max_invest_amount && project.max_invest_amount > 0
+      ? Math.min(project.max_invest_amount, remaining > 0 ? remaining : project.max_invest_amount)
+      : remaining > 0 ? remaining : 14000
+  );
   const platformFeeRate = (project?.platform_fee || 5) / 100;
   const vatRate = 0.07;
 

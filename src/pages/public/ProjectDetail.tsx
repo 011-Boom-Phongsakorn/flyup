@@ -470,9 +470,12 @@ function ProjectDetail() {
                     <span className="text-muted-foreground font-bold">ลงทุนได้สูงสุด</span>
                     <span className="text-foreground font-medium">{(() => {
                       const remaining = Math.max(0, targetAmount - fundedAmount);
-                      const effectiveMax = project?.max_invest_amount && project.max_invest_amount > 0
+                      // เพดานต่อรายการของ payment gateway
+                      const MAX_PER_TRANSACTION = 500_000;
+                      const projectMax = project?.max_invest_amount && project.max_invest_amount > 0
                         ? Math.min(project.max_invest_amount, remaining)
                         : remaining;
+                      const effectiveMax = Math.min(projectMax, MAX_PER_TRANSACTION);
                       return effectiveMax > 0 ? `${effectiveMax.toLocaleString()}฿` : '—';
                     })()}</span>
                   </div>
