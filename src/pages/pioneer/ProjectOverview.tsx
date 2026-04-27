@@ -90,15 +90,17 @@ const ProjectOverview = () => {
             )
           })}
         </div>
-        <div className='flex justify-end p-[10px] mt-[10px]'>
-          <button
-            disabled={!canSubmit}
-            onClick={() => setShowModal(true)}
-            className='flex h-[38px] bg-primary text-white-foreground rounded-[12px] w-[190px] justify-center items-center gap-[10px] hover:bg-primary-hover transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary'>
-            <Send size={16} strokeWidth={1} />
-            <span className='text-[14px]'>ส่งคำขอสร้างโปรเจกต์</span>
-          </button>
-        </div>
+        {currentProject.state === 'draft' && (
+          <div className='flex justify-end p-[10px] mt-[10px]'>
+            <button
+              disabled={!canSubmit}
+              onClick={() => setShowModal(true)}
+              className='flex h-[38px] bg-primary text-white-foreground rounded-[12px] w-[190px] justify-center items-center gap-[10px] hover:bg-primary-hover transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary'>
+              <Send size={16} strokeWidth={1} />
+              <span className='text-[14px]'>ส่งคำขอสร้างโปรเจกต์</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {showModal && (
