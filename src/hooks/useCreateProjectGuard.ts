@@ -1,0 +1,45 @@
+import { useNavigate } from 'react-router'
+import Swal from 'sweetalert2'
+import { useAuthStore } from '../store/useAuthStore'
+import { useProjectStore } from '../store/useProjectStore'
+
+const useCreateProjectGuard = () => {
+    const navigate = useNavigate()
+    const { authUser } = useAuthStore()
+    const { createProject, isCreating } = useProjectStore()
+
+    const createWithGuard = async () => {
+        const studentApproved =
+            authUser?.student_card_verification?.status === 'approved' &&
+            authUser?.id_card_verification?.status === 'approved'
+        const hasBank = !!authUser?.bank_account?.id
+
+        if (!studentApproved || !hasBank) {
+            const missing: string[] = []
+            if (!studentApproved) missing.push('ยืนยันตัวตนนักศึกษา')
+            if (!hasBank) missing.push('ยืนยันบัญชีธนาคาร')
+
+            const result = await Swal.fire({
+                icon: 'warning',
+                title: 'ยังไม่พร้อมสร้างโปรเจกต์',
+                html: `กรุณาดำเนินการให้ครบก่อน:<br/><b>${missing.join(', ')}</b><br/><span style="font-size:13px;color:#6b7280">ไปที่ตั้งค่าโปรไฟล์ → แท็บยืนยันตัวตน</span>`,
+                confirmButtonText: 'ไปยืนยันตัวตน',
+                confirmButtonColor: '#8B5CF6',
+                showCancelButton: true,
+                cancelButtonText: 'ตกลง',
+                cancelButtonColor: '#6B7280',
+                reverseButtons: true,
+            })
+            if (result.isConfirmed) navigate('/pioneer/profile?tab=verify')
+            return null
+        }
+
+        const id = await createProject()
+        if (id) navigate(`/project/overview/${id}`)
+        return id
+    }
+
+    return { createWithGuard, isCreating }
+}
+
+export default useCreateProjectGuard

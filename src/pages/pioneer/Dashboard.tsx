@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react"
-import { useNavigate } from "react-router"
 import { Plus, Loader2, TrendingUp, TrendingDown, FolderOpen, Rocket, BadgeDollarSign, Target } from 'lucide-react'
 import { useProjectStore } from "../../store/useProjectStore"
+import useCreateProjectGuard from "../../hooks/useCreateProjectGuard"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -78,15 +78,12 @@ const StatCard = ({ icon, label, value, sub, trend }: StatCardProps) => (
 
 // ---- main ----
 const Dashboard = () => {
-  const navigate = useNavigate()
-  const { createProject, isCreating, projects, isLoading, fetchMyProjects } = useProjectStore()
+  const { projects, isLoading, fetchMyProjects } = useProjectStore()
+  const { createWithGuard, isCreating } = useCreateProjectGuard()
 
   useEffect(() => { fetchMyProjects() }, [fetchMyProjects])
 
-  const handleCreateProject = async () => {
-    const newProjectId = await createProject()
-    if (newProjectId) navigate(`/project/overview/${newProjectId}`)
-  }
+  const handleCreateProject = () => createWithGuard()
 
   // ---- derived stats ----
   const totalProjects   = projects.length

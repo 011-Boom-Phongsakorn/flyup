@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Search, Plus, SlidersHorizontal, ChevronDown, Eye, Edit3, Trash2, Loader2, ChevronLeft, ChevronRight, XCircle, Ban } from "lucide-react";
 import { useProjectStore } from "../../store/useProjectStore";
-import { useAuthStore } from "../../store/useAuthStore";
+import useCreateProjectGuard from "../../hooks/useCreateProjectGuard";
 import Swal from "sweetalert2";
 
 type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled" | "executing";
@@ -35,8 +35,8 @@ const stateBadgeClass: Record<StateType, string> = {
 
 const MyProjects = () => {
   const navigate = useNavigate();
-  const { projects, isLoading, fetchMyProjects, createProject, isCreating, deleteProject, updateProjectStatus } = useProjectStore();
-  const { authUser } = useAuthStore();
+  const { projects, isLoading, fetchMyProjects, deleteProject, updateProjectStatus } = useProjectStore();
+  const { createWithGuard, isCreating } = useCreateProjectGuard();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<StateType | "all">("all");
@@ -77,33 +77,7 @@ const MyProjects = () => {
     navigate(useDetail ? `/projects/${id}` : `/preview/${id}`);
   };
   const handleEdit = (id: number) => navigate(`/project/overview/${id}`);
-  const handleCreate = async () => {
-    const studentApproved = authUser?.student_card_verification?.status === 'approved'
-      && authUser?.id_card_verification?.status === 'approved';
-    const hasBank = !!authUser?.bank_account?.id;
-
-    if (!studentApproved || !hasBank) {
-      const missing = [];
-      if (!studentApproved) missing.push('ยืนยันตัวตนนักศึกษา');
-      if (!hasBank) missing.push('ยืนยันบัญชีธนาคาร');
-      const result = await Swal.fire({
-        icon: 'warning',
-        title: 'ยังไม่พร้อมสร้างโปรเจกต์',
-        html: `กรุณาดำเนินการให้ครบก่อน:<br/><b>${missing.join(', ')}</b><br/><span style="font-size:13px;color:#6b7280">ไปที่ตั้งค่าโปรไฟล์ → แท็บยืนยันตัวตน</span>`,
-        confirmButtonText: 'ไปยืนยันตัวตน',
-        confirmButtonColor: '#8B5CF6',
-        showCancelButton: true,
-        cancelButtonText: 'ตกลง',
-        cancelButtonColor: '#6B7280',
-        reverseButtons: true,
-      });
-      if (result.isConfirmed) navigate('/pioneer/profile?tab=verify');
-      return;
-    }
-
-    const id = await createProject();
-    if (id) navigate(`/project/overview/${id}`);
-  };
+  const handleCreate = () => createWithGuard();
   const handleCancel = async (id: number, title: string) => {
     const result = await Swal.fire({
       title: 'ยกเลิกคำขอ?',
