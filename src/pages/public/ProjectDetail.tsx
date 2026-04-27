@@ -84,6 +84,14 @@ function ProjectDetail() {
   })();
 
   const hasInvested = false; // TODO: check from investments API
+  const isOwner = !!authUser?.id && !!project?.owner_user_id && authUser.id === project.owner_user_id;
+  const isAdmin = authUser?.role === 'admin';
+  const cannotInvest = isOwner || isAdmin;
+  const cannotInvestReason = isAdmin
+    ? 'ผู้ดูแลระบบไม่สามารถลงทุนได้'
+    : isOwner
+    ? 'เจ้าของโปรเจกต์ไม่สามารถลงทุนในโปรเจกต์ของตัวเองได้'
+    : '';
 
   const handleInvest = () => {
     if (!isLoggedIn) {
@@ -100,6 +108,10 @@ function ProjectDetail() {
         },
         iconTheme: { primary: "var(--color-error)", secondary: "var(--color-white-foreground)" },
       });
+      return;
+    }
+    if (cannotInvest) {
+      toast.error(cannotInvestReason, { id: "cannot-invest", position: "top-right", duration: 3000 });
       return;
     }
     navigate(`/projects/${id}/invest`);
@@ -477,10 +489,12 @@ function ProjectDetail() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleInvest}
-                    className="flex-1 py-3 rounded-xl text-white-foreground bg-primary font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity uppercase tracking-wider"
+                    disabled={cannotInvest}
+                    title={cannotInvestReason || undefined}
+                    className="flex-1 py-3 rounded-xl text-white-foreground bg-primary font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:opacity-50"
                   >
                     <TrendingUp size={16} />
-                    ลงทุนโปรเจคต์นี้
+                    {isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้' : isOwner ? 'โปรเจกต์ของคุณ' : 'ลงทุนโปรเจคต์นี้'}
                   </button>
                   <button
                     onClick={() => {

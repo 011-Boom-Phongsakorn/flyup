@@ -73,6 +73,20 @@ const Investment = () => {
     }
   }, [id, fetchPublicProjectById]);
 
+  // Guard: เจ้าของโปรเจกต์ และ admin ลงทุนไม่ได้
+  useEffect(() => {
+    if (!project || !authUser) return;
+    const isOwner = !!project.owner_user_id && authUser.id === project.owner_user_id;
+    const isAdmin = authUser.role === 'admin';
+    if (isAdmin) {
+      toast.error('ผู้ดูแลระบบไม่สามารถลงทุนได้');
+      navigate(`/projects/${id}`, { replace: true });
+    } else if (isOwner) {
+      toast.error('เจ้าของโปรเจกต์ไม่สามารถลงทุนในโปรเจกต์ของตัวเองได้');
+      navigate(`/projects/${id}`, { replace: true });
+    }
+  }, [project, authUser, id, navigate]);
+
   // Timer countdown
   useEffect(() => {
     if (step === 3 && timeLeft > 0) {
