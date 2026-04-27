@@ -6,6 +6,22 @@ import type { MilestoneData, MilestoneStatus, EvidenceLink } from '../components
 
 const PHASE_PERCENTS = [0.15, 0.20, 0.30, 0.35]
 
+// แปลง status จาก backend (draft/waiting/active/submitted/approved/paid/rejected/failed)
+// เป็น status ที่ frontend ใช้ใน STATUS_CONFIG
+const mapBackendStatus = (s: string | undefined): MilestoneStatus => {
+  switch (s) {
+    case 'active':            return 'in_progress'
+    case 'submitted':         return 'submitted'
+    case 'approved':          return 'approved'
+    case 'paid':              return 'completed'
+    case 'rejected':
+    case 'failed':            return 'rejected'
+    case 'draft':
+    case 'waiting':
+    default:                  return 'pending'
+  }
+}
+
 interface MilestoneStore {
   milestones: MilestoneData[]
   projectTitle: string
@@ -38,7 +54,6 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
       const proj = projRes.data?.data ?? {}
       const fundingGoal: number = proj.funding_goal ?? 0
       const baseDate: Date | null = proj.funded_at ? new Date(proj.funded_at) : null
-      const projectState: string = proj.state ?? ''
 
       const raw: {
         id?: number
@@ -79,20 +94,11 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
           criteria: bm.acceptance_criteria
             ? bm.acceptance_criteria.split('\n').filter(Boolean)
             : [],
-          status: bm.status ?? 'pending',
+          status: mapBackendStatus(bm.status),
           progress_pct: bm.progress_pct ?? 0,
           admin_note: bm.admin_note,
         }
       })
-
-      if (projectState === 'executing') {
-        const nextIdx = milestones.findIndex(
-          m => m.status !== 'completed' && m.status !== 'approved'
-        )
-        if (nextIdx >= 0 && milestones[nextIdx].status === 'pending') {
-          milestones[nextIdx] = { ...milestones[nextIdx], status: 'in_progress' }
-        }
-      }
 
       set({ projectTitle: proj.title ?? '', milestones })
 
