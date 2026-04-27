@@ -495,26 +495,29 @@ const Step3Milestone = () => {
             {/* 5.1 ไฟล์ประกอบ — เพิ่มไฟล์จะล้าง video อัตโนมัติ (backend รองรับ type เดียวต่อ milestone) */}
             <div className="flex flex-col gap-[8px]">
               <label className="text-[14px] font-semibold text-foreground">ไฟล์ประกอบ (ไม่บังคับ)</label>
-              <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,.xlsx,.xls,.pdf,.doc,.docx" />
+              <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf,.xls,.xlsx" />
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
               >
                 <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
-                <span className="text-[13px] text-muted-foreground">รูปภาพ, Excel, เอกสาร (สูงสุด 5MB ต่อไฟล์)</span>
+                <span className="text-[13px] text-muted-foreground">.jpg, .png, .gif, .webp, .pdf, .xls, .xlsx (สูงสุด 5MB ต่อไฟล์)</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {currentData.files?.map((f, i) => {
                   const uploading = f.url?.startsWith('blob:');
                   const lowerName = (f.name || '').toLowerCase();
                   const lowerUrl = (f.url || '').toLowerCase();
-                  const isImage = /\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i.test(lowerName) ||
-                    /\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i.test(lowerUrl) ||
-                    lowerUrl.includes('/image/upload/') ||
-                    lowerUrl.startsWith('blob:');
                   const isExcel = /\.(xlsx?|csv)$/i.test(lowerName);
                   const isPdf = /\.pdf$/i.test(lowerName);
                   const isDoc = /\.(docx?)$/i.test(lowerName);
+                  // นามสกุลเอกสารชนะ Cloudinary path (PDF/Excel/Doc อาจถูก upload ผ่าน /image/upload/)
+                  const isImage = !isExcel && !isPdf && !isDoc && (
+                    /\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i.test(lowerName) ||
+                    /\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i.test(lowerUrl) ||
+                    lowerUrl.includes('/image/upload/') ||
+                    lowerUrl.startsWith('blob:')
+                  );
                   const fileIcon = isExcel ? '📊' : isPdf ? '📄' : isDoc ? '📝' : '📎';
                   return (
                     <div key={i} className="flex items-center gap-[10px] px-3 py-1.5 rounded-full text-xs">
@@ -553,7 +556,7 @@ const Step3Milestone = () => {
                 className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
               >
                 <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
-                <span className="text-[13px] text-muted-foreground">อัปโหลดวิดีโอ (สูงสุด 50MB)</span>
+                <span className="text-[13px] text-muted-foreground">.mp4, .webm, .mov, .avi, .mkv (สูงสุด 50MB)</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {(currentData.videos || []).map((vid, i) => {

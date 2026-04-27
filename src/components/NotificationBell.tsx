@@ -79,10 +79,21 @@ function NotificationItem({ notif, onRead }: { notif: Notification; onRead: (id:
 
 // -------------------- main --------------------
 
-const NotificationBell = () => {
+interface NotificationBellProps {
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+}
+
+const NotificationBell = ({ open: openProp, onOpenChange }: NotificationBellProps = {}) => {
     const { notifications, unread, isLoading, fetchNotifications, markAsRead, markAllAsRead } =
         useNotificationStore()
-    const [open, setOpen] = useState(false)
+    const [internalOpen, setInternalOpen] = useState(false)
+    const isControlled = openProp !== undefined
+    const open = isControlled ? openProp : internalOpen
+    const setOpen = (next: boolean) => {
+        if (isControlled) onOpenChange?.(next)
+        else setInternalOpen(next)
+    }
     const panelRef = useRef<HTMLDivElement>(null)
 
     // activate SSE connection
@@ -102,10 +113,11 @@ const NotificationBell = () => {
         }
         document.addEventListener('mousedown', handler)
         return () => document.removeEventListener('mousedown', handler)
-    }, [])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isControlled, onOpenChange])
 
     const handleBellClick = () => {
-        setOpen((prev) => !prev)
+        setOpen(!open)
     }
 
     return (

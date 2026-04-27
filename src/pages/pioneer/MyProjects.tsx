@@ -74,7 +74,8 @@ const MyProjects = () => {
 
   const handleView = (id: number, state: StateType) => {
     const useDetail = state === 'funding' || state === 'executing' || state === 'closed';
-    navigate(useDetail ? `/projects/${id}` : `/preview/${id}`);
+    if (useDetail) navigate(`/projects/${id}`);
+    else navigate(`/preview/${id}`, { state: { from: '/pioneer/dashboard/projects' } });
   };
   const handleEdit = (id: number) => navigate(`/project/overview/${id}`);
   const handleCreate = () => createWithGuard();

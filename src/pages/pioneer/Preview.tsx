@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useLocation } from "react-router";
 import { useProjectStore } from "../../store/useProjectStore";
 import { useProjectDetailStore } from "../../store/useProjectDetailStore";
 import { useAuthStore } from "../../store/useAuthStore";
@@ -10,7 +10,9 @@ import { PreviewUpdate, PreviewQuestion, PreviewComment } from "../../components
 
 const Preview = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { projectId } = useParams();
+    const fromPath = (location.state as { from?: string } | null)?.from ?? '/pioneer/dashboard/projects';
     const { currentProject, loadCurrentProject, projects, fetchMyProjects } = useProjectStore();
     const { updates, faqs, threads, investorCount, fetchAll } = useProjectDetailStore();
     const { authUser } = useAuthStore();
@@ -56,7 +58,7 @@ const Preview = () => {
             {/* Header (Exit Preview Button) */}
             <div className="w-full flex justify-end p-[20px] max-w-7xl mx-auto">
                 <button
-                    onClick={() => navigate('/pioneer/dashboard/projects')}
+                    onClick={() => navigate(fromPath)}
                     className="border border-border bg-white text-foreground px-[20px] py-[8px] rounded-[6px] text-[14px] font-medium hover:bg-gray-50 transition-all duration-200 cursor-pointer"
                 >
                     ออกจากดูตัวอย่าง

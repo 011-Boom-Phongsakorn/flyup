@@ -12,6 +12,19 @@ const Navbar = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [showNotif, setShowNotif] = useState(false);
+
+    const handleProfileToggle = () => {
+        setShowProfileMenu(prev => {
+            const next = !prev;
+            if (next) setShowNotif(false);
+            return next;
+        });
+    };
+    const handleNotifChange = (next: boolean) => {
+        setShowNotif(next);
+        if (next) setShowProfileMenu(false);
+    };
     const { authUser, logout } = useAuthStore();
     const { publicProjects, fetchPublicProjects } = usePublicProjectStore();
     const navigate = useNavigate();
@@ -167,10 +180,10 @@ const Navbar = () => {
                                 <Link to={`/${authUser?.role}/dashboard`} className="flex items-center justify-center w-11 h-11 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white rounded-full transition-all shadow-sm active:scale-95">
                                     <LayoutDashboard size={22} />
                                 </Link>
-                                <NotificationBell />
+                                <NotificationBell open={showNotif} onOpenChange={handleNotifChange} />
                                 <div className="relative" ref={profileMenuRef}>
                                     <button
-                                        onClick={() => setShowProfileMenu(prev => !prev)}
+                                        onClick={handleProfileToggle}
                                         className="relative flex items-center justify-center focus:outline-none hover:opacity-90 transition-opacity cursor-pointer"
                                     >
                                         <img
@@ -248,10 +261,10 @@ const Navbar = () => {
                             </div>
                             {authUser && (
                                 <>
-                                    <NotificationBell />
+                                    <NotificationBell open={showNotif} onOpenChange={handleNotifChange} />
                                     <button
-                                        onClick={() => setShowProfileMenu(prev => !prev)}
-                                        className="flex-shrink-0 w-[48px] h-[48px] rounded-full overflow-hidden border-2 border-transparent focus:outline-none"
+                                        onClick={handleProfileToggle}
+                                        className="flex-shrink-0 w-[48px] h-[48px] rounded-full overflow-hidden border-2 border-transparent focus:outline-none cursor-pointer"
                                     >
                                         <img
                                             src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}

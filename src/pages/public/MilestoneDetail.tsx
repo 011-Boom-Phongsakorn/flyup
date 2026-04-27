@@ -72,7 +72,6 @@ type FileKind = "image" | "video" | "document" | "unknown";
 
 function detectFileKind(url: string): { kind: FileKind; ext: string; filename: string; docType?: string } {
   try {
-    // Strip query params for extension detection
     const pathname = new URL(url).pathname;
     const segments = pathname.split("/");
     const rawFilename = segments[segments.length - 1] || "file";
@@ -80,20 +79,20 @@ function detectFileKind(url: string): { kind: FileKind; ext: string; filename: s
     const ext = dotIndex >= 0 ? rawFilename.substring(dotIndex).toLowerCase() : "";
     const filename = decodeURIComponent(rawFilename);
 
-    // Cloudinary URLs — detect from path segments
-    if (url.includes("cloudinary.com")) {
-      if (url.includes("/video/upload/")) return { kind: "video", ext: ext || ".mp4", filename };
-      if (url.includes("/image/upload/")) return { kind: "image", ext: ext || ".jpg", filename };
-      if (url.includes("/raw/upload/")) {
-        const docType = DOC_EXT_MAP[ext];
-        return { kind: "document", ext, filename, docType: docType || ext.replace(".", "").toUpperCase() };
-      }
-    }
-
+    // นามสกุลไฟล์เชื่อถือได้กว่า Cloudinary URL path (PDF อาจถูก upload ผ่าน /image/upload/)
     if (IMAGE_EXT.includes(ext)) return { kind: "image", ext, filename };
     if (VIDEO_EXT.includes(ext)) return { kind: "video", ext, filename };
     const docType = DOC_EXT_MAP[ext];
     if (docType) return { kind: "document", ext, filename, docType };
+
+    // Cloudinary fallback เมื่อไม่มี/ไม่รู้จักนามสกุล
+    if (url.includes("cloudinary.com")) {
+      if (url.includes("/video/upload/")) return { kind: "video", ext: ext || ".mp4", filename };
+      if (url.includes("/image/upload/")) return { kind: "image", ext: ext || ".jpg", filename };
+      if (url.includes("/raw/upload/")) {
+        return { kind: "document", ext, filename, docType: ext.replace(".", "").toUpperCase() || "FILE" };
+      }
+    }
 
     return { kind: "unknown", ext, filename };
   } catch {
