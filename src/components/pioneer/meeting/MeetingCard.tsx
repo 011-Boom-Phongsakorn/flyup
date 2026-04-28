@@ -18,7 +18,7 @@ function formatTime(iso: string) {
   return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-export function isMeetingUpcoming(m: Meeting): boolean {
+function isMeetingUpcoming(m: Meeting): boolean {
   const date = new Date(m.date);
   const time = new Date(m.time);
   if (Number.isNaN(date.getTime()) || Number.isNaN(time.getTime())) return true;
