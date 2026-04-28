@@ -17,7 +17,13 @@ interface MilestoneOption {
   id: number;
   phase_no?: number;
   title: string;
+  status: string;
+  project_id: number;
+  project_title: string;
 }
+
+// Only milestones admin has approved (ready for booster meeting before voting)
+const MEETING_ELIGIBLE_MILESTONE_STATUS = 'approved';
 
 interface ApiMeeting {
   id: number;
@@ -178,7 +184,6 @@ function MeetingCard({ meeting, projectTitle, phaseLabel }: MeetingCardProps) {
 const PioneerMeetings = () => {
   const { projects, fetchMyProjects } = useProjectStore();
 
-  const [projectId, setProjectId] = useState<string>('');
   const [milestones, setMilestones] = useState<MilestoneOption[]>([]);
   const [milestonesLoading, setMilestonesLoading] = useState(false);
 
@@ -195,7 +200,6 @@ const PioneerMeetings = () => {
   const [meetings, setMeetings] = useState<ApiMeeting[]>([]);
   const [meetingsLoading, setMeetingsLoading] = useState(false);
 
-  // load pioneer projects
   useEffect(() => {
     fetchMyProjects();
   }, [fetchMyProjects]);
@@ -205,56 +209,60 @@ const PioneerMeetings = () => {
     [projects],
   );
 
-  const selectedProject = useMemo(
-    () => eligibleProjects.find(p => String(p.id) === projectId) ?? null,
-    [eligibleProjects, projectId],
-  );
-
-  // when project changes, reset milestone selection and load this project's milestones
+  // load milestones for ALL eligible projects, flatten into one list
   useEffect(() => {
-    setMilestoneId('');
-    if (!projectId) {
+    if (eligibleProjects.length === 0) {
       setMilestones([]);
       return;
     }
     let cancelled = false;
     setMilestonesLoading(true);
-    api.get(`/pioneer/projects/${projectId}/milestones`)
-      .then(res => {
-        if (cancelled) return;
-        const list: MilestoneOption[] = (res.data?.data ?? []).map((m: { id: number; phase_no?: number; title?: string }) => ({
-          id: m.id,
-          phase_no: m.phase_no,
-          title: m.title ?? `Phase ${m.phase_no ?? '?'}`,
-        }));
-        setMilestones(list);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setMilestones([]);
-          toast.error('โหลด Milestone ไม่สำเร็จ');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setMilestonesLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [projectId]);
 
-  // load meetings when project or filter changes
+    Promise.all(
+      eligibleProjects.map(p =>
+        api.get(`/pioneer/projects/${p.id}/milestones`)
+          .then(res => {
+            const raw: { id: number; phase_no?: number; title?: string; status?: string }[] = res.data?.data ?? [];
+            return raw
+              .filter(m => m.status === MEETING_ELIGIBLE_MILESTONE_STATUS)
+              .map<MilestoneOption>(m => ({
+                id: m.id,
+                phase_no: m.phase_no,
+                title: m.title ?? `Phase ${m.phase_no ?? '?'}`,
+                status: m.status ?? '',
+                project_id: p.id,
+                project_title: p.title,
+              }));
+          })
+          .catch(() => [] as MilestoneOption[])
+      )
+    ).then(results => {
+      if (cancelled) return;
+      setMilestones(results.flat());
+    }).finally(() => {
+      if (!cancelled) setMilestonesLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [eligibleProjects]);
+
+  // load meetings from ALL eligible projects, merge into one list
   const loadMeetings = useMemo(() => {
-    return async (pid: string, f: FilterMode) => {
-      if (!pid) {
+    return async (projs: { id: number }[], f: FilterMode) => {
+      if (projs.length === 0) {
         setMeetings([]);
         return;
       }
       setMeetingsLoading(true);
       try {
-        const res = await api.get(`/projects/${pid}/meetings`, { params: { filter: f } });
-        const list: ApiMeeting[] = res.data?.data ?? [];
-        setMeetings(list);
-      } catch {
-        setMeetings([]);
+        const results = await Promise.all(
+          projs.map(p =>
+            api.get(`/projects/${p.id}/meetings`, { params: { filter: f } })
+              .then(r => (r.data?.data ?? []) as ApiMeeting[])
+              .catch(() => [] as ApiMeeting[])
+          )
+        );
+        setMeetings(results.flat());
       } finally {
         setMeetingsLoading(false);
       }
@@ -262,17 +270,22 @@ const PioneerMeetings = () => {
   }, []);
 
   useEffect(() => {
-    loadMeetings(projectId, filter);
-  }, [projectId, filter, loadMeetings]);
+    loadMeetings(eligibleProjects, filter);
+  }, [eligibleProjects, filter, loadMeetings]);
+
+  const milestoneById = (mid: number) => milestones.find(x => x.id === mid);
 
   const milestoneLabel = (mid: number): string | null => {
-    const m = milestones.find(x => x.id === mid);
+    const m = milestoneById(mid);
     if (!m) return null;
     return m.phase_no ? `Phase ${m.phase_no}` : m.title;
   };
 
+  const projectTitleByMilestone = (mid: number): string => {
+    return milestoneById(mid)?.project_title ?? '';
+  };
+
   const handleSubmit = async () => {
-    if (!projectId) { toast.error('กรุณาเลือกโปรเจกต์'); return; }
     if (!milestoneId) { toast.error('กรุณาเลือก Milestone'); return; }
     if (!date) { toast.error('กรุณาเลือกวันที่'); return; }
     if (!time) { toast.error('กรุณาเลือกเวลา'); return; }
@@ -310,7 +323,7 @@ const PioneerMeetings = () => {
       setAgenda('');
 
       // refresh list
-      loadMeetings(projectId, filter);
+      loadMeetings(eligibleProjects, filter);
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -332,26 +345,6 @@ const PioneerMeetings = () => {
       <div className="bg-white border border-border rounded-2xl p-6 flex flex-col gap-5">
         <h2 className="text-base font-bold text-foreground">สร้างนัดหมายใหม่</h2>
 
-        {/* Project */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[13px] font-medium text-foreground">
-            โปรเจกต์ <span className="text-error">*</span>
-          </label>
-          <select
-            value={projectId}
-            onChange={e => setProjectId(e.target.value)}
-            className="border border-border rounded-[8px] px-3 py-2.5 text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_10px_center]"
-          >
-            <option value="">-- เลือกโปรเจกต์ --</option>
-            {eligibleProjects.map(p => (
-              <option key={p.id} value={p.id}>{p.title}</option>
-            ))}
-          </select>
-          {eligibleProjects.length === 0 && (
-            <p className="text-[12px] text-muted-foreground">ยังไม่มีโปรเจกต์ที่นัดประชุมได้</p>
-          )}
-        </div>
-
         {/* Milestone */}
         <div className="flex flex-col gap-1.5">
           <label className="text-[13px] font-medium text-foreground">
@@ -360,7 +353,7 @@ const PioneerMeetings = () => {
           <select
             value={milestoneId}
             onChange={e => setMilestoneId(e.target.value)}
-            disabled={!projectId || milestonesLoading}
+            disabled={milestonesLoading || milestones.length === 0}
             className="border border-border rounded-[8px] px-3 py-2.5 text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer appearance-none disabled:opacity-50 disabled:cursor-not-allowed bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_10px_center]"
           >
             <option value="">
@@ -368,10 +361,13 @@ const PioneerMeetings = () => {
             </option>
             {milestones.map(m => (
               <option key={m.id} value={m.id}>
-                {m.phase_no ? `Phase ${m.phase_no}: ${m.title}` : m.title}
+                {m.project_title} — {m.phase_no ? `Phase ${m.phase_no}: ${m.title}` : m.title}
               </option>
             ))}
           </select>
+          {!milestonesLoading && milestones.length === 0 && (
+            <p className="text-[12px] text-muted-foreground">ยังไม่มี Milestone ที่นัดประชุมได้</p>
+          )}
         </div>
 
         {/* Date + Time */}
@@ -509,11 +505,7 @@ const PioneerMeetings = () => {
           </div>
         </div>
 
-        {!projectId ? (
-          <p className="text-sm text-muted-foreground text-center py-10">
-            เลือกโปรเจกต์ด้านบนเพื่อดูรายการประชุม
-          </p>
-        ) : meetingsLoading ? (
+        {meetingsLoading ? (
           <div className="flex items-center justify-center py-10">
             <Loader2 size={24} className="animate-spin text-primary" />
           </div>
@@ -525,7 +517,7 @@ const PioneerMeetings = () => {
               <MeetingCard
                 key={m.id}
                 meeting={m}
-                projectTitle={selectedProject?.title ?? ''}
+                projectTitle={projectTitleByMilestone(m.milestone_id)}
                 phaseLabel={milestoneLabel(m.milestone_id)}
               />
             ))}
