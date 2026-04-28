@@ -48,7 +48,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
     try {
       const [projRes, msRes] = await Promise.all([
         api.get(`/pioneer/projects/${projectId}`),
-        api.get(`/pioneer/projects/${projectId}/milestones`),
+        api.get(`/projects/${projectId}/milestones`),
       ])
 
       const proj = projRes.data?.data ?? {}
