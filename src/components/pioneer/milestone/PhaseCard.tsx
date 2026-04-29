@@ -1,4 +1,4 @@
-import { CheckCircle2, Calendar, Undo2 } from 'lucide-react'
+import { CheckCircle2, Calendar, Undo2, Vote, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { STATUS_CONFIG, fmtDateRange, fmtBaht } from './types'
 import type { MilestoneData, EvidenceLink } from './types'
@@ -10,10 +10,12 @@ interface PhaseCardProps {
   onToggle: () => void
   onSubmit: (milestoneId: number, files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
   onRecall: (milestoneId: number) => Promise<void>
+  onOpenVoting: (milestoneId: number) => Promise<void>
   isSubmitting: boolean
+  isOpeningVoting: boolean
 }
 
-const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, isSubmitting }: PhaseCardProps) => {
+const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVoting, isSubmitting, isOpeningVoting }: PhaseCardProps) => {
   const navigate = useNavigate()
   const cfg = STATUS_CONFIG[milestone.status] ?? STATUS_CONFIG['pending']
   const canSubmit = milestone.status === 'in_progress' || milestone.status === 'rejected'
@@ -79,13 +81,30 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, isSubmit
             </div>
           )}
           {isApproved && (
-            <button
-              onClick={() => navigate('/pioneer/dashboard/meetings')}
-              className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F8F9FA] transition-colors cursor-pointer"
-            >
-              <Calendar size={14} className="text-muted-foreground" />
-              นัดประชุม
-            </button>
+            <>
+              <button
+                onClick={() => navigate('/pioneer/dashboard/meetings')}
+                className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F8F9FA] transition-colors cursor-pointer"
+              >
+                <Calendar size={14} className="text-muted-foreground" />
+                นัดประชุม
+              </button>
+              {milestone.voting_open ? (
+                <span className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] bg-amber-50 border border-amber-200 text-[13px] font-medium text-amber-700">
+                  <Vote size={14} />
+                  กำลัง Vote อยู่...
+                </span>
+              ) : (
+                <button
+                  onClick={() => milestone.id && onOpenVoting(milestone.id)}
+                  disabled={isOpeningVoting}
+                  className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] bg-primary text-white text-[13px] font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isOpeningVoting ? <Loader2 size={14} className="animate-spin" /> : <Vote size={14} />}
+                  เปิด Vote
+                </button>
+              )}
+            </>
           )}
           {milestone.status === 'submitted' && (
             <>
