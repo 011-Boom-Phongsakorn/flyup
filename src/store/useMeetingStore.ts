@@ -110,7 +110,7 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
   editMeeting: async (id, payload) => {
     set({ isSubmitting: true });
     try {
-      await api.patch(`/pioneer/projects/meeting`, { id, ...payload });
+      await api.patch(`/pioneer/projects/meeting/${id}`, payload);
       toast.success('แก้ไขนัดหมายเรียบร้อยแล้ว');
       return true;
     } catch (err: unknown) {
