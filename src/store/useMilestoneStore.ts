@@ -33,7 +33,7 @@ interface MilestoneStore {
     projectId: string,
     files: File[],
     links: EvidenceLink[],
-    checkedCriteria: boolean[]
+    checkedCriteria: string[]
   ) => Promise<boolean>
 }
 
@@ -117,15 +117,27 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
   submitEvidence: async (milestoneId, _projectId, files, links, checkedCriteria) => {
     set({ isSubmitting: true })
     try {
-      const formData = new FormData()
-      files.forEach(f => formData.append('files', f))
-      formData.append('links', JSON.stringify(links))
-      formData.append('checked_criteria', JSON.stringify(checkedCriteria))
+      const attachments: string[] = []
+      for (const file of files) {
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await api.post('/upload', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 120000,
+        })
+        const url: string | undefined = res.data?.data?.url
+        if (url) attachments.push(url)
+      }
+
+      const body = {
+        criteria: checkedCriteria,
+        attachments,
+        links: links.map(l => l.url.trim()).filter(Boolean),
+      }
 
       await api.patch(
         `/pioneer/projects/milestones/${milestoneId}/submit`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        body
       )
 
       toast.success('ส่งหลักฐานเรียบร้อยแล้ว รอ Admin ตรวจสอบ')

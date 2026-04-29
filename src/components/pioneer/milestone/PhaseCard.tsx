@@ -7,7 +7,7 @@ interface PhaseCardProps {
   milestone: MilestoneData
   isActive: boolean
   onToggle: () => void
-  onSubmit: (milestoneId: number, files: File[], links: EvidenceLink[], checkedCriteria: boolean[]) => Promise<void>
+  onSubmit: (milestoneId: number, files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
   isSubmitting: boolean
 }
 
@@ -20,7 +20,7 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, isSubmitting }: Ph
   const handleEvidenceSubmit = async (
     files: File[],
     links: EvidenceLink[],
-    checkedCriteria: boolean[]
+    checkedCriteria: string[]
   ) => {
     if (!milestone.id) return
     await onSubmit(milestone.id, files, links, checkedCriteria)

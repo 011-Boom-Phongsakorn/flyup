@@ -6,7 +6,7 @@ interface EvidenceFormProps {
   criteria: MilestoneData['criteria']
   isSubmitting: boolean
   onCancel: () => void
-  onSubmit: (files: File[], links: EvidenceLink[], checkedCriteria: boolean[]) => Promise<void>
+  onSubmit: (files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
 }
 
 const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFormProps) => {
@@ -31,7 +31,8 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
 
   const handleSubmit = async () => {
     const validLinks = links.filter(l => l.url.trim())
-    await onSubmit(files, validLinks, checkedCriteria)
+    const checkedTexts = criteria.filter((_, i) => checkedCriteria[i])
+    await onSubmit(files, validLinks, checkedTexts)
   }
 
   return (

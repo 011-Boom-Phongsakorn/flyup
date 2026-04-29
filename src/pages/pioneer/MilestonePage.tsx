@@ -25,7 +25,7 @@ const MilestonePage = () => {
     milestoneId: number,
     files: File[],
     links: EvidenceLink[],
-    checkedCriteria: boolean[]
+    checkedCriteria: string[]
   ) => {
     const ok = await submitEvidence(milestoneId, projectId!, files, links, checkedCriteria)
     if (ok) setActivePhase(null)
