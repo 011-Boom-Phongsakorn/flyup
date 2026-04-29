@@ -1,5 +1,5 @@
 export type MeetingType = 'online' | 'onsite' | 'hybrid';
-export type MeetingStatus = 'open' | 'closed' | 'canceleed';
+export type MeetingStatus = 'open' | 'closed' | 'canceled';
 export type FilterMode = 'upcoming' | 'past' | 'all';
 
 export interface Meeting {

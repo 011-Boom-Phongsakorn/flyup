@@ -35,6 +35,7 @@ interface MilestoneStore {
     links: EvidenceLink[],
     checkedCriteria: string[]
   ) => Promise<boolean>
+  recallEvidence: (milestoneId: number) => Promise<boolean>
 }
 
 export const useMilestoneStore = create<MilestoneStore>((set) => ({
@@ -154,6 +155,22 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
       return false
     } finally {
       set({ isSubmitting: false })
+    }
+  },
+
+  recallEvidence: async (milestoneId) => {
+    try {
+      await api.patch(`/pioneer/projects/milestones/${milestoneId}/recall`)
+      toast.success('ยกเลิกการส่งหลักฐานเรียบร้อยแล้ว')
+      set(state => ({
+        milestones: state.milestones.map(m =>
+          m.id === milestoneId ? { ...m, status: 'in_progress' as MilestoneStatus } : m
+        ),
+      }))
+      return true
+    } catch {
+      toast.error('ไม่สามารถยกเลิกได้')
+      return false
     }
   },
 }))
