@@ -9,7 +9,7 @@ const MilestonePage = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
 
-  const { milestones, projectTitle, isLoading, isSubmitting, fetchMilestones, submitEvidence } =
+  const { milestones, projectTitle, isLoading, isSubmitting, fetchMilestones, submitEvidence, recallEvidence } =
     useMilestoneStore()
 
   const [activePhase, setActivePhase] = useState<number | null>(null)
@@ -29,6 +29,10 @@ const MilestonePage = () => {
   ) => {
     const ok = await submitEvidence(milestoneId, projectId!, files, links, checkedCriteria)
     if (ok) setActivePhase(null)
+  }
+
+  const handleRecall = async (milestoneId: number) => {
+    await recallEvidence(milestoneId)
   }
 
   const completedCount = milestones.filter(m => m.status === 'completed').length
@@ -84,6 +88,7 @@ const MilestonePage = () => {
             isActive={activePhase === idx}
             onToggle={() => setActivePhase(prev => prev === idx ? null : idx)}
             onSubmit={handleSubmit}
+            onRecall={handleRecall}
             isSubmitting={isSubmitting}
           />
         ))}

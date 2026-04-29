@@ -1,4 +1,5 @@
-import { CheckCircle2, Calendar } from 'lucide-react'
+import { CheckCircle2, Calendar, Undo2 } from 'lucide-react'
+import { useNavigate } from 'react-router'
 import { STATUS_CONFIG, fmtDateRange, fmtBaht } from './types'
 import type { MilestoneData, EvidenceLink } from './types'
 import EvidenceForm from './EvidenceForm'
@@ -8,10 +9,12 @@ interface PhaseCardProps {
   isActive: boolean
   onToggle: () => void
   onSubmit: (milestoneId: number, files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
+  onRecall: (milestoneId: number) => Promise<void>
   isSubmitting: boolean
 }
 
-const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, isSubmitting }: PhaseCardProps) => {
+const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, isSubmitting }: PhaseCardProps) => {
+  const navigate = useNavigate()
   const cfg = STATUS_CONFIG[milestone.status] ?? STATUS_CONFIG['pending']
   const canSubmit = milestone.status === 'in_progress' || milestone.status === 'rejected'
   const isCompleted = milestone.status === 'completed'
@@ -76,13 +79,25 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, isSubmitting }: Ph
             </div>
           )}
           {isApproved && (
-            <button className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F8F9FA] transition-colors cursor-pointer">
+            <button
+              onClick={() => navigate('/pioneer/dashboard/meetings')}
+              className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F8F9FA] transition-colors cursor-pointer"
+            >
               <Calendar size={14} className="text-muted-foreground" />
               นัดประชุม
             </button>
           )}
           {milestone.status === 'submitted' && (
-            <span className="text-[12px] text-muted-foreground">รอ Admin ตรวจสอบ...</span>
+            <>
+              <span className="text-[12px] text-muted-foreground">รอ Admin ตรวจสอบ...</span>
+              <button
+                onClick={() => milestone.id && onRecall(milestone.id)}
+                className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border border-red-200 text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+              >
+                <Undo2 size={14} />
+                ยกเลิกการส่ง
+              </button>
+            </>
           )}
           {canSubmit && (
             <button
