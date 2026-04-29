@@ -1,9 +1,31 @@
-import { useState } from 'react'
-import { Loader2, UserX, RotateCcw, Search, AlertTriangle, X } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Loader2, UserX, RotateCcw, Search, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { AxiosError } from 'axios'
 import api from '../../services/api'
 import PageHeader from '../../components/admin/PageHeader'
+
+interface UserRow {
+    id: number
+    email: string
+    first_name: string
+    last_name: string
+    role: string
+    status: string
+    picture?: string | null
+    suspend_reason?: string | null
+}
+
+const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
+    pioneer: { label: 'Pioneer', cls: 'bg-primary/10 text-primary border border-primary/20' },
+    booster: { label: 'Booster', cls: 'bg-rose-50 text-rose-600 border border-rose-200' },
+    admin:   { label: 'Admin',   cls: 'bg-red-50 text-red-700 border border-red-200' },
+}
+
+const STATUS_BADGE: Record<string, string> = {
+    active: 'bg-green-50 text-green-700 border border-green-200',
+    suspended: 'bg-red-50 text-red-700 border border-red-200',
+}
 
 const SuspendModal = ({
     userId,
@@ -51,21 +73,61 @@ const SuspendModal = ({
 }
 
 const AdminUserManagement = () => {
-    const [userId, setUserId] = useState('')
-    const [showSuspendModal, setShowSuspendModal] = useState(false)
-    const [isSuspending, setIsSuspending] = useState(false)
-    const [isRollingBack, setIsRollingBack] = useState(false)
+    const [users, setUsers] = useState<UserRow[]>([])
+    const [total, setTotal] = useState(0)
+    const [page, setPage] = useState(1)
+    const pageSize = 15
 
-    const parsedId = Number(userId)
-    const isValidId = Number.isInteger(parsedId) && parsedId > 0
+    const [search, setSearch] = useState('')
+    const [searchInput, setSearchInput] = useState('')
+    const [roleFilter, setRoleFilter] = useState('')
+    const [statusFilter, setStatusFilter] = useState('')
+
+    const [isLoading, setIsLoading] = useState(false)
+    const [suspendTarget, setSuspendTarget] = useState<number | null>(null)
+    const [isSuspending, setIsSuspending] = useState(false)
+    const [rollingBackId, setRollingBackId] = useState<number | null>(null)
+
+    const totalPages = Math.ceil(total / pageSize)
+
+    const fetchUsers = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const params = new URLSearchParams({
+                page: String(page),
+                page_size: String(pageSize),
+            })
+            if (search) params.set('search', search)
+            if (roleFilter) params.set('role', roleFilter)
+            if (statusFilter) params.set('status', statusFilter)
+
+            const res = await api.get(`/admin/list-users?${params}`)
+            setUsers(res.data?.data ?? [])
+            setTotal(res.data?.meta?.total ?? 0)
+        } catch {
+            toast.error('โหลดรายชื่อผู้ใช้ไม่สำเร็จ')
+        } finally {
+            setIsLoading(false)
+        }
+    }, [page, search, roleFilter, statusFilter])
+
+    useEffect(() => {
+        fetchUsers()
+    }, [fetchUsers])
+
+    const handleSearch = () => {
+        setSearch(searchInput)
+        setPage(1)
+    }
 
     const handleSuspend = async (reason: string) => {
-        if (!isValidId) return
+        if (!suspendTarget) return
         setIsSuspending(true)
         try {
-            await api.patch(`/admin/suspend-user/${parsedId}`, { reason })
-            toast.success(`ระงับผู้ใช้ #${parsedId} สำเร็จ`)
-            setShowSuspendModal(false)
+            await api.patch(`/admin/suspend-user/${suspendTarget}`, { reason })
+            toast.success(`ระงับผู้ใช้ #${suspendTarget} สำเร็จ`)
+            setSuspendTarget(null)
+            fetchUsers()
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
             toast.error(msg || 'ระงับไม่สำเร็จ')
@@ -74,17 +136,17 @@ const AdminUserManagement = () => {
         }
     }
 
-    const handleRollback = async () => {
-        if (!isValidId) return
-        setIsRollingBack(true)
+    const handleRollback = async (id: number) => {
+        setRollingBackId(id)
         try {
-            await api.patch(`/admin/rollback-user/${parsedId}`)
-            toast.success(`คืนสถานะผู้ใช้ #${parsedId} สำเร็จ`)
+            await api.patch(`/admin/rollback-user/${id}`)
+            toast.success(`คืนสถานะผู้ใช้ #${id} สำเร็จ`)
+            fetchUsers()
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
             toast.error(msg || 'คืนสถานะไม่สำเร็จ')
         } finally {
-            setIsRollingBack(false)
+            setRollingBackId(null)
         }
     }
 
@@ -92,52 +154,151 @@ const AdminUserManagement = () => {
         <div className="flex flex-col gap-[16px]">
             <PageHeader title="จัดการผู้ใช้" subtitle="ระงับหรือคืนสถานะบัญชีผู้ใช้" />
 
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 mx-2.5">
-                <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-0.5">
-                    <p className="text-[13px] font-semibold text-amber-800">ข้อจำกัดปัจจุบัน</p>
-                    <p className="text-[12px] text-amber-700">Backend ยังไม่มี endpoint สำหรับดึงรายชื่อผู้ใช้ทั้งหมด ตอนนี้รองรับเฉพาะการค้นหาด้วย User ID เท่านั้น</p>
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 items-center">
+                <div className="flex items-center gap-2 flex-1 min-w-[200px] border border-border rounded-lg px-3 py-2 bg-white focus-within:border-primary">
+                    <Search size={15} className="text-muted-foreground shrink-0" />
+                    <input
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        placeholder="ค้นหาชื่อ หรืออีเมล..."
+                        className="flex-1 text-[13px] outline-none bg-transparent"
+                    />
+                    {searchInput && (
+                        <button onClick={() => { setSearchInput(''); setSearch(''); setPage(1) }}>
+                            <X size={14} className="text-muted-foreground" />
+                        </button>
+                    )}
                 </div>
+                <button
+                    onClick={handleSearch}
+                    className="px-4 py-2 rounded-lg bg-primary text-white text-[13px] font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+                >
+                    ค้นหา
+                </button>
+                <select
+                    value={roleFilter}
+                    onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
+                    className="border border-border rounded-lg px-3 py-2 text-[13px] outline-none focus:border-primary bg-white cursor-pointer"
+                >
+                    <option value="">ทุก Role</option>
+                    <option value="pioneer">Pioneer</option>
+                    <option value="booster">Booster</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <select
+                    value={statusFilter}
+                    onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+                    className="border border-border rounded-lg px-3 py-2 text-[13px] outline-none focus:border-primary bg-white cursor-pointer"
+                >
+                    <option value="">ทุกสถานะ</option>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                </select>
+                <span className="text-[12px] text-muted-foreground ml-auto">{total} ผู้ใช้</span>
             </div>
 
-            <div className="bg-white rounded-xl border border-border p-6 mx-2.5 flex flex-col gap-5">
-                <div className="flex flex-col gap-2">
-                    <label className="text-[13px] font-medium">User ID</label>
-                    <div className="relative">
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <input
-                            type="number"
-                            value={userId}
-                            onChange={(e) => setUserId(e.target.value)}
-                            placeholder="กรอก User ID เช่น 42"
-                            className="w-full border border-border rounded-lg pl-9 pr-3 py-2.5 text-[14px] outline-none focus:border-primary"
-                        />
+            {/* Table */}
+            <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
+                <div className="grid grid-cols-[60px_1fr_1fr_90px_90px_120px] bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border text-[13px]">
+                    <div className="text-center">ID</div>
+                    <div>ชื่อ</div>
+                    <div>อีเมล</div>
+                    <div className="text-center">Role</div>
+                    <div className="text-center">สถานะ</div>
+                    <div className="text-center">จัดการ</div>
+                </div>
+
+                {isLoading ? (
+                    <div className="flex justify-center items-center py-16">
+                        <Loader2 className="animate-spin text-muted-foreground" size={28} />
                     </div>
-                </div>
-
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => isValidId && setShowSuspendModal(true)}
-                        disabled={!isValidId}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[13px] font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                    >
-                        <UserX size={15} /> ระงับบัญชี
-                    </button>
-                    <button
-                        onClick={handleRollback}
-                        disabled={!isValidId || isRollingBack}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                    >
-                        {isRollingBack ? <Loader2 size={15} className="animate-spin" /> : <RotateCcw size={15} />}
-                        คืนสถานะ
-                    </button>
-                </div>
+                ) : users.length === 0 ? (
+                    <div className="flex justify-center items-center py-16 text-[13px] text-muted-foreground">
+                        ไม่พบผู้ใช้
+                    </div>
+                ) : (
+                    users.map((u) => (
+                        <div
+                            key={u.id}
+                            className="grid grid-cols-[60px_1fr_1fr_90px_90px_120px] border-b border-border last:border-0 hover:bg-gray-50 transition-colors px-4"
+                        >
+                            <div className="h-12 flex items-center justify-center text-[12px] text-muted-foreground">
+                                {u.id}
+                            </div>
+                            <div className="h-12 flex items-center text-[13px] font-medium truncate pr-2">
+                                {u.first_name} {u.last_name}
+                            </div>
+                            <div className="h-12 flex items-center text-[13px] text-muted-foreground truncate pr-2">
+                                {u.email}
+                            </div>
+                            <div className="h-12 flex items-center justify-center">
+                                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${ROLE_BADGE[u.role]?.cls ?? 'bg-gray-100 text-gray-600'}`}>
+                                    {ROLE_BADGE[u.role]?.label ?? u.role}
+                                </span>
+                            </div>
+                            <div className="h-12 flex items-center justify-center">
+                                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[u.status] ?? ''}`}>
+                                    {u.status === 'active' ? 'Active' : 'Suspended'}
+                                </span>
+                            </div>
+                            <div className="h-12 flex items-center justify-center gap-1.5">
+                                {u.status === 'active' ? (
+                                    <button
+                                        onClick={() => setSuspendTarget(u.id)}
+                                        className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                        title="ระงับบัญชี"
+                                    >
+                                        <UserX size={15} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => handleRollback(u.id)}
+                                        disabled={rollingBackId === u.id}
+                                        className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer disabled:opacity-50"
+                                        title="คืนสถานะ"
+                                    >
+                                        {rollingBackId === u.id
+                                            ? <Loader2 size={15} className="animate-spin" />
+                                            : <RotateCcw size={15} />
+                                        }
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
 
-            {showSuspendModal && isValidId && (
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2">
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="p-1.5 rounded-lg border border-border hover:bg-gray-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+                    <span className="text-[13px] text-muted-foreground">
+                        หน้า {page} / {totalPages}
+                    </span>
+                    <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="p-1.5 rounded-lg border border-border hover:bg-gray-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                        <ChevronRight size={16} />
+                    </button>
+                </div>
+            )}
+
+            {suspendTarget && (
                 <SuspendModal
-                    userId={parsedId}
-                    onClose={() => setShowSuspendModal(false)}
+                    userId={suspendTarget}
+                    onClose={() => setSuspendTarget(null)}
                     onConfirm={handleSuspend}
                     isSubmitting={isSuspending}
                 />
