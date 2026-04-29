@@ -30,6 +30,9 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
     setCheckedCriteria(prev => prev.map((v, idx) => idx === i ? !v : v))
 
   const handleSubmit = async () => {
+    if (criteria.length > 0 && checkedCriteria.some(v => !v)) {
+      return
+    }
     const validLinks = links.filter(l => l.url.trim())
     const checkedTexts = criteria.filter((_, i) => checkedCriteria[i])
     await onSubmit(files, validLinks, checkedTexts)
