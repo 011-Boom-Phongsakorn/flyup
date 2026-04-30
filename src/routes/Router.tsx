@@ -37,6 +37,7 @@ import Preview from '../pages/pioneer/Preview'
 import MilestonePage from '../pages/pioneer/MilestonePage'
 import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
 import PioneerMeetings from '../pages/pioneer/Meetings';
+import PioneerPayouts from '../pages/pioneer/Payouts';
 import CancelProjectRequest from '../pages/pioneer/CancelProjectRequest';
 import PreviewMilestoneDetail from '../pages/pioneer/PreviewMilestoneDetail';
 
@@ -71,6 +72,7 @@ import AdminUserManagement from '@/pages/admin/AdminUserManagement'
 import AdminComplaints from '@/pages/admin/AdminComplaints'
 import AdminAuditLogs from '@/pages/admin/AdminAuditLogs'
 import AdminRefunds from '@/pages/admin/AdminRefunds';
+import AdminProfitDistribution from '@/pages/admin/AdminProfitDistribution';
 import AdminUniversities from '@/pages/admin/AdminUniversities';
 import AdminUniversityDetail from '@/pages/admin/AdminUniversityDetail';
 
@@ -156,6 +158,7 @@ const Router = () => {
                             <Route path='/pioneer/dashboard/projects' element={<MyProjects />} />
                             <Route path='/pioneer/dashboard/milestones' element={<MilestoneListPage />} />
                             <Route path='/pioneer/dashboard/meetings' element={<PioneerMeetings />} />
+                            <Route path='/pioneer/dashboard/payouts' element={<PioneerPayouts />} />
                             <Route path='/pioneer/dashboard/projects/:projectId/cancel-request' element={<CancelProjectRequest />} />
                             <Route path='/pioneer/dashboard/projects/:projectId/milestones' element={<MilestonePage />} />
                             <Route path='/pioneer/profile' element={<Profile />} />
@@ -203,6 +206,7 @@ const Router = () => {
                             <Route path='/admin/milestones/:milestoneId' element={<AdminMilestoneDetail />} />
                             <Route path='/admin/refunds' element={<AdminRefunds />} />
                             <Route path='/admin/disbursements' element={<AdminDisbursements />} />
+                            <Route path='/admin/profit-distribution' element={<AdminProfitDistribution />} />
                             <Route path='/admin/projects-suspension' element={<AdminProjectSuspension />} />
                             <Route path='/admin/users' element={<AdminUserManagement />} />
                             <Route path='/admin/complaints' element={<AdminComplaints />} />

@@ -100,7 +100,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
             ? bm.acceptance_criteria.split('\n').filter(Boolean)
             : [],
           status: mapBackendStatus(bm.status),
-          progress_pct: bm.progress_pct ?? 0,
+          progress_pct: mapBackendStatus(bm.status) === 'completed' ? 100 : (bm.progress_pct ?? 0),
           admin_note: bm.admin_note,
           voting_open: bm.voting_open ?? false,
         }
