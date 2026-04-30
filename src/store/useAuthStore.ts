@@ -150,9 +150,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
         } catch (error: unknown) {
             const err = error instanceof AxiosError ? error : null;
             const errorMessage = err?.response?.data?.error;
+            const apiMessage = err?.response?.data?.message;
 
             if (!err || err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED') {
                 toast.error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่')
+            } else if (apiMessage === 'your account has been suspended') {
+                toast.error('บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ')
             } else if (errorMessage === 'please verify email') {
                 toast.error('กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
             } else if (err?.response?.data?.login_method === 'google') {
