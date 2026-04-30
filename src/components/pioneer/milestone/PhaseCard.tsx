@@ -70,7 +70,7 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
       {/* ── Footer ── */}
       <div className="px-[20px] py-[12px] flex items-center justify-between">
         <span className={`text-[13px] font-medium ${isCompleted ? 'text-[#2BA88E]' : 'text-muted-foreground'}`}>
-          {milestone.progress_pct}% {isCompleted ? 'สำเร็จ' : 'ไม่สำเร็จ'}
+          {milestone.progress_pct}%{isCompleted ? ' สำเร็จ' : milestone.progress_pct > 0 ? ' กำลังดำเนินการ' : ''}
         </span>
 
         <div className="flex items-center gap-[8px]">
