@@ -199,7 +199,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 phase_no?: number;
             }[] = [];
             try {
-                const msRes = await api.get(`/pioneer/projects/${id}/milestones`);
+                const msRes = await api.get(`/projects/${id}/milestones`);
                 const raw: typeof bms = msRes.data?.data ?? [];
                 // เรียงตาม phase_no (1-4) แล้ว map ลง index 0-3
                 bms = Array.from({ length: 4 }, (_, i) =>
@@ -329,7 +329,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         try {
             // ลบ milestones ก่อน
             try {
-                const msRes = await api.get(`/pioneer/projects/${id}/milestones`);
+                const msRes = await api.get(`/projects/${id}/milestones`);
                 const milestones: { id?: number }[] = msRes.data?.data ?? [];
                 await Promise.all(
                     milestones.filter(m => m.id).map(m => api.delete(`/pioneer/projects/milestones/${m.id}`))

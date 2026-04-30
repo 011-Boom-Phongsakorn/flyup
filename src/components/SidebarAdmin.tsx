@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/store/useAuthStore'
-import { House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone, Wallet, MessageSquareWarning, ShieldBan, RotateCcw, FileText, Users, LogOut, UserRound, GraduationCap } from 'lucide-react'
+import { House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone, Wallet, TrendingUp, MessageSquareWarning, ShieldBan, RotateCcw, FileText, Users, LogOut, UserRound, GraduationCap, Tag } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 
 const menu = [
@@ -10,12 +10,14 @@ const menu = [
     { icon: <MailSearch size={20} />, title: 'ตรวจสอบโปรเจกต์', path: '/admin/projects-approval' },
     { icon: <Milestone size={20} />, title: 'ตรวจสอบ Milestone', path: '/admin/milestones' },
     { icon: <Wallet size={20} />, title: 'การปล่อยเงิน', path: '/admin/disbursements' },
+    { icon: <TrendingUp size={20} />, title: 'โอนกำไรนักลงทุน', path: '/admin/profit-distribution' },
     { icon: <MessageSquareWarning size={20} />, title: 'คำร้องเรียน', path: '/admin/complaints' },
     { icon: <ShieldBan size={20} />, title: 'ระงับโปรเจกต์', path: '/admin/projects-suspension' },
     { icon: <RotateCcw size={20} />, title: 'คืนเงิน', path: '/admin/refunds' },
     { icon: <FileText size={20} />, title: 'บันทึกการตรวจสอบ', path: '/admin/audit-logs' },
     { icon: <Users size={20} />, title: 'จัดการผู้ใช้', path: '/admin/users' },
     { icon: <GraduationCap size={20} />, title: 'จัดการมหาวิทยาลัย', path: '/admin/universities' },
+    { icon: <Tag size={20} />, title: 'จัดการหมวดหมู่', path: '/admin/categories' },
     { icon: <UserRound size={20} />, title: 'โปรไฟล์', path: '/admin/profile' },
 ]
 

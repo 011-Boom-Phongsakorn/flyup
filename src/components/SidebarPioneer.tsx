@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router"
-import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files, Flag, CalendarClock } from 'lucide-react'
+import { HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound, Files, Flag, CalendarClock, Banknote } from 'lucide-react'
 import { useAuthStore } from '../store/useAuthStore'
 
 const menu = [
@@ -9,6 +9,7 @@ const menu = [
     { icon: <Files size={20} />, title: 'โปรเจกต์ของฉัน', path: '/pioneer/dashboard/projects' },
     { icon: <Flag size={20} />, title: 'Milestone', path: '/pioneer/dashboard/milestones' },
     { icon: <CalendarClock size={20} />, title: 'การประชุม', path: '/pioneer/dashboard/meetings' },
+    { icon: <Banknote size={20} />, title: 'การจ่ายเงิน', path: '/pioneer/dashboard/payouts' },
     { icon: <UserRound size={20} />, title: 'โปรไฟล์', path: '/pioneer/profile' },
 ]
 

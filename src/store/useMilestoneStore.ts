@@ -33,8 +33,11 @@ interface MilestoneStore {
     projectId: string,
     files: File[],
     links: EvidenceLink[],
-    checkedCriteria: boolean[]
+    checkedCriteria: string[]
   ) => Promise<boolean>
+  recallEvidence: (milestoneId: number) => Promise<boolean>
+  isOpeningVoting: boolean
+  openVoting: (milestoneId: number) => Promise<boolean>
 }
 
 export const useMilestoneStore = create<MilestoneStore>((set) => ({
@@ -42,13 +45,14 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
   projectTitle: '',
   isLoading: false,
   isSubmitting: false,
+  isOpeningVoting: false,
 
   fetchMilestones: async (projectId) => {
     set({ isLoading: true })
     try {
       const [projRes, msRes] = await Promise.all([
         api.get(`/pioneer/projects/${projectId}`),
-        api.get(`/pioneer/projects/${projectId}/milestones`),
+        api.get(`/projects/${projectId}/milestones`),
       ])
 
       const proj = projRes.data?.data ?? {}
@@ -66,6 +70,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
         status?: MilestoneStatus
         progress_pct?: number
         admin_note?: string
+        voting_open?: boolean
       }[] = msRes.data?.data ?? []
 
       const milestones: MilestoneData[] = Array.from({ length: 4 }, (_, i) => {
@@ -95,8 +100,9 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
             ? bm.acceptance_criteria.split('\n').filter(Boolean)
             : [],
           status: mapBackendStatus(bm.status),
-          progress_pct: bm.progress_pct ?? 0,
+          progress_pct: mapBackendStatus(bm.status) === 'completed' ? 100 : (bm.progress_pct ?? 0),
           admin_note: bm.admin_note,
+          voting_open: bm.voting_open ?? false,
         }
       })
 
@@ -117,15 +123,27 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
   submitEvidence: async (milestoneId, _projectId, files, links, checkedCriteria) => {
     set({ isSubmitting: true })
     try {
-      const formData = new FormData()
-      files.forEach(f => formData.append('files', f))
-      formData.append('links', JSON.stringify(links))
-      formData.append('checked_criteria', JSON.stringify(checkedCriteria))
+      const attachments: string[] = []
+      for (const file of files) {
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await api.post('/upload', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 120000,
+        })
+        const url: string | undefined = res.data?.data?.url
+        if (url) attachments.push(url)
+      }
+
+      const body = {
+        criteria: checkedCriteria,
+        attachments,
+        links: links.map(l => l.url.trim()).filter(Boolean),
+      }
 
       await api.patch(
         `/pioneer/projects/milestones/${milestoneId}/submit`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        body
       )
 
       toast.success('ส่งหลักฐานเรียบร้อยแล้ว รอ Admin ตรวจสอบ')
@@ -142,6 +160,41 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
       return false
     } finally {
       set({ isSubmitting: false })
+    }
+  },
+
+  openVoting: async (milestoneId) => {
+    set({ isOpeningVoting: true })
+    try {
+      await api.patch(`/pioneer/projects/milestones/${milestoneId}/open-vote`)
+      toast.success('เปิดการโหวตเรียบร้อยแล้ว')
+      set(state => ({
+        milestones: state.milestones.map(m =>
+          m.id === milestoneId ? { ...m, voting_open: true } : m
+        ),
+      }))
+      return true
+    } catch {
+      toast.error('ไม่สามารถเปิดการโหวตได้')
+      return false
+    } finally {
+      set({ isOpeningVoting: false })
+    }
+  },
+
+  recallEvidence: async (milestoneId) => {
+    try {
+      await api.patch(`/pioneer/projects/milestones/${milestoneId}/recall`)
+      toast.success('ยกเลิกการส่งหลักฐานเรียบร้อยแล้ว')
+      set(state => ({
+        milestones: state.milestones.map(m =>
+          m.id === milestoneId ? { ...m, status: 'in_progress' as MilestoneStatus } : m
+        ),
+      }))
+      return true
+    } catch {
+      toast.error('ไม่สามารถยกเลิกได้')
+      return false
     }
   },
 }))
