@@ -75,6 +75,7 @@ import AdminRefunds from '@/pages/admin/AdminRefunds';
 import AdminProfitDistribution from '@/pages/admin/AdminProfitDistribution';
 import AdminUniversities from '@/pages/admin/AdminUniversities';
 import AdminUniversityDetail from '@/pages/admin/AdminUniversityDetail';
+import AdminCategories from '@/pages/admin/AdminCategories';
 
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
@@ -213,6 +214,7 @@ const Router = () => {
                             <Route path='/admin/audit-logs' element={<AdminAuditLogs />} />
                             <Route path='/admin/universities' element={<AdminUniversities />} />
                             <Route path='/admin/universities/:id' element={<AdminUniversityDetail />} />
+                            <Route path='/admin/categories' element={<AdminCategories />} />
                             <Route path='/admin/profile' element={<AdminProfile />} />
                         </Route>
                     </Route>
