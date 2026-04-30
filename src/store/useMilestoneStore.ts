@@ -35,6 +35,9 @@ interface MilestoneStore {
     links: EvidenceLink[],
     checkedCriteria: string[]
   ) => Promise<boolean>
+  recallEvidence: (milestoneId: number) => Promise<boolean>
+  isOpeningVoting: boolean
+  openVoting: (milestoneId: number) => Promise<boolean>
 }
 
 export const useMilestoneStore = create<MilestoneStore>((set) => ({
@@ -42,6 +45,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
   projectTitle: '',
   isLoading: false,
   isSubmitting: false,
+  isOpeningVoting: false,
 
   fetchMilestones: async (projectId) => {
     set({ isLoading: true })
@@ -66,6 +70,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
         status?: MilestoneStatus
         progress_pct?: number
         admin_note?: string
+        voting_open?: boolean
       }[] = msRes.data?.data ?? []
 
       const milestones: MilestoneData[] = Array.from({ length: 4 }, (_, i) => {
@@ -95,8 +100,9 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
             ? bm.acceptance_criteria.split('\n').filter(Boolean)
             : [],
           status: mapBackendStatus(bm.status),
-          progress_pct: bm.progress_pct ?? 0,
+          progress_pct: mapBackendStatus(bm.status) === 'completed' ? 100 : (bm.progress_pct ?? 0),
           admin_note: bm.admin_note,
+          voting_open: bm.voting_open ?? false,
         }
       })
 
@@ -154,6 +160,41 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
       return false
     } finally {
       set({ isSubmitting: false })
+    }
+  },
+
+  openVoting: async (milestoneId) => {
+    set({ isOpeningVoting: true })
+    try {
+      await api.patch(`/pioneer/projects/milestones/${milestoneId}/open-vote`)
+      toast.success('เปิดการโหวตเรียบร้อยแล้ว')
+      set(state => ({
+        milestones: state.milestones.map(m =>
+          m.id === milestoneId ? { ...m, voting_open: true } : m
+        ),
+      }))
+      return true
+    } catch {
+      toast.error('ไม่สามารถเปิดการโหวตได้')
+      return false
+    } finally {
+      set({ isOpeningVoting: false })
+    }
+  },
+
+  recallEvidence: async (milestoneId) => {
+    try {
+      await api.patch(`/pioneer/projects/milestones/${milestoneId}/recall`)
+      toast.success('ยกเลิกการส่งหลักฐานเรียบร้อยแล้ว')
+      set(state => ({
+        milestones: state.milestones.map(m =>
+          m.id === milestoneId ? { ...m, status: 'in_progress' as MilestoneStatus } : m
+        ),
+      }))
+      return true
+    } catch {
+      toast.error('ไม่สามารถยกเลิกได้')
+      return false
     }
   },
 }))

@@ -19,6 +19,7 @@ export interface MilestoneData {
   status: MilestoneStatus
   progress_pct: number
   admin_note?: string
+  voting_open?: boolean
 }
 
 export interface EvidenceLink {

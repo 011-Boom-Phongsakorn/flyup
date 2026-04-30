@@ -37,7 +37,7 @@ const CancelProjectRequest = () => {
 
     setIsSubmitting(true);
     try {
-      await api.post(`/pioneer/projects/${projectId}/cancel-request`, {
+      await api.patch(`/pioneer/projects/${projectId}/cancel`, {
         reason: selectedReason,
         details: details.trim(),
       });

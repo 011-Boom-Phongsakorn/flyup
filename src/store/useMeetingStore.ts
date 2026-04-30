@@ -28,6 +28,14 @@ interface MeetingStoreState {
   cancelMeeting: (id: number) => Promise<boolean>;
 }
 
+const BACKEND_ERROR_TH: Record<string, string> = {
+  'meeting already exists for this milestone': 'มี Milestone นี้นัดหมายอยู่แล้ว ไม่สามารถสร้างซ้ำได้',
+}
+
+function toThaiError(msg: string): string {
+  return BACKEND_ERROR_TH[msg] ?? msg
+}
+
 export const useMeetingStore = create<MeetingStoreState>((set) => ({
   meetings: [],
   milestones: [],
@@ -97,10 +105,10 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
       toast.success('ส่งนัดหมายเรียบร้อยแล้ว');
       return true;
     } catch (err: unknown) {
-      const message =
+      const raw =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'เกิดข้อผิดพลาด กรุณาลองใหม่';
-      toast.error(message);
+      toast.error(toThaiError(raw));
       return false;
     } finally {
       set({ isSubmitting: false });
@@ -110,14 +118,14 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
   editMeeting: async (id, payload) => {
     set({ isSubmitting: true });
     try {
-      await api.patch(`/pioneer/projects/meeting`, { id, ...payload });
+      await api.patch(`/pioneer/projects/meeting/${id}`, payload);
       toast.success('แก้ไขนัดหมายเรียบร้อยแล้ว');
       return true;
     } catch (err: unknown) {
-      const message =
+      const raw =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'เกิดข้อผิดพลาด กรุณาลองใหม่';
-      toast.error(message);
+      toast.error(toThaiError(raw));
       return false;
     } finally {
       set({ isSubmitting: false });
@@ -131,10 +139,10 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
       toast.success('ยกเลิกนัดหมายเรียบร้อยแล้ว');
       return true;
     } catch (err: unknown) {
-      const message =
+      const raw =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'เกิดข้อผิดพลาด กรุณาลองใหม่';
-      toast.error(message);
+      toast.error(toThaiError(raw));
       return false;
     } finally {
       set({ isSubmitting: false });

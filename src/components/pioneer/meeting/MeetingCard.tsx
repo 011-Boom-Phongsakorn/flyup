@@ -18,19 +18,6 @@ function formatTime(iso: string) {
   return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-function isMeetingUpcoming(m: Meeting): boolean {
-  const date = new Date(m.date);
-  const time = new Date(m.time);
-  if (Number.isNaN(date.getTime()) || Number.isNaN(time.getTime())) return true;
-  const combined = new Date(
-    date.getUTCFullYear(),
-    date.getUTCMonth(),
-    date.getUTCDate(),
-    time.getUTCHours(),
-    time.getUTCMinutes(),
-  );
-  return combined.getTime() >= Date.now();
-}
 
 interface MeetingCardProps {
   meeting: Meeting;
@@ -44,17 +31,18 @@ export default function MeetingCard({
   meeting, projectTitle, phaseLabel, onEdit, onCancel,
 }: MeetingCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const upcoming = isMeetingUpcoming(meeting);
   const typeLabel = MEETING_TYPE_LABEL[meeting.meeting_type] ?? meeting.meeting_type;
   const hasDetail = !!meeting.about || !!meeting.link || !!meeting.place;
-  const isCanceled = meeting.status === 'canceleed';
-  const canModify = upcoming && !isCanceled && meeting.status === 'open';
+  const isCanceled = meeting.status === 'canceled';
+  const isClosed = meeting.status === 'closed';
+  const isOpen = meeting.status === 'open';
+  const canModify = isOpen && !isCanceled;
 
   return (
     <div className={`bg-white border rounded-2xl overflow-hidden transition-all ${expanded ? 'border-primary/40 shadow-sm' : 'border-border'} ${isCanceled ? 'opacity-60' : ''}`}>
       <div className="flex items-center gap-4 p-5">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isCanceled ? 'bg-muted text-muted-foreground' : upcoming ? 'bg-purple-100 text-primary' : 'bg-muted text-muted-foreground'}`}>
-          {isCanceled ? <Ban size={20} /> : upcoming ? <Video size={20} /> : <CheckCircle size={20} />}
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isCanceled || isClosed ? 'bg-muted text-muted-foreground' : 'bg-purple-100 text-primary'}`}>
+          {isCanceled ? <Ban size={20} /> : isClosed ? <CheckCircle size={20} /> : <Video size={20} />}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -74,7 +62,11 @@ export default function MeetingCard({
             <span className="text-xs font-medium text-error border border-error/30 bg-error/5 px-3 py-1.5 rounded-full">
               ยกเลิก
             </span>
-          ) : upcoming ? (
+          ) : isClosed ? (
+            <span className="text-xs font-medium text-muted-foreground border border-border px-3 py-1.5 rounded-full">
+              เสร็จสิ้น
+            </span>
+          ) : (
             <>
               <span className="text-xs font-medium text-primary bg-purple-50 border border-primary/20 px-3 py-1.5 rounded-full hidden sm:inline-block">
                 กำลังจะถึง
@@ -116,10 +108,6 @@ export default function MeetingCard({
                 </button>
               )}
             </>
-          ) : (
-            <span className="text-xs font-medium text-muted-foreground border border-border px-3 py-1.5 rounded-full">
-              เสร็จสิ้น
-            </span>
           )}
         </div>
       </div>
