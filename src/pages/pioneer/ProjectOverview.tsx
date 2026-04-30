@@ -3,6 +3,8 @@ import { type LucideIcon, CircleCheckBig, Send } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router'
 import { useProjectStore, type Project } from '../../store/useProjectStore';
 import api from '../../services/api';
+import { AxiosError } from 'axios';
+import toast from 'react-hot-toast';
 
 interface StageItems {
   icon: LucideIcon;
@@ -63,7 +65,12 @@ const ProjectOverview = () => {
       await api.patch(`/pioneer/projects/${projectId}/submit`)
       navigate('/pioneer/dashboard/projects')
     } catch (error) {
-      console.error('submit failed:', error)
+      const msg = error instanceof AxiosError ? error.response?.data?.message : null;
+      if (msg === 'you already have an active project') {
+        toast.error('คุณมีโปรเจกต์ที่กำลังดำเนินอยู่แล้ว ไม่สามารถส่งโปรเจกต์ใหม่ได้ในขณะนี้');
+      } else {
+        toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+      }
     } finally {
       setIsSubmitting(false)
       setShowModal(false)
@@ -95,7 +102,7 @@ const ProjectOverview = () => {
             <button
               disabled={!canSubmit}
               onClick={() => setShowModal(true)}
-              className='flex h-[38px] bg-primary text-white-foreground rounded-[12px] w-[190px] justify-center items-center gap-[10px] hover:bg-primary-hover transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary'>
+              className='flex h-[38px] bg-primary text-white-foreground rounded-[12px] w-[190px] justify-center items-center gap-[10px] hover:bg-primary-hover transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary cursor-pointer'>
               <Send size={16} strokeWidth={1} />
               <span className='text-[14px]'>ส่งคำขอสร้างโปรเจกต์</span>
             </button>

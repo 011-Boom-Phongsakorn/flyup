@@ -69,7 +69,7 @@ const StepNavigation = ({ onSubmit, disableSubmit, disableNext }: StepNavigation
         <button
           onClick={onSubmit || (() => console.log("ส่งคำขอแล้ว!"))}
           disabled={disableSubmit}
-          className={`px-[20px] h-[38px] flex items-center justify-center gap-[6px] rounded-[12px] transition-all duration-200 ${
+          className={`px-[20px] h-[38px] flex items-center justify-center gap-[6px] rounded-[12px] transition-all duration-200 cursor-pointer ${
             disableSubmit
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-primary hover:bg-primary-hover text-white'
