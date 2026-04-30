@@ -1,18 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Video, Clock, ChevronDown, ExternalLink, Calendar } from 'lucide-react';
-import { useBoosterStore } from '../../store/useBoosterStore';
+import { useBoosterStore, type BoosterMeeting } from '../../store/useBoosterStore';
 
 // ─── Meeting Card ────────────────────────────────────────────────────────────
 
-function MeetingCard({ meeting }: { meeting: any }) {
+function MeetingCard({ meeting }: { meeting: BoosterMeeting }) {
   const [expanded, setExpanded] = useState(false);
 
   // Format dates
   const meetingDateStr = meeting.date ? new Date(meeting.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : 'ไม่ระบุวันที่';
 
   // Check if upcoming
-  const meetingDateTime = new Date(`${meeting.date}T${meeting.time || '00:00'}`);
-  const isUpcoming = meetingDateTime.getTime() > Date.now() && meeting.status !== 'canceled';
+  const isUpcoming = useMemo(() => {
+    const meetingDateTime = new Date(`${meeting.date}T${meeting.time || '00:00'}`);
+    return meetingDateTime.getTime() > Date.now() && meeting.status !== 'canceled';
+  }, [meeting.date, meeting.time, meeting.status]);
 
   // Parse agendas from `about`
   const agendas = meeting.about ? meeting.about.split('\n').filter((l: string) => l.trim().length > 0) : [];
@@ -20,7 +22,7 @@ function MeetingCard({ meeting }: { meeting: any }) {
 
   // Type Mapping
   const typeMap: Record<string, string> = { online: 'ออนไลน์', onsite: 'ออนไซต์', hybrid: 'ไฮบริด' };
-  const meetingTypeStr = typeMap[meeting.meeting_type] || meeting.meeting_type || '';
+  const meetingTypeStr = (meeting.meeting_type ? typeMap[meeting.meeting_type] : undefined) ?? meeting.meeting_type ?? '';
 
   const projectTitle = meeting.project?.title || 'โปรเจกต์';
   const phaseLabel = meeting.milestone ? `Phase ${meeting.milestone.phase_no || ''}: ${meeting.milestone.title || ''}` : '';
@@ -135,12 +137,16 @@ const Meetings = () => {
     fetchBoosterMeetings();
   }, [fetchBoosterMeetings]);
 
-  const filtered = boosterMeetings.filter((m: any) => {
-    const meetingDateTime = new Date(`${m.date}T${m.time || '00:00'}`);
-    const isUpcoming = meetingDateTime.getTime() > Date.now() && m.status !== 'canceled';
-    if (filter === 'upcoming') return isUpcoming;
-    return true;
-  });
+  const now = useMemo(() => Date.now(), []);
+  const filtered = useMemo(() =>
+    boosterMeetings.filter((m: BoosterMeeting) => {
+      const meetingDateTime = new Date(`${m.date}T${m.time || '00:00'}`);
+      const isUpcoming = meetingDateTime.getTime() > now && m.status !== 'canceled';
+      if (filter === 'upcoming') return isUpcoming;
+      return true;
+    }),
+    [boosterMeetings, filter, now]
+  );
 
   return (
     <div>
@@ -167,7 +173,7 @@ const Meetings = () => {
 
         {filtered.length > 0 ? (
           <div className="space-y-3">
-            {filtered.map((m: any) => <MeetingCard key={m.id} meeting={m} />)}
+            {filtered.map((m: BoosterMeeting) => <MeetingCard key={m.id} meeting={m} />)}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-8">ไม่มีนัดหมายที่ตรงกับเงื่อนไข</p>

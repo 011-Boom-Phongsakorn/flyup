@@ -3,6 +3,24 @@ import api from '../services/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export interface BoosterMeeting {
+  id: number;
+  date: string;
+  time?: string;
+  status: string;
+  about?: string;
+  meeting_type?: string;
+  place?: string;
+  link?: string;
+  project?: {
+    title: string;
+  };
+  milestone?: {
+    phase_no?: number | string;
+    title?: string;
+  };
+}
+
 export interface BoosterInvestment {
   id: number;
   project_id: number;
@@ -41,7 +59,7 @@ export interface BoosterInvestment {
 interface BoosterStoreState {
   investments: BoosterInvestment[];
   currentInvestment: BoosterInvestment | null;
-  boosterMeetings: any[];
+  boosterMeetings: BoosterMeeting[];
   isLoading: boolean;
   isDetailLoading: boolean;
 
@@ -89,7 +107,7 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
             try {
               const projRes = await api.get(`/projects/${inv.project_id}`);
               inv.project = projRes.data?.data ?? null;
-            } catch (e) {
+            } catch {
               console.error(`Failed to fetch project for investment ${inv.id}`);
             }
           }
