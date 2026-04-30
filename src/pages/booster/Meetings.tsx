@@ -11,10 +11,9 @@ function MeetingCard({ meeting }: { meeting: BoosterMeeting }) {
   const meetingDateStr = meeting.date ? new Date(meeting.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : 'ไม่ระบุวันที่';
 
   // Check if upcoming
-  const isUpcoming = useMemo(() => {
-    const meetingDateTime = new Date(`${meeting.date}T${meeting.time || '00:00'}`);
-    return meetingDateTime.getTime() > Date.now() && meeting.status !== 'canceled';
-  }, [meeting.date, meeting.time, meeting.status]);
+  const [now] = useState<number>(Date.now);
+  const meetingDateTime = new Date(`${meeting.date}T${meeting.time || '00:00'}`);
+  const isUpcoming = meetingDateTime.getTime() > now && meeting.status !== 'canceled';
 
   // Parse agendas from `about`
   const agendas = meeting.about ? meeting.about.split('\n').filter((l: string) => l.trim().length > 0) : [];
@@ -137,7 +136,7 @@ const Meetings = () => {
     fetchBoosterMeetings();
   }, [fetchBoosterMeetings]);
 
-  const now = useMemo(() => Date.now(), []);
+  const [now] = useState<number>(Date.now);
   const filtered = useMemo(() =>
     boosterMeetings.filter((m: BoosterMeeting) => {
       const meetingDateTime = new Date(`${m.date}T${m.time || '00:00'}`);
