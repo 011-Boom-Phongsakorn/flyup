@@ -127,7 +127,7 @@ const MyProjects = () => {
         <button
           onClick={handleCreate}
           disabled={isCreating}
-          className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white px-[16px] py-[10px] rounded-[8px] flex items-center gap-[8px] text-[14px] font-medium transition-colors"
+          className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white px-[16px] py-[10px] rounded-[8px] flex items-center gap-[8px] text-[14px] font-medium transition-colors cursor-pointer"
         >
           {isCreating ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
           สร้างโปรเจกต์ใหม่
