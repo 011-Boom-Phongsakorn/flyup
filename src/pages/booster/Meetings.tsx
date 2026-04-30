@@ -2,24 +2,18 @@ import { useState, useEffect } from 'react';
 import { Video, Clock, ChevronDown, ExternalLink, Calendar } from 'lucide-react';
 import { useBoosterStore } from '../../store/useBoosterStore';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface MeetingAgenda {
-  title: string;
-}
-
 // ─── Meeting Card ────────────────────────────────────────────────────────────
 
 function MeetingCard({ meeting }: { meeting: any }) {
   const [expanded, setExpanded] = useState(false);
-  
+
   // Format dates
   const meetingDateStr = meeting.date ? new Date(meeting.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : 'ไม่ระบุวันที่';
-  
+
   // Check if upcoming
   const meetingDateTime = new Date(`${meeting.date}T${meeting.time || '00:00'}`);
   const isUpcoming = meetingDateTime.getTime() > Date.now() && meeting.status !== 'canceled';
-  
+
   // Parse agendas from `about`
   const agendas = meeting.about ? meeting.about.split('\n').filter((l: string) => l.trim().length > 0) : [];
   const hasAgendas = agendas.length > 0;
@@ -47,7 +41,7 @@ function MeetingCard({ meeting }: { meeting: any }) {
             {phaseLabel && <span className="text-muted-foreground font-normal"> — {phaseLabel}</span>}
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {meetingDateStr} เวลา {meeting.time?.substring(0,5) || '00:00'}
+            {meetingDateStr} เวลา {meeting.time?.substring(0, 5) || '00:00'}
             {meetingTypeStr && <> · {meetingTypeStr}</>}
             {meeting.place && <> · {meeting.place}</>}
           </p>
@@ -161,8 +155,8 @@ const Meetings = () => {
             <Clock size={16} className="text-muted-foreground" />
             <h2 className="text-base font-bold text-foreground">รายการนัดหมาย</h2>
           </div>
-          <select 
-            value={filter} 
+          <select
+            value={filter}
             onChange={(e) => setFilter(e.target.value as 'all' | 'upcoming')}
             className="text-sm bg-background border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
           >
@@ -170,7 +164,7 @@ const Meetings = () => {
             <option value="all">ทั้งหมด</option>
           </select>
         </div>
-        
+
         {filtered.length > 0 ? (
           <div className="space-y-3">
             {filtered.map((m: any) => <MeetingCard key={m.id} meeting={m} />)}
