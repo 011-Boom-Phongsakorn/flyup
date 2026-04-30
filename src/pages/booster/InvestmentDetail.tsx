@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Loader2, Calendar } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Calendar, AlertTriangle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useBoosterStore } from '../../store/useBoosterStore';
 import { usePublicProjectStore } from '../../store/usePublicProjectStore';
 import { useProjectDetailStore } from '../../store/useProjectDetailStore';
@@ -32,6 +33,29 @@ const InvestmentDetail = () => {
 
   const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Refund State
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundReason, setRefundReason] = useState('');
+  const [isRefunding, setIsRefunding] = useState(false);
+  const { requestRefund } = useBoosterStore();
+
+  const handleRequestRefund = async () => {
+    if (!refundReason.trim()) {
+      toast.error('กรุณาระบุเหตุผลในการขอคืนเงิน');
+      return;
+    }
+    setIsRefunding(true);
+    const success = await requestRefund(Number(id), refundReason);
+    setIsRefunding(false);
+    if (success) {
+      toast.success('ส่งคำร้องขอคืนเงินเรียบร้อยแล้ว');
+      setShowRefundModal(false);
+      fetchInvestmentById(Number(id)); // Refresh data
+    } else {
+      toast.error('เกิดข้อผิดพลาดในการส่งคำร้อง');
+    }
+  };
 
   // 1. Fetch Investment first
   useEffect(() => {
@@ -239,6 +263,15 @@ const InvestmentDetail = () => {
              <button className="w-full mt-6 bg-background hover:bg-muted border border-border text-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px]">
                  <Download size={16} /> <span>ดาวน์โหลดสัญญา</span>
              </button>
+
+             {inv.status !== 'refunded' && inv.status !== 'cancelled' && (
+               <button 
+                 onClick={() => setShowRefundModal(true)}
+                 className="w-full mt-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px]"
+               >
+                   <AlertTriangle size={16} /> <span>แจ้งขอคืนเงิน (Refund)</span>
+               </button>
+             )}
           </div>
 
           {/* Project Progress Status */}
@@ -268,6 +301,50 @@ const InvestmentDetail = () => {
 
         </div>
       </div>
+
+      {/* Refund Modal */}
+      {showRefundModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <div className="p-6">
+              <div className="flex items-center gap-3 text-red-600 mb-2">
+                <AlertTriangle size={24} />
+                <h3 className="font-bold text-xl">ขอคืนเงิน (Refund)</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                คุณกำลังส่งคำร้องขอคืนเงินสำหรับโปรเจกต์ <span className="font-semibold text-foreground">{title}</span> ยอดเงิน <span className="font-semibold text-foreground">฿{inv.amount?.toLocaleString()}</span>
+                <br /><br />
+                โปรดระบุเหตุผลในการขอคืนเงิน แอดมินจะทำการตรวจสอบคำร้องของคุณโดยเร็วที่สุด
+              </p>
+              
+              <textarea
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder="ระบุเหตุผลในการขอคืนเงิน..."
+                className="w-full h-24 p-3 rounded-xl border border-border focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-sm resize-none bg-background"
+              />
+            </div>
+
+            <div className="p-4 border-t border-border bg-background/50 flex gap-3">
+              <button
+                onClick={() => setShowRefundModal(false)}
+                className="flex-1 py-2.5 rounded-xl border border-border bg-card text-foreground font-semibold hover:bg-muted transition-colors text-sm"
+                disabled={isRefunding}
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleRequestRefund}
+                disabled={isRefunding || !refundReason.trim()}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              >
+                {isRefunding ? <Loader2 size={16} className="animate-spin" /> : null}
+                ยืนยันการขอคืนเงิน
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -41,11 +41,14 @@ export interface BoosterInvestment {
 interface BoosterStoreState {
   investments: BoosterInvestment[];
   currentInvestment: BoosterInvestment | null;
+  boosterMeetings: any[];
   isLoading: boolean;
   isDetailLoading: boolean;
 
   fetchMyInvestments: () => Promise<void>;
+  fetchBoosterMeetings: () => Promise<void>;
   fetchInvestmentById: (id: number) => Promise<void>;
+  requestRefund: (investmentId: number, reason: string) => Promise<boolean>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -53,15 +56,48 @@ interface BoosterStoreState {
 export const useBoosterStore = create<BoosterStoreState>((set) => ({
   investments: [],
   currentInvestment: null,
+  boosterMeetings: [],
   isLoading: false,
   isDetailLoading: false,
+
+  fetchBoosterMeetings: async () => {
+    try {
+      const res = await api.get('/me/meetings');
+      set({ boosterMeetings: res.data?.data ?? [] });
+    } catch (error) {
+      console.error('fetchBoosterMeetings:', error);
+      set({ boosterMeetings: [] });
+    }
+  },
 
   fetchMyInvestments: async () => {
     set({ isLoading: true });
     try {
       const res = await api.get('/investments');
       const data = res.data?.data ?? res.data?.investments ?? [];
-      set({ investments: Array.isArray(data) ? data : [] });
+      
+      // Map and ensure amount field is populated (fallback to total_amount)
+      let investmentsArray = Array.isArray(data) ? data.map(inv => ({
+        ...inv,
+        amount: inv.amount ?? inv.total_amount ?? 0,
+      })) : [];
+
+      // Fetch project details for each investment if not provided by backend
+      investmentsArray = await Promise.all(
+        investmentsArray.map(async (inv) => {
+          if (!inv.project && inv.project_id) {
+            try {
+              const projRes = await api.get(`/projects/${inv.project_id}`);
+              inv.project = projRes.data?.data ?? null;
+            } catch (e) {
+              console.error(`Failed to fetch project for investment ${inv.id}`);
+            }
+          }
+          return inv;
+        })
+      );
+
+      set({ investments: investmentsArray });
     } catch (error) {
       console.error('fetchMyInvestments:', error);
       set({ investments: [] });
@@ -74,12 +110,28 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
     set({ isDetailLoading: true, currentInvestment: null });
     try {
       const res = await api.get(`/investments/${id}`);
-      const data = res.data?.data ?? res.data?.investment ?? res.data;
+      let data = res.data?.data ?? res.data?.investment ?? res.data;
+      if (data) {
+        data = {
+          ...data,
+          amount: data.amount ?? data.total_amount ?? 0,
+        };
+      }
       set({ currentInvestment: data });
     } catch (error) {
       console.error('fetchInvestmentById:', error);
     } finally {
       set({ isDetailLoading: false });
+    }
+  },
+
+  requestRefund: async (investmentId: number, reason: string) => {
+    try {
+      await api.post(`/investments/${investmentId}/refund`, { reason });
+      return true;
+    } catch (error) {
+      console.error('requestRefund:', error);
+      return false;
     }
   },
 }));
