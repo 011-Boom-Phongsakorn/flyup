@@ -277,7 +277,7 @@ const Step3Milestone = () => {
             <button
               key={phase}
               onClick={() => setActivePhase(idx)}
-              className={`pb-2 text-[14px] md:text-[15px] font-semibold transition-all relative ${activePhase === idx ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              className={`pb-2 text-[14px] md:text-[15px] font-semibold transition-all relative ${activePhase === idx ? 'text-primary' : 'text-muted-foreground hover:text-foreground cursor-pointer'
                 }`}
             >
               Phase {phase}
@@ -421,7 +421,7 @@ const Step3Milestone = () => {
                     toast.error('คุณสามารถระบุเกณฑ์การยอมรับได้สูงสุด 10 ข้อ')
                   }
                 }}
-                className="flex items-center space-x-2 bg-[#F3F4F6] text-foreground hover:bg-[#E5E7EB] px-3 py-1.5 rounded-[8px] text-[13px] font-medium transition-all"
+                className="flex items-center space-x-2 bg-[#F3F4F6] text-foreground hover:bg-[#E5E7EB] px-3 py-1.5 rounded-[8px] text-[13px] font-medium transition-all cursor-pointer"
               >
                 <Plus size={14} />
                 <span>เพิ่มเกณฑ์</span>
@@ -475,7 +475,7 @@ const Step3Milestone = () => {
                   {currentData.criteria.length > 1 && (
                     <button
                       onClick={() => handleChange('criteria', currentData.criteria.filter((_, i) => i !== cIdx))}
-                      className="p-2 text-muted-foreground hover:text-error transition-colors"
+                      className="p-2 text-muted-foreground hover:text-error transition-colors cursor-pointer"
                     >
                       <Trash2 size={18} />
                     </button>
