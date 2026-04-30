@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft, AlertTriangle, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { AxiosError } from 'axios';
 
 const CANCEL_REASONS = [
   'เปลี่ยนแปลงแผนธุรกิจ',
@@ -37,14 +38,20 @@ const CancelProjectRequest = () => {
 
     setIsSubmitting(true);
     try {
-      await api.patch(`/pioneer/projects/${projectId}/cancel`, {
-        reason: selectedReason,
-        details: details.trim(),
+      await api.patch(`/pioneer/projects/${projectId}/submit-cancel`, {
+        reason: `${selectedReason}: ${details.trim()}`,
       });
       toast.success('ส่งคำขอยกเลิกเรียบร้อยแล้ว รอ Admin พิจารณา');
       navigate('/pioneer/dashboard/projects');
-    } catch {
-      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    } catch (error) {
+      const msg = error instanceof AxiosError ? error.response?.data?.message : null;
+      if (msg === 'cancel request is already pending') {
+        toast.error('คุณได้ส่งคำขอยกเลิกไปแล้ว กรุณารอ Admin พิจารณา');
+      } else if (msg === 'project is already cancelled or state is draft') {
+        toast.error('ไม่สามารถส่งคำขอได้ เนื่องจากโปรเจกต์ถูกยกเลิกแล้ว หรืออยู่ในสถานะแบบร่าง');
+      } else {
+        toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+      }
     } finally {
       setIsSubmitting(false);
     }
