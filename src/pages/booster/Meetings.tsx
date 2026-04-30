@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Video, Clock, ChevronDown, ExternalLink, Calendar } from 'lucide-react';
+import { useBoosterStore } from '../../store/useBoosterStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -7,65 +8,28 @@ interface MeetingAgenda {
   title: string;
 }
 
-interface Meeting {
-  id: number;
-  projectTitle: string;
-  phaseLabel: string | null;
-  date: string;
-  time: string;
-  type: string; // ออนไลน์ | ออนไซต์
-  meetingUrl?: string;
-  status: 'upcoming' | 'past';
-  agendas?: MeetingAgenda[];
-}
-
-// ─── Mock Data (TODO: replace with API) ──────────────────────────────────────
-
-const mockMeetings: Meeting[] = [
-  {
-    id: 1,
-    projectTitle: 'UniTrack',
-    phaseLabel: 'Phase 2',
-    date: '18 ก.พ. 2026',
-    time: '14:00',
-    type: 'ออนไลน์',
-    meetingUrl: 'https://meet.google.com/abc-defg-hij',
-    status: 'upcoming',
-    agendas: [
-      { title: 'รายงานความก้าวหน้า Sprint 3' },
-      { title: 'Demo หน้า Dashboard' },
-      { title: 'Q&A กับ Booster' },
-    ],
-  },
-  {
-    id: 2,
-    projectTitle: 'UniTrack',
-    phaseLabel: null,
-    date: '25 ก.พ. 2026',
-    time: '10:00',
-    type: 'ออนไลน์',
-    meetingUrl: undefined,
-    status: 'upcoming',
-    agendas: [],
-  },
-  {
-    id: 3,
-    projectTitle: 'UniTrack',
-    phaseLabel: null,
-    date: '5 ม.ค. 2026',
-    time: '15:00',
-    type: '',
-    status: 'past',
-    agendas: [],
-  },
-];
-
 // ─── Meeting Card ────────────────────────────────────────────────────────────
 
-function MeetingCard({ meeting }: { meeting: Meeting }) {
+function MeetingCard({ meeting }: { meeting: any }) {
   const [expanded, setExpanded] = useState(false);
-  const isUpcoming = meeting.status === 'upcoming';
-  const hasAgendas = meeting.agendas && meeting.agendas.length > 0;
+  
+  // Format dates
+  const meetingDateStr = meeting.date ? new Date(meeting.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : 'ไม่ระบุวันที่';
+  
+  // Check if upcoming
+  const meetingDateTime = new Date(`${meeting.date}T${meeting.time || '00:00'}`);
+  const isUpcoming = meetingDateTime.getTime() > Date.now() && meeting.status !== 'canceled';
+  
+  // Parse agendas from `about`
+  const agendas = meeting.about ? meeting.about.split('\n').filter((l: string) => l.trim().length > 0) : [];
+  const hasAgendas = agendas.length > 0;
+
+  // Type Mapping
+  const typeMap: Record<string, string> = { online: 'ออนไลน์', onsite: 'ออนไซต์', hybrid: 'ไฮบริด' };
+  const meetingTypeStr = typeMap[meeting.meeting_type] || meeting.meeting_type || '';
+
+  const projectTitle = meeting.project?.title || 'โปรเจกต์';
+  const phaseLabel = meeting.milestone ? `Phase ${meeting.milestone.phase_no || ''}: ${meeting.milestone.title || ''}` : '';
 
   return (
     <div className={`bg-card border rounded-2xl overflow-hidden transition-all ${expanded ? 'border-primary/30' : 'border-border'}`}>
@@ -78,26 +42,31 @@ function MeetingCard({ meeting }: { meeting: Meeting }) {
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-foreground text-sm">
-            {meeting.projectTitle}
-            {meeting.phaseLabel && <span className="text-muted-foreground font-normal"> — {meeting.phaseLabel}</span>}
+          <h3 className="font-bold text-foreground text-sm truncate">
+            {projectTitle}
+            {phaseLabel && <span className="text-muted-foreground font-normal"> — {phaseLabel}</span>}
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {meeting.date} เวลา {meeting.time}
-            {meeting.type && <> · {meeting.type}</>}
+            {meetingDateStr} เวลา {meeting.time?.substring(0,5) || '00:00'}
+            {meetingTypeStr && <> · {meetingTypeStr}</>}
+            {meeting.place && <> · {meeting.place}</>}
           </p>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {isUpcoming ? (
+          {meeting.status === 'canceled' ? (
+            <span className="text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-full">
+              ยกเลิก
+            </span>
+          ) : isUpcoming ? (
             <>
               <span className="text-xs font-medium text-muted-foreground bg-muted px-3 py-1.5 rounded-full hidden sm:inline-block">
                 กำลังจะถึง
               </span>
-              {meeting.meetingUrl && (
+              {meeting.link && (
                 <a
-                  href={meeting.meetingUrl}
+                  href={meeting.link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity"
@@ -105,7 +74,7 @@ function MeetingCard({ meeting }: { meeting: Meeting }) {
                   <Video size={14} /> เข้าร่วม
                 </a>
               )}
-              {(hasAgendas || meeting.meetingUrl) && (
+              {(hasAgendas || meeting.link) && (
                 <button
                   onClick={() => setExpanded(!expanded)}
                   className={`p-2 rounded-lg hover:bg-muted transition-colors ${expanded ? 'text-primary' : 'text-muted-foreground'}`}
@@ -129,29 +98,29 @@ function MeetingCard({ meeting }: { meeting: Meeting }) {
             {/* Agenda list */}
             {hasAgendas && (
               <div className="flex-1">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">วาระการประชุม</h4>
-                <ol className="space-y-2">
-                  {meeting.agendas!.map((a, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-foreground">
-                      <span className="text-primary font-bold">{i + 1}</span>
-                      {a.title}
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">วาระการประชุม / รายละเอียด</h4>
+                <ul className="space-y-2 list-disc pl-4">
+                  {agendas.map((a: string, i: number) => (
+                    <li key={i} className="text-sm text-foreground">
+                      {a}
                     </li>
                   ))}
-                </ol>
+                </ul>
               </div>
             )}
 
             {/* Meeting link */}
-            {meeting.meetingUrl && (
+            {meeting.link && (
               <div>
                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">ลิงก์ประชุม</h4>
                 <a
-                  href={meeting.meetingUrl}
+                  href={meeting.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline flex items-center gap-1"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline font-medium break-all"
                 >
-                  <ExternalLink size={14} /> {meeting.meetingUrl}
+                  {meeting.link}
+                  <ExternalLink size={14} />
                 </a>
               </div>
             )}
@@ -165,8 +134,19 @@ function MeetingCard({ meeting }: { meeting: Meeting }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 const Meetings = () => {
-  const upcoming = mockMeetings.filter(m => m.status === 'upcoming');
-  const past = mockMeetings.filter(m => m.status === 'past');
+  const [filter, setFilter] = useState<'all' | 'upcoming'>('upcoming');
+  const { boosterMeetings, fetchBoosterMeetings } = useBoosterStore();
+
+  useEffect(() => {
+    fetchBoosterMeetings();
+  }, [fetchBoosterMeetings]);
+
+  const filtered = boosterMeetings.filter((m: any) => {
+    const meetingDateTime = new Date(`${m.date}T${m.time || '00:00'}`);
+    const isUpcoming = meetingDateTime.getTime() > Date.now() && m.status !== 'canceled';
+    if (filter === 'upcoming') return isUpcoming;
+    return true;
+  });
 
   return (
     <div>
@@ -175,30 +155,28 @@ const Meetings = () => {
         <p className="text-sm text-muted-foreground mt-1">นัดหมายประชุม Milestone กับทีมโปรเจกต์</p>
       </div>
 
-      {/* Upcoming */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Clock size={16} className="text-muted-foreground" />
-          <h2 className="text-base font-bold text-foreground">กำลังจะถึง</h2>
+        <div className="flex items-center gap-2 mb-4 justify-between">
+          <div className="flex items-center gap-2">
+            <Clock size={16} className="text-muted-foreground" />
+            <h2 className="text-base font-bold text-foreground">รายการนัดหมาย</h2>
+          </div>
+          <select 
+            value={filter} 
+            onChange={(e) => setFilter(e.target.value as 'all' | 'upcoming')}
+            className="text-sm bg-background border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
+          >
+            <option value="upcoming">กำลังจะถึง</option>
+            <option value="all">ทั้งหมด</option>
+          </select>
         </div>
-        {upcoming.length > 0 ? (
+        
+        {filtered.length > 0 ? (
           <div className="space-y-3">
-            {upcoming.map(m => <MeetingCard key={m.id} meeting={m} />)}
+            {filtered.map((m: any) => <MeetingCard key={m.id} meeting={m} />)}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-8">ไม่มีนัดหมายที่กำลังจะถึง</p>
-        )}
-      </div>
-
-      {/* Past */}
-      <div>
-        <h2 className="text-base font-bold text-foreground mb-4">ประชุมที่ผ่านมา</h2>
-        {past.length > 0 ? (
-          <div className="space-y-3">
-            {past.map(m => <MeetingCard key={m.id} meeting={m} />)}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-8">ยังไม่มีประชุมที่ผ่านมา</p>
+          <p className="text-sm text-muted-foreground text-center py-8">ไม่มีนัดหมายที่ตรงกับเงื่อนไข</p>
         )}
       </div>
     </div>
