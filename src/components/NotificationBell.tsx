@@ -31,18 +31,20 @@ function timeAgo(dateStr: string): string {
     return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
 }
 
+const NOTIF_CONFIG: Record<string, { icon: React.ReactNode; bg: string }> = {
+    new_investment: { icon: <TrendingUp size={16} />, bg: 'bg-emerald-500' },
+    milestone:      { icon: <CheckSquare size={16} />, bg: 'bg-violet-500' },
+    vote:           { icon: <ThumbsUp size={16} />, bg: 'bg-blue-500' },
+    project_status: { icon: <FileText size={16} />, bg: 'bg-orange-500' },
+    profit:         { icon: <Banknote size={16} />, bg: 'bg-teal-500' },
+    meeting:        { icon: <CalendarDays size={16} />, bg: 'bg-sky-500' },
+}
+
 function NotifIcon({ type }: { type: string }) {
-    const icons: Record<string, React.ReactNode> = {
-        new_investment: <TrendingUp size={16} />,
-        milestone: <CheckSquare size={16} />,
-        vote: <ThumbsUp size={16} />,
-        project_status: <FileText size={16} />,
-        profit: <Banknote size={16} />,
-        meeting: <CalendarDays size={16} />,
-    }
+    const config = NOTIF_CONFIG[type]
     return (
-        <div className="w-[40px] h-[40px] rounded-lg bg-primary flex items-center justify-center text-white shrink-0">
-            {icons[type] ?? <BellIcon size={16} />}
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0 ${config?.bg ?? 'bg-primary'}`}>
+            {config?.icon ?? <BellIcon size={16} />}
         </div>
     )
 }
