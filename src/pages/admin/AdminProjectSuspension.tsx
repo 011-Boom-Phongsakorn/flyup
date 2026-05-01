@@ -114,7 +114,7 @@ const AdminProjectSuspension = () => {
     const fetchProjects = async () => {
         setIsLoading(true)
         try {
-            const res = await api.get('/projects')
+            const res = await api.get('/admin/projects')
             setProjects(res.data?.data ?? [])
         } catch {
             toast.error('โหลดข้อมูลโปรเจกต์ไม่สำเร็จ')
