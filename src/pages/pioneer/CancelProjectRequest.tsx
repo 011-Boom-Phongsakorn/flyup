@@ -20,6 +20,7 @@ const CancelProjectRequest = () => {
 
   const [selectedReason, setSelectedReason] = useState('');
   const [details, setDetails] = useState('');
+  const [detailsError, setDetailsError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -28,18 +29,20 @@ const CancelProjectRequest = () => {
       return;
     }
     if (!details.trim()) {
-      toast.error('กรุณาระบุรายละเอียดเพิ่มเติม');
+      setDetailsError('กรุณาระบุรายละเอียดเพิ่มเติม');
       return;
     }
     if (details.trim().length < 20) {
-      toast.error('กรุณาระบุรายละเอียดอย่างน้อย 20 ตัวอักษร');
+      setDetailsError('กรุณาระบุรายละเอียดอย่างน้อย 20 ตัวอักษร');
       return;
     }
+    setDetailsError('');
 
     setIsSubmitting(true);
     try {
       await api.patch(`/pioneer/projects/${projectId}/submit-cancel`, {
-        reason: `${selectedReason}: ${details.trim()}`,
+        reason: selectedReason,
+        description: details.trim(),
       });
       toast.success('ส่งคำขอยกเลิกเรียบร้อยแล้ว รอ Admin พิจารณา');
       navigate('/pioneer/dashboard/projects');
@@ -49,6 +52,8 @@ const CancelProjectRequest = () => {
         toast.error('คุณได้ส่งคำขอยกเลิกไปแล้ว กรุณารอ Admin พิจารณา');
       } else if (msg === 'project is already cancelled or state is draft') {
         toast.error('ไม่สามารถส่งคำขอได้ เนื่องจากโปรเจกต์ถูกยกเลิกแล้ว หรืออยู่ในสถานะแบบร่าง');
+      } else if (msg === 'description is required') {
+        setDetailsError('กรุณาระบุรายละเอียดเพิ่มเติม');
       } else {
         toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
       }
@@ -120,14 +125,18 @@ const CancelProjectRequest = () => {
           </label>
           <textarea
             value={details}
-            onChange={e => setDetails(e.target.value)}
+            onChange={e => { setDetails(e.target.value); setDetailsError(''); }}
             placeholder="อธิบายสถานการณ์และเหตุผลโดยละเอียด เพื่อให้ Admin พิจารณาได้อย่างถูกต้อง..."
             rows={5}
-            className="border border-border rounded-xl px-4 py-3 text-sm outline-none focus:border-red-400 transition-colors resize-none"
+            className={`border rounded-xl px-4 py-3 text-sm outline-none transition-colors resize-none ${detailsError ? 'border-red-400 focus:border-red-500' : 'border-border focus:border-red-400'}`}
           />
-          <p className={`text-xs text-right ${details.trim().length < 20 ? 'text-muted-foreground' : 'text-green-600'}`}>
-            {details.trim().length} / 20 ตัวอักษรขั้นต่ำ
-          </p>
+          {detailsError ? (
+            <p className="text-xs text-red-500">{detailsError}</p>
+          ) : (
+            <p className={`text-xs text-right ${details.trim().length < 20 ? 'text-muted-foreground' : 'text-green-600'}`}>
+              {details.trim().length} / 20 ตัวอักษรขั้นต่ำ
+            </p>
+          )}
         </div>
 
         {/* Submit */}
