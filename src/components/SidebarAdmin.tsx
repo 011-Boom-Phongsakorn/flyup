@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/store/useAuthStore'
-import { House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone, Wallet, TrendingUp, MessageSquareWarning, ShieldBan, RotateCcw, FileText, Users, LogOut, UserRound, GraduationCap, Tag } from 'lucide-react'
+import { House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone, Wallet, TrendingUp, MessageSquareWarning, ShieldBan, RotateCcw, FileText, Users, LogOut, UserRound, GraduationCap, Tag, FolderX } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 
 const menu = [
@@ -12,6 +12,7 @@ const menu = [
     { icon: <Wallet size={20} />, title: 'การปล่อยเงิน', path: '/admin/disbursements' },
     { icon: <TrendingUp size={20} />, title: 'โอนกำไรนักลงทุน', path: '/admin/profit-distribution' },
     { icon: <MessageSquareWarning size={20} />, title: 'คำร้องเรียน', path: '/admin/complaints' },
+    { icon: <FolderX size={20} />, title: 'ยกเลิกโปรเจกต์', path: '/admin/cancel-requests' },
     { icon: <ShieldBan size={20} />, title: 'ระงับโปรเจกต์', path: '/admin/projects-suspension' },
     { icon: <RotateCcw size={20} />, title: 'คืนเงิน', path: '/admin/refunds' },
     { icon: <FileText size={20} />, title: 'บันทึกการตรวจสอบ', path: '/admin/audit-logs' },
