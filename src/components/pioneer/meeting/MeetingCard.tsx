@@ -33,7 +33,7 @@ export default function MeetingCard({
   const [expanded, setExpanded] = useState(false);
   const typeLabel = MEETING_TYPE_LABEL[meeting.meeting_type] ?? meeting.meeting_type;
   const hasDetail = !!meeting.about || !!meeting.link || !!meeting.place;
-  const isCanceled = meeting.status === 'canceled';
+  const isCanceled = meeting.status === 'cancelled';
   const isClosed = meeting.status === 'closed';
   const isOpen = meeting.status === 'open';
   const canModify = isOpen && !isCanceled;
