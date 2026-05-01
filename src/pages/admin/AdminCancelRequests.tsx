@@ -48,7 +48,7 @@ const DetailModal = ({
     onReject: () => void
 }) => {
     const navigate = useNavigate()
-    const status = STATUS_CONFIG[request.status]
+    const status = STATUS_CONFIG[request.status] ?? STATUS_CONFIG['pending']
     const fullName = request.pioneer ? `${request.pioneer.first_name} ${request.pioneer.last_name}` : '-'
     const isPending = request.status === 'pending'
 
@@ -327,7 +327,7 @@ const AdminCancelRequests = () => {
                     </div>
                 ) : (
                     filtered.map((r) => {
-                        const status = STATUS_CONFIG[r.status]
+                        const status = STATUS_CONFIG[r.status] ?? STATUS_CONFIG['pending']
                         const fullname = r.pioneer
                             ? `${r.pioneer.first_name} ${r.pioneer.last_name}`
                             : '-'
