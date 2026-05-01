@@ -8,49 +8,43 @@ import SearchBar from '../../components/admin/SearchBar'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
 
-type CancelRequestStatus = 'pending' | 'approved' | 'rejected'
-
-type CancelRequest = {
+// matches actual API response shape
+type CancelProject = {
     id: number
-    project_id: number
-    project_title: string
-    reason: string
-    description: string
-    status: CancelRequestStatus
-    admin_note?: string | null
-    created_at: string
-    resolved_at?: string | null
-    pioneer?: {
-        first_name: string
-        last_name: string
-        email: string
-    } | null
+    title: string
+    cancel_reason: string
+    cancel_description: string
+    state: string
+    owner_user_id: number
+    CreatedAt: string
+    UpdatedAt: string
 }
 
-const STATUS_CONFIG: Record<CancelRequestStatus, { label: string; className: string; icon: React.ReactNode }> = {
-    pending:  { label: 'รอดำเนินการ', className: 'bg-amber-50 text-amber-600 border border-amber-200', icon: <Clock size={12} /> },
-    approved: { label: 'อนุมัติแล้ว',  className: 'bg-green-50 text-green-600 border border-green-200',  icon: <CheckCircle size={12} /> },
-    rejected: { label: 'ปฏิเสธแล้ว',  className: 'bg-red-50 text-red-600 border border-red-200',         icon: <XCircle size={12} /> },
+const STATE_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+    pending_cancel:   { label: 'รอดำเนินการ', className: 'bg-amber-50 text-amber-600 border border-amber-200', icon: <Clock size={12} /> },
+    cancelled:        { label: 'อนุมัติแล้ว',  className: 'bg-green-50 text-green-600 border border-green-200',  icon: <CheckCircle size={12} /> },
+    cancel_rejected:  { label: 'ปฏิเสธแล้ว',  className: 'bg-red-50 text-red-600 border border-red-200',         icon: <XCircle size={12} /> },
 }
+
+const FALLBACK_BADGE = { label: 'ไม่ทราบสถานะ', className: 'bg-gray-50 text-gray-500 border border-gray-200', icon: null }
 
 const fmtDate = (d?: string | null) =>
     d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'
 
 const DetailModal = ({
-    request,
+    project,
     onClose,
     onApprove,
     onReject,
 }: {
-    request: CancelRequest
+    project: CancelProject
     onClose: () => void
     onApprove: () => void
     onReject: () => void
 }) => {
     const navigate = useNavigate()
-    const status = STATUS_CONFIG[request.status] ?? STATUS_CONFIG['pending']
-    const fullName = request.pioneer ? `${request.pioneer.first_name} ${request.pioneer.last_name}` : '-'
-    const isPending = request.status === 'pending'
+    const badge = STATE_CONFIG[project.state] ?? FALLBACK_BADGE
+    const isPending = project.state === 'pending_cancel'
 
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
@@ -61,10 +55,10 @@ const DetailModal = ({
                 <div className="flex items-start justify-between mb-4">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <h2 className="text-lg font-bold text-foreground">{request.project_title}</h2>
-                            <StatusBadge label={status.label} className={status.className} icon={status.icon} />
+                            <h2 className="text-lg font-bold text-foreground">{project.title}</h2>
+                            <StatusBadge label={badge.label} className={badge.className} icon={badge.icon} />
                         </div>
-                        <p className="text-[12px] text-muted-foreground">ส่งเมื่อ {fmtDate(request.created_at)}</p>
+                        <p className="text-[12px] text-muted-foreground">ส่งเมื่อ {fmtDate(project.UpdatedAt)}</p>
                     </div>
                     <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
                         <X size={18} />
@@ -72,17 +66,14 @@ const DetailModal = ({
                 </div>
 
                 <div className="bg-gray-50 rounded-xl p-4 mb-4 flex flex-col gap-2 text-[13px]">
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Pioneer</span>
-                        <div className="text-right">
-                            <div className="font-medium">{fullName}</div>
-                            <div className="text-[11px] text-muted-foreground">{request.pioneer?.email ?? '-'}</div>
-                        </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Owner ID</span>
+                        <span className="font-medium">#{project.owner_user_id}</span>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">โปรเจกต์</span>
                         <button
-                            onClick={() => navigate(`/admin/projects/${request.project_id}`)}
+                            onClick={() => navigate(`/admin/projects/${project.id}`)}
                             className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
                         >
                             ดูโปรเจกต์ <ExternalLink size={10} />
@@ -93,28 +84,16 @@ const DetailModal = ({
                 <div className="mb-4">
                     <p className="text-[13px] font-semibold text-foreground mb-2">เหตุผลที่ขอยกเลิก</p>
                     <p className="text-[13px] text-foreground bg-white border border-border rounded-lg px-3 py-2">
-                        {request.reason}
+                        {project.cancel_reason || '-'}
                     </p>
                 </div>
 
-                <div className="mb-4">
-                    <p className="text-[13px] font-semibold text-foreground mb-2">รายละเอียดเพิ่มเติม</p>
-                    <p className="text-[13px] text-foreground whitespace-pre-wrap leading-relaxed bg-white border border-border rounded-lg p-3">
-                        {request.description}
-                    </p>
-                </div>
-
-                {request.admin_note && (
+                {project.cancel_description && (
                     <div className="mb-4">
-                        <p className="text-[13px] font-semibold text-foreground mb-2">หมายเหตุจาก Admin</p>
-                        <p className="text-[13px] text-foreground whitespace-pre-wrap leading-relaxed bg-amber-50 border border-amber-200 rounded-lg p-3">
-                            {request.admin_note}
+                        <p className="text-[13px] font-semibold text-foreground mb-2">รายละเอียดเพิ่มเติม</p>
+                        <p className="text-[13px] text-foreground whitespace-pre-wrap leading-relaxed bg-white border border-border rounded-lg p-3">
+                            {project.cancel_description}
                         </p>
-                        {request.resolved_at && (
-                            <p className="text-[11px] text-muted-foreground mt-1">
-                                ดำเนินการเมื่อ {fmtDate(request.resolved_at)}
-                            </p>
-                        )}
                     </div>
                 )}
 
@@ -140,13 +119,13 @@ const DetailModal = ({
 }
 
 const ConfirmModal = ({
-    request,
+    project,
     mode,
     onClose,
     onConfirm,
     isSubmitting,
 }: {
-    request: CancelRequest
+    project: CancelProject
     mode: 'approve' | 'reject'
     onClose: () => void
     onConfirm: (note: string) => Promise<void>
@@ -170,7 +149,7 @@ const ConfirmModal = ({
                     </button>
                 </div>
                 <p className="text-[13px] text-muted-foreground mb-4">
-                    โปรเจกต์: <span className="font-medium text-foreground">{request.project_title}</span>
+                    โปรเจกต์: <span className="font-medium text-foreground">{project.title}</span>
                 </p>
                 <div className="flex flex-col gap-1 mb-5">
                     <label className="text-[13px] font-medium">
@@ -214,27 +193,24 @@ const ConfirmModal = ({
 }
 
 const AdminCancelRequests = () => {
-    const [requests, setRequests] = useState<CancelRequest[]>([])
+    const [projects, setProjects] = useState<CancelProject[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [tab, setTab] = useState<CancelRequestStatus | 'all'>('pending')
     const [search, setSearch] = useState('')
-    const [selected, setSelected] = useState<CancelRequest | null>(null)
+    const [selected, setSelected] = useState<CancelProject | null>(null)
     const [modalMode, setModalMode] = useState<'approve' | 'reject' | null>(null)
 
     const fetchRequests = useCallback(async () => {
         setIsLoading(true)
         try {
-            const params = new URLSearchParams()
-            if (tab !== 'all') params.set('status', tab)
-            const res = await api.get(`/admin/projects/cancel-request?${params}`)
-            setRequests(res.data?.data ?? res.data ?? [])
+            const res = await api.get('/admin/projects/cancel-request')
+            setProjects(res.data?.data ?? [])
         } catch {
             toast.error('โหลดข้อมูลไม่สำเร็จ')
         } finally {
             setIsLoading(false)
         }
-    }, [tab])
+    }, [])
 
     useEffect(() => {
         fetchRequests()
@@ -258,22 +234,13 @@ const AdminCancelRequests = () => {
         }
     }
 
-    const filtered = requests.filter((r) => {
+    const filtered = projects.filter((r) => {
         const q = search.toLowerCase()
-        const fullname = r.pioneer ? `${r.pioneer.first_name} ${r.pioneer.last_name}` : ''
         return (
-            (r.project_title ?? '').toLowerCase().includes(q) ||
-            (r.reason ?? '').toLowerCase().includes(q) ||
-            fullname.toLowerCase().includes(q)
+            (r.title ?? '').toLowerCase().includes(q) ||
+            (r.cancel_reason ?? '').toLowerCase().includes(q)
         )
     })
-
-    const tabs: { key: CancelRequestStatus | 'all'; label: string }[] = [
-        { key: 'pending',  label: 'รอดำเนินการ' },
-        { key: 'approved', label: 'อนุมัติแล้ว' },
-        { key: 'rejected', label: 'ปฏิเสธแล้ว' },
-        { key: 'all',      label: 'ทั้งหมด' },
-    ]
 
     return (
         <div className="flex flex-col gap-[16px]">
@@ -282,34 +249,18 @@ const AdminCancelRequests = () => {
                 subtitle="ตรวจสอบและอนุมัติคำขอยกเลิกโปรเจกต์จาก Pioneer"
             />
 
-            <div className="flex gap-2 px-2.5 flex-wrap">
-                {tabs.map((t) => (
-                    <button
-                        key={t.key}
-                        onClick={() => setTab(t.key)}
-                        className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors ${
-                            tab === t.key
-                                ? 'bg-primary text-white'
-                                : 'bg-white border border-border text-foreground hover:bg-gray-50'
-                        }`}
-                    >
-                        {t.label}
-                    </button>
-                ))}
-            </div>
-
             <SearchBar
                 value={search}
                 onChange={setSearch}
-                placeholder="ค้นหาโปรเจกต์ หรือ Pioneer..."
+                placeholder="ค้นหาชื่อโปรเจกต์ หรือเหตุผล..."
                 resultCount={filtered.length}
             />
 
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
-                <div className="grid grid-cols-7 bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">
-                    <div className="col-span-2">โปรเจกต์</div>
-                    <div className="text-center">Pioneer</div>
-                    <div className="col-span-2">เหตุผล</div>
+                <div className="grid grid-cols-[2fr_1fr_2fr_120px_100px] bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">
+                    <div>โปรเจกต์</div>
+                    <div className="text-center">Owner ID</div>
+                    <div>เหตุผล</div>
                     <div className="text-center">สถานะ</div>
                     <div className="text-center">จัดการ</div>
                 </div>
@@ -327,36 +278,30 @@ const AdminCancelRequests = () => {
                     </div>
                 ) : (
                     filtered.map((r) => {
-                        const status = STATUS_CONFIG[r.status] ?? STATUS_CONFIG['pending']
-                        const fullname = r.pioneer
-                            ? `${r.pioneer.first_name} ${r.pioneer.last_name}`
-                            : '-'
+                        const badge = STATE_CONFIG[r.state] ?? FALLBACK_BADGE
                         return (
                             <div
                                 key={r.id}
                                 onClick={() => setSelected(r)}
-                                className="grid grid-cols-7 border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                                className="grid grid-cols-[2fr_1fr_2fr_120px_100px] border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
                             >
-                                <div className="col-span-2 h-14 flex flex-col justify-center px-2">
-                                    <span className="font-medium text-[13px] truncate">{r.project_title}</span>
-                                    <span className="text-[11px] text-muted-foreground">{fmtDate(r.created_at)}</span>
-                                </div>
-                                <div className="h-14 flex flex-col justify-center items-center gap-[2px]">
-                                    <span className="text-[13px]">{fullname}</span>
-                                    <span className="text-[11px] text-muted-foreground truncate max-w-[110px]">
-                                        {r.pioneer?.email ?? ''}
-                                    </span>
-                                </div>
-                                <div className="col-span-2 h-14 flex items-center px-2">
-                                    <span className="text-[13px] truncate">{r.reason}</span>
+                                <div className="h-14 flex flex-col justify-center px-2">
+                                    <span className="font-medium text-[13px] truncate">{r.title}</span>
+                                    <span className="text-[11px] text-muted-foreground">{fmtDate(r.UpdatedAt)}</span>
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
-                                    <StatusBadge label={status.label} className={status.className} icon={status.icon} />
+                                    <span className="text-[13px] text-muted-foreground">#{r.owner_user_id}</span>
+                                </div>
+                                <div className="h-14 flex items-center px-2">
+                                    <span className="text-[13px] truncate">{r.cancel_reason || '-'}</span>
+                                </div>
+                                <div className="h-14 flex justify-center items-center">
+                                    <StatusBadge label={badge.label} className={badge.className} icon={badge.icon} />
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setSelected(r) }}
-                                        className="px-[12px] py-[6px] rounded-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[12px] font-medium text-foreground"
+                                        className="px-3 py-1.5 rounded-lg bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[12px] font-medium text-foreground"
                                     >
                                         ดูรายละเอียด
                                     </button>
@@ -369,7 +314,7 @@ const AdminCancelRequests = () => {
 
             {selected && !modalMode && (
                 <DetailModal
-                    request={selected}
+                    project={selected}
                     onClose={() => setSelected(null)}
                     onApprove={() => setModalMode('approve')}
                     onReject={() => setModalMode('reject')}
@@ -378,7 +323,7 @@ const AdminCancelRequests = () => {
 
             {selected && modalMode && (
                 <ConfirmModal
-                    request={selected}
+                    project={selected}
                     mode={modalMode}
                     onClose={() => setModalMode(null)}
                     onConfirm={handleConfirm}
