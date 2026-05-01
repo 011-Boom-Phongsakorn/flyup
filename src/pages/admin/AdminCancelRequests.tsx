@@ -227,7 +227,7 @@ const AdminCancelRequests = () => {
         try {
             const params = new URLSearchParams()
             if (tab !== 'all') params.set('status', tab)
-            const res = await api.get(`/admin/cancel-requests?${params}`)
+            const res = await api.get(`/admin/projects/cancel-request?${params}`)
             setRequests(res.data?.data ?? res.data ?? [])
         } catch {
             toast.error('โหลดข้อมูลไม่สำเร็จ')
@@ -244,7 +244,8 @@ const AdminCancelRequests = () => {
         if (!selected || !modalMode) return
         setIsSubmitting(true)
         try {
-            await api.patch(`/admin/cancel-requests/${selected.id}/${modalMode}`, { admin_note: note })
+            const action = modalMode === 'approve' ? 'approve-cancel' : 'reject-cancel'
+            await api.patch(`/admin/projects/${selected.id}/${action}`, { admin_note: note })
             toast.success(modalMode === 'approve' ? 'อนุมัติการยกเลิกแล้ว' : 'ปฏิเสธคำขอยกเลิกแล้ว')
             setModalMode(null)
             setSelected(null)
