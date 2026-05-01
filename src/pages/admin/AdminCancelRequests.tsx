@@ -262,8 +262,8 @@ const AdminCancelRequests = () => {
         const q = search.toLowerCase()
         const fullname = r.pioneer ? `${r.pioneer.first_name} ${r.pioneer.last_name}` : ''
         return (
-            r.project_title.toLowerCase().includes(q) ||
-            r.reason.toLowerCase().includes(q) ||
+            (r.project_title ?? '').toLowerCase().includes(q) ||
+            (r.reason ?? '').toLowerCase().includes(q) ||
             fullname.toLowerCase().includes(q)
         )
     })
