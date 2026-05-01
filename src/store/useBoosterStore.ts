@@ -67,6 +67,7 @@ interface BoosterStoreState {
   fetchBoosterMeetings: () => Promise<void>;
   fetchInvestmentById: (id: number) => Promise<void>;
   requestRefund: (investmentId: number, reason: string) => Promise<boolean>;
+  voteOnMilestone: (milestoneId: number, payload: { vote: 'approve' | 'reject', comment?: string }) => Promise<boolean>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -149,6 +150,16 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
       return true;
     } catch (error) {
       console.error('requestRefund:', error);
+      return false;
+    }
+  },
+
+  voteOnMilestone: async (milestoneId: number, payload: { vote: 'approve' | 'reject', comment?: string }) => {
+    try {
+      await api.post(`/investments/milestones/${milestoneId}/vote`, payload);
+      return true;
+    } catch (error) {
+      console.error('voteOnMilestone:', error);
       return false;
     }
   },

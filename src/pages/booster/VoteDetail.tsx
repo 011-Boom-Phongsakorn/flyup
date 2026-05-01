@@ -1,65 +1,161 @@
-import { useState } from 'react';
-import { ArrowLeft, CheckCircle2, ChevronRight, FileText, Image as ImageIcon, Link2, XCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, CheckCircle2, ChevronRight, FileText, Image as ImageIcon, Link2, XCircle, Loader2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router';
+import { toast } from 'react-hot-toast';
+import { useBoosterStore } from '../../store/useBoosterStore';
+import api from '../../services/api';
 
-// ─── Mock Data ──────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
-const mockDetail = {
-  id: 1,
-  projectTitle: 'UniTrack',
-  phaseLabel: 'Phase 2: เปิดตัว Beta',
-  details: {
-    description: 'พัฒนาแอป Beta version พร้อมฟีเจอร์แผนที่แบบเรียลไทม์ ระบบค้นหาห้องเรียน และปฏิทินกิจกรรมในมหาวิทยาลัย',
-    summary: 'ทีมได้พัฒนาแอป Beta version สำเร็จตามแผน ผ่านการทดสอบจากนักศึกษา 25 คน ระบบค้นหาและแผนที่ทำงานได้อย่างถูกต้อง'
-  },
-  criteria: [
-    'แอป Beta ใช้งานได้บน iOS และ Android',
-    'ระบบค้นหาห้องเรียนทำงานได้ถูกต้อง',
-    'แผนที่แบบเรียลไทม์แสดงตำแหน่งอาคารครบถ้วน',
-    'มีผลทดสอบจากผู้ใช้จริงอย่างน้อย 20 คน'
-  ],
-  evidence: [
-    { type: 'image', title: 'screenshot-beta-app.png' },
-    { type: 'pdf', title: 'beta-test-results.pdf' },
-    { type: 'link', title: 'GitHub Repository' },
-    { type: 'link', title: 'Figma Design' },
-  ],
-  stats: {
-    approve: 28,
-    reject: 5,
-    totalInvestors: 48,
-    totalVoted: 33, // 28 + 5
-    deadlineText: 'โหวดภายใน 22 มี.ค. 2026'
-  },
-  financial: {
-    amountToRelease: 20000,
-    deadline: '15 มี.ค. 2026'
-  }
-};
+interface MilestoneDetail {
+  id: number;
+  project_id: number;
+  phase_no: number;
+  title: string;
+  description: string | null;
+  acceptance_criteria: string | null;
+  percent_release: number;
+  status: string;
+  submission_summary?: string | null;
+  submission_criteria?: string[];
+  submission_attachments?: string[];
+  submission_links?: string[];
+  submitted_at?: string | null;
+  voting_open?: boolean;
+  voting_opened_at?: string | null;
+  voting_closed_at?: string | null;
+  due_date?: string | null;
+}
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 const VoteDetail = () => {
   const navigate = useNavigate();
-  useParams();
+  const { id } = useParams();
+  const { voteOnMilestone, investments, fetchMyInvestments } = useBoosterStore();
+
+  const [milestone, setMilestone] = useState<MilestoneDetail | null>(null);
+  const [projectTitle, setProjectTitle] = useState('');
+  const [loading, setLoading] = useState(true);
+
   const [voteValue, setVoteValue] = useState<'approve' | 'reject' | null>(null);
   const [comment, setComment] = useState('');
   const [isVoted, setIsVoted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const data = mockDetail;
-  const progressPercent = Math.min(((data.stats.approve) / data.stats.totalInvestors) * 100, 100);
+  // 1. Load investments if not loaded
+  useEffect(() => {
+    if (investments.length === 0) fetchMyInvestments();
+  }, [investments.length, fetchMyInvestments]);
+
+  // 2. Fetch milestone detail
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchMilestone = async () => {
+      setLoading(true);
+      try {
+        // Try to find the project that owns this milestone
+        const projectIds = [...new Set(investments.map(inv => inv.project_id).filter(Boolean))];
+
+        for (const pid of projectIds) {
+          try {
+            const res = await api.get(`/projects/${pid}/milestones`);
+            const milestones: MilestoneDetail[] = res.data?.data ?? [];
+            const found = milestones.find(m => m.id === Number(id));
+            if (found) {
+              setMilestone({ ...found, project_id: pid });
+              const proj = investments.find(inv => inv.project_id === pid);
+              setProjectTitle(proj?.project?.title || `โปรเจกต์ #${pid}`);
+              break;
+            }
+          } catch {
+            // continue to next project
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (investments.length > 0) {
+      fetchMilestone();
+    }
+  }, [id, investments]);
 
   const handleVoteSubmit = () => {
     if (!voteValue) return;
     setShowConfirm(true);
   };
 
-  const confirmVote = () => {
+  const confirmVote = async () => {
+    if (!voteValue || !milestone) return;
+    setIsSubmitting(true);
     setShowConfirm(false);
-    setIsVoted(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const success = await voteOnMilestone(milestone.id, {
+      vote: voteValue,
+      comment: comment.trim() || undefined,
+    });
+
+    setIsSubmitting(false);
+
+    if (success) {
+      toast.success('บันทึกการลงคะแนนสำเร็จ');
+      setIsVoted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      toast.error('เกิดข้อผิดพลาดในการโหวต กรุณาลองใหม่');
+    }
   };
+
+  const fmtDate = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+
+  // ─── Loading State ────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-32">
+        <Loader2 size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!milestone) {
+    return (
+      <div className="max-w-5xl">
+        <button onClick={() => navigate('/booster/votes')} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6">
+          <ArrowLeft size={16} /> กลับไปหน้าโหวต
+        </button>
+        <div className="text-center py-20 text-muted-foreground">
+          <p className="text-lg font-semibold mb-2">ไม่พบข้อมูล Milestone</p>
+          <p className="text-sm">Milestone นี้อาจถูกลบหรือคุณไม่มีสิทธิ์เข้าถึง</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Parse criteria from acceptance_criteria string
+  const criteria = milestone.acceptance_criteria
+    ? milestone.acceptance_criteria.split('\n').filter(c => c.trim().length > 0)
+    : [];
+
+  // Evidence
+  const evidence: { type: string; title: string; url?: string }[] = [];
+  if (milestone.submission_attachments) {
+    milestone.submission_attachments.forEach(a => {
+      const ext = a.split('.').pop()?.toLowerCase();
+      const type = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '') ? 'image' : 'pdf';
+      evidence.push({ type, title: a.split('/').pop() || a, url: a });
+    });
+  }
+  if (milestone.submission_links) {
+    milestone.submission_links.forEach(l => {
+      evidence.push({ type: 'link', title: l, url: l });
+    });
+  }
 
   return (
     <div className="max-w-5xl relative">
@@ -73,8 +169,8 @@ const VoteDetail = () => {
 
       {/* Header */}
       <div className="mb-8">
-        <p className="text-sm text-muted-foreground">{data.projectTitle}</p>
-        <h1 className="text-2xl font-bold text-foreground">{data.phaseLabel}</h1>
+        <p className="text-sm text-muted-foreground">{projectTitle}</p>
+        <h1 className="text-2xl font-bold text-foreground">Phase {milestone.phase_no}: {milestone.title}</h1>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -85,45 +181,57 @@ const VoteDetail = () => {
           <div className="bg-card border border-border rounded-2xl p-6">
             <h3 className="font-bold text-foreground text-sm mb-4">รายละเอียดงาน</h3>
             <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              {data.details.description}
+              {milestone.description || 'ไม่มีรายละเอียด'}
             </p>
-            <p className="text-sm text-foreground leading-relaxed">
-              <span className="font-bold">สรุปผล:</span> {data.details.summary}
-            </p>
+            {milestone.submission_summary && (
+              <p className="text-sm text-foreground leading-relaxed">
+                <span className="font-bold">สรุปผล:</span> {milestone.submission_summary}
+              </p>
+            )}
           </div>
 
           {/* Criteria */}
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-bold text-foreground text-sm mb-4">เกณฑ์การยอมรับ</h3>
-            <ul className="space-y-3">
-              {data.criteria.map((c, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <div className="bg-primary/10 rounded-full p-0.5 mt-0.5">
-                    <CheckCircle2 size={14} className="text-primary fill-primary/20" />
-                  </div>
-                  <span className="text-sm text-foreground">{c}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {criteria.length > 0 && (
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="font-bold text-foreground text-sm mb-4">เกณฑ์การยอมรับ</h3>
+              <ul className="space-y-3">
+                {criteria.map((c, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <div className="bg-primary/10 rounded-full p-0.5 mt-0.5">
+                      <CheckCircle2 size={14} className="text-primary fill-primary/20" />
+                    </div>
+                    <span className="text-sm text-foreground">{c}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Evidence */}
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-bold text-foreground text-sm mb-4">หลักฐานความสำเร็จ</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {data.evidence.map((e, i) => (
-                <button key={i} className="flex items-center justify-between gap-3 p-3 border border-border rounded-xl hover:bg-muted transition-colors">
-                  <div className="flex items-center gap-2 text-sm text-foreground truncate">
-                    {e.type === 'image' && <ImageIcon size={16} className="text-primary" />}
-                    {e.type === 'pdf' && <FileText size={16} className="text-pink-500" />}
-                    {e.type === 'link' && <Link2 size={16} className="text-muted-foreground" />}
-                    <span className="truncate">{e.title}</span>
-                  </div>
-                  <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
-                </button>
-              ))}
+          {evidence.length > 0 && (
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="font-bold text-foreground text-sm mb-4">หลักฐานความสำเร็จ</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {evidence.map((e, i) => (
+                  <a
+                    key={i}
+                    href={e.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-3 p-3 border border-border rounded-xl hover:bg-muted transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-sm text-foreground truncate">
+                      {e.type === 'image' && <ImageIcon size={16} className="text-primary" />}
+                      {e.type === 'pdf' && <FileText size={16} className="text-pink-500" />}
+                      {e.type === 'link' && <Link2 size={16} className="text-muted-foreground" />}
+                      <span className="truncate">{e.title}</span>
+                    </div>
+                    <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
+                  </a>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN: Voting */}
@@ -131,40 +239,32 @@ const VoteDetail = () => {
 
           {/* Stats Box */}
           <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-bold text-foreground text-sm mb-4">ผลโหวตปัจจุบัน</h3>
+            <h3 className="font-bold text-foreground text-sm mb-4">ข้อมูล Milestone</h3>
 
-            <div className="mb-2">
-              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary" style={{ width: `${progressPercent}%` }} />
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">สถานะ</span>
+                <span className={`font-semibold ${milestone.voting_open ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {milestone.voting_open ? 'กำลัง Vote อยู่' : milestone.status}
+                </span>
               </div>
-            </div>
-
-            <div className="flex justify-between items-center text-xs font-bold mb-4">
-              <span className="text-primary">ยอมรับ {isVoted && voteValue === 'approve' ? data.stats.approve + 1 : data.stats.approve}</span>
-              <span className="text-red-500">ไม่ยอมรับ {isVoted && voteValue === 'reject' ? data.stats.reject + 1 : data.stats.reject}</span>
-            </div>
-
-            {isVoted ? (
-              <div className="space-y-2 text-xs font-medium border-t border-border pt-4 mt-2">
-                <div className="flex justify-between">
-                  <span className="text-foreground">ผู้โหวตแล้ว</span>
-                  <span>{data.stats.totalVoted + 1} / {data.stats.totalInvestors} คน</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-foreground">ยังไม่โหวต</span>
-                  <span>{data.stats.totalInvestors - data.stats.totalVoted - 1} คน</span>
-                </div>
-                <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-green-600 bg-green-50 p-2.5 rounded-lg justify-center font-bold">
-                  <CheckCircle2 size={16} /> แนวโน้มอนุมัติ (เกิน 50%)
-                </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">เปอร์เซ็นต์ปล่อยเงิน</span>
+                <span className="font-semibold">{milestone.percent_release}%</span>
               </div>
-            ) : (
-              <p className="text-xs text-foreground font-medium mb-4">
-                จากผู้ลงทุนทั้งหมด {data.stats.totalInvestors} คน (เกิน 50% = อนุมัติ)
-              </p>
-            )}
-
-            <p className="text-[11px] text-muted-foreground mt-4">{data.stats.deadlineText}</p>
+              {milestone.voting_opened_at && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">เปิดโหวตเมื่อ</span>
+                  <span className="font-semibold">{fmtDate(milestone.voting_opened_at)}</span>
+                </div>
+              )}
+              {milestone.due_date && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">กำหนดส่งงาน</span>
+                  <span className="font-semibold">{fmtDate(milestone.due_date)}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Vote Action Box */}
@@ -179,7 +279,7 @@ const VoteDetail = () => {
                 {voteValue === 'approve' ? <CheckCircle2 size={16} className="text-green-500" /> : <XCircle size={16} className="text-red-500" />}
               </p>
             </div>
-          ) : (
+          ) : milestone.voting_open ? (
             <div className="bg-card border border-border rounded-2xl p-6">
               <h3 className="font-bold text-foreground text-sm mb-4">ลงคะแนนของคุณ</h3>
 
@@ -227,25 +327,18 @@ const VoteDetail = () => {
 
               <button
                 onClick={handleVoteSubmit}
-                disabled={!voteValue}
-                className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                disabled={!voteValue || isSubmitting}
+                className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               >
+                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                 ยืนยันการโหวต
               </button>
             </div>
+          ) : (
+            <div className="bg-card border border-border rounded-2xl p-6 text-center">
+              <p className="text-sm text-muted-foreground">Milestone นี้ปิดการโหวตแล้ว</p>
+            </div>
           )}
-
-          {/* Financial Info */}
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <div className="flex justify-between items-center text-sm font-semibold text-foreground mb-3">
-              <span>จำนวนเงินที่ปล่อย</span>
-              <span>฿{data.financial.amountToRelease.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm font-semibold text-foreground">
-              <span>กำหนดส่งงาน</span>
-              <span>{data.financial.deadline}</span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -255,7 +348,7 @@ const VoteDetail = () => {
           <div className="bg-card border border-border w-full max-w-sm rounded-[24px] p-6 shadow-xl animate-in zoom-in-95 duration-200">
             <h3 className="text-xl font-bold text-foreground mb-2">ยืนยันการโหวต</h3>
             <p className="text-sm text-muted-foreground mb-6">
-              คุณต้องการโหวต <span className={voteValue === 'approve' ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{voteValue === 'approve' ? 'ยอมรับ' : 'ไม่ยอมรับ'}</span> สำหรับ Phase 2: เปิดตัว Beta?
+              คุณต้องการโหวต <span className={voteValue === 'approve' ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{voteValue === 'approve' ? 'ยอมรับ' : 'ไม่ยอมรับ'}</span> สำหรับ Phase {milestone.phase_no}: {milestone.title}?
             </p>
             <div className="flex items-center gap-3">
               <button
