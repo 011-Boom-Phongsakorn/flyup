@@ -15,6 +15,8 @@ export interface Complaint {
     admin_note: string
     resolved_at?: string | null
     created_at: string
+    total_reports: number
+    resolved_reports: number
     complainant?: {
         id: number
         first_name: string
@@ -27,6 +29,8 @@ export interface Complaint {
         state: string
     } | null
 }
+
+export const COMPLAINT_THRESHOLD = 3
 
 interface ComplaintStore {
     complaints: Complaint[]

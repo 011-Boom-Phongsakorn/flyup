@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Loader2, MessageSquareWarning, CheckCircle, XCircle, Clock, X, ExternalLink } from 'lucide-react'
+import { Loader2, MessageSquareWarning, CheckCircle, XCircle, Clock, X, ExternalLink, TriangleAlert } from 'lucide-react'
 import { useNavigate } from 'react-router'
-import { useComplaintStore, type Complaint, type ComplaintStatus } from '../../store/useComplaintStore'
+import { useComplaintStore, type Complaint, type ComplaintStatus, COMPLAINT_THRESHOLD } from '../../store/useComplaintStore'
 import SearchBar from '../../components/admin/SearchBar'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
@@ -126,6 +126,43 @@ const DetailModal = ({
                     </div>
                 </div>
 
+                {/* Report Stats */}
+                {complaint.total_reports > 0 && (() => {
+                    const resolved = complaint.resolved_reports ?? 0
+                    const total = complaint.total_reports ?? 0
+                    const pct = Math.min((resolved / COMPLAINT_THRESHOLD) * 100, 100)
+                    const willSuspend = resolved >= COMPLAINT_THRESHOLD
+                    const nearThreshold = !willSuspend && resolved >= COMPLAINT_THRESHOLD - 1
+                    return (
+                        <div className={`rounded-xl p-4 mb-4 border ${willSuspend ? 'bg-red-50 border-red-200' : nearThreshold ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-border'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+                                    {(willSuspend || nearThreshold) && <TriangleAlert size={13} className={willSuspend ? 'text-red-500' : 'text-amber-500'} />}
+                                    <span className={willSuspend ? 'text-red-700' : nearThreshold ? 'text-amber-700' : 'text-foreground'}>
+                                        สถิติรายงานโปรเจกต์นี้
+                                    </span>
+                                </div>
+                                <span className={`text-[12px] font-bold ${willSuspend ? 'text-red-600' : 'text-foreground'}`}>
+                                    {resolved} / {COMPLAINT_THRESHOLD} อนุมัติ
+                                </span>
+                            </div>
+                            <div className="w-full bg-white rounded-full h-2 border border-border overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all ${willSuspend ? 'bg-red-500' : nearThreshold ? 'bg-amber-400' : 'bg-primary'}`}
+                                    style={{ width: `${pct}%` }}
+                                />
+                            </div>
+                            <div className="flex justify-between mt-1.5 text-[11px] text-muted-foreground">
+                                <span>รายงานทั้งหมด {total} ครั้ง</span>
+                                {willSuspend
+                                    ? <span className="text-red-600 font-medium">โปรเจกต์ถูกระงับอัตโนมัติแล้ว</span>
+                                    : <span>อีก {COMPLAINT_THRESHOLD - resolved} ครั้งจะระงับอัตโนมัติ</span>
+                                }
+                            </div>
+                        </div>
+                    )
+                })()}
+
                 <div className="mb-4">
                     <p className="text-[13px] font-semibold text-foreground mb-2">รายละเอียด</p>
                     <p className="text-[13px] text-foreground whitespace-pre-wrap leading-relaxed bg-white border border-border rounded-lg p-3">
@@ -227,10 +264,11 @@ const AdminComplaints = () => {
             <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาหัวข้อ ผู้ร้องเรียน หรือโปรเจกต์..." resultCount={filtered.length} />
 
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
-                <div className="grid grid-cols-7 bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">
-                    <div className="col-span-2">หัวข้อ</div>
+                <div className="grid grid-cols-[2fr_1fr_2fr_80px_100px_80px] bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">
+                    <div>หัวข้อ</div>
                     <div className="text-center">ผู้ร้องเรียน</div>
-                    <div className="col-span-2">โปรเจกต์</div>
+                    <div>โปรเจกต์</div>
+                    <div className="text-center">รายงาน</div>
                     <div className="text-center">สถานะ</div>
                     <div className="text-center">จัดการ</div>
                 </div>
@@ -252,9 +290,9 @@ const AdminComplaints = () => {
                             <div
                                 key={c.id}
                                 onClick={() => setSelected(c)}
-                                className="grid grid-cols-7 border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                                className="grid grid-cols-[2fr_1fr_2fr_80px_100px_80px] border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
                             >
-                                <div className="col-span-2 h-14 flex flex-col justify-center px-2">
+                                <div className="h-14 flex flex-col justify-center px-2">
                                     <span className="font-medium text-[13px] truncate">{c.subject}</span>
                                     <span className="text-[11px] text-muted-foreground">{fmtDate(c.created_at)}</span>
                                 </div>
@@ -262,8 +300,21 @@ const AdminComplaints = () => {
                                     <span className="text-[13px]">{fullname}</span>
                                     <span className="text-[11px] text-muted-foreground truncate max-w-[110px]">{c.complainant?.email ?? ''}</span>
                                 </div>
-                                <div className="col-span-2 h-14 flex flex-col justify-center px-2">
+                                <div className="h-14 flex flex-col justify-center px-2">
                                     <span className="text-[13px] truncate">{c.project?.title ?? `ID: ${c.project_id}`}</span>
+                                </div>
+                                <div className="h-14 flex justify-center items-center">
+                                    {c.total_reports > 0 && (
+                                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                                            c.resolved_reports >= COMPLAINT_THRESHOLD
+                                                ? 'bg-red-100 text-red-600'
+                                                : c.resolved_reports >= COMPLAINT_THRESHOLD - 1
+                                                ? 'bg-amber-100 text-amber-700'
+                                                : 'bg-gray-100 text-gray-600'
+                                        }`}>
+                                            {c.resolved_reports}/{COMPLAINT_THRESHOLD}
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
                                     <StatusBadge label={status.label} className={status.className} icon={status.icon} />

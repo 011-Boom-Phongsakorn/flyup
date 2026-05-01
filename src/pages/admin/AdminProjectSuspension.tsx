@@ -20,7 +20,8 @@ const STATE_LABEL: Record<string, string> = {
     funding: 'กำลังระดมทุน',
     executing: 'กำลังดำเนินการ',
     closed: 'เสร็จสิ้น',
-    cancelled: 'ถูกระงับ',
+    cancelled: 'ยกเลิกแล้ว',
+    suspended: 'ถูกระงับ',
     pending_review: 'รอตรวจสอบ',
     draft: 'แบบร่าง',
 }
@@ -29,7 +30,8 @@ const STATE_BADGE: Record<string, string> = {
     funding: 'bg-violet-50 text-violet-600 border border-violet-200',
     executing: 'bg-blue-50 text-blue-600 border border-blue-200',
     closed: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
-    cancelled: 'bg-red-50 text-red-600 border border-red-200',
+    cancelled: 'bg-gray-50 text-gray-500 border border-gray-200',
+    suspended: 'bg-red-50 text-red-600 border border-red-200',
     pending_review: 'bg-amber-50 text-amber-600 border border-amber-200',
     draft: 'bg-gray-50 text-gray-500 border border-gray-200',
 }
@@ -150,11 +152,11 @@ const AdminProjectSuspension = () => {
         setIsSubmitting(true)
         try {
             await api.patch(`/admin/projects/${selected.id}/status`, {
-                state: 'cancelled',
-                status: 'cancelled',
+                state: 'suspended',
+                status: 'suspended',
             })
             toast.success('ระงับโปรเจกต์สำเร็จ')
-            setProjects((prev) => prev.map((p) => (p.id === selected.id ? { ...p, state: 'cancelled', status: 'cancelled' } : p)))
+            setProjects((prev) => prev.map((p) => (p.id === selected.id ? { ...p, state: 'suspended', status: 'suspended' } : p)))
             setSelected(null)
         } catch {
             toast.error('ระงับไม่สำเร็จ')
@@ -194,7 +196,7 @@ const AdminProjectSuspension = () => {
                     </div>
                 ) : (
                     filtered.map((p) => {
-                        const isSuspended = p.state === 'cancelled' || p.status === 'cancelled'
+                        const isSuspended = p.state === 'suspended'
                         const stateBadge = STATE_BADGE[p.state] ?? 'bg-gray-50 text-gray-500 border border-gray-200'
                         const stateLabel = STATE_LABEL[p.state] ?? p.state
                         return (
