@@ -48,7 +48,7 @@ function ProjectDetail() {
   const project = currentPublicProject;
   const isOwner = !!authUser?.id && !!project?.owner_user_id && authUser.id === project.owner_user_id;
   const hasInvested = isLoggedIn && investments.some(
-    inv => inv.project_id === Number(id) && inv.status === 'verified'
+    inv => inv.project_id === Number(id) && inv.status !== 'cancelled' && inv.status !== 'refunded'
   );
 
   useEffect(() => {
@@ -108,11 +108,14 @@ function ProjectDetail() {
   })();
 
   const isAdmin = authUser?.role === 'admin';
-  const cannotInvest = isOwner || isAdmin;
+  const isIdVerified = authUser?.id_card_verification?.status === 'approved';
+  const cannotInvest = isOwner || isAdmin || (isLoggedIn && !isIdVerified);
   const cannotInvestReason = isAdmin
     ? 'ผู้ดูแลระบบไม่สามารถลงทุนได้'
     : isOwner
     ? 'เจ้าของโปรเจกต์ไม่สามารถลงทุนในโปรเจกต์ของตัวเองได้'
+    : (isLoggedIn && !isIdVerified)
+    ? 'กรุณายืนยันตัวตนก่อนลงทุน'
     : '';
 
   const handleInvest = () => {
@@ -134,6 +137,9 @@ function ProjectDetail() {
     }
     if (cannotInvest) {
       toast.error(cannotInvestReason, { id: "cannot-invest", position: "top-right", duration: 3000 });
+      if (isLoggedIn && !isIdVerified) {
+        navigate('/booster/profile');
+      }
       return;
     }
     navigate(`/projects/${id}/invest`);
@@ -458,7 +464,7 @@ function ProjectDetail() {
                   className="flex-1 bg-primary hover:bg-primary/90 text-white-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors cursor-pointer duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <TrendingUp size={18} />
-                  <span>{isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้' : isOwner ? 'โปรเจกต์ของคุณ' : 'ลงทุนโปรเจกต์นี้'}</span>
+                  <span>{isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้' : isOwner ? 'โปรเจกต์ของคุณ' : (isLoggedIn && !isIdVerified) ? 'ยืนยันตัวตนก่อนลงทุน' : 'ลงทุนโปรเจกต์นี้'}</span>
                 </button>
                 <button
                   onClick={() => {
