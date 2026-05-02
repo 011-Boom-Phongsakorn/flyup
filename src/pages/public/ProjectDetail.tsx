@@ -508,7 +508,7 @@ function ProjectDetail() {
                 {(project?.owner_profile?.project_count ?? 0) > 0 && (
                   <span className="inline-flex items-center gap-[5px] border border-green-500 text-green-600 px-[10px] py-[4px] rounded-full text-[11px] font-medium">
                     <CheckCircle2 size={13} />
-                    {project.owner_profile!.project_count} โปรเจกต์
+                    {project?.owner_profile?.project_count} โปรเจกต์
                   </span>
                 )}
               </div>
