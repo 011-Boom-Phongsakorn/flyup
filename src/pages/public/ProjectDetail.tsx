@@ -1,24 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import {
   Calendar,
   Users,
   Clock,
   TrendingUp,
-  Lock,
-  MessageCircle,
   Flag,
-  AlertTriangle,
   ShieldCheck,
-  BadgeCheck,
-  BarChart2,
+  CheckCircle2,
   Loader2,
+  Lock,
+  Send,
 } from "lucide-react";
 import { useNavigate, Link, useParams } from "react-router";
 import { usePublicProjectStore } from "../../store/usePublicProjectStore";
 import { useProjectDetailStore } from "../../store/useProjectDetailStore";
 import { useAuthStore } from "../../store/useAuthStore";
+import { useBoosterStore } from "../../store/useBoosterStore";
 import ComplaintModal from "../../components/ComplaintModal";
+import PreviewStory from "../../components/preview/PreviewStory";
+import { PreviewUpdate, PreviewComment, PreviewQuestion } from "../../components/preview/PreviewMisc";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -36,11 +37,19 @@ function ProjectDetail() {
   const [showComplaintModal, setShowComplaintModal] = useState(false);
 
   const { currentPublicProject, isDetailLoading, fetchPublicProjectById } = usePublicProjectStore();
-  const { updates, threads, faqs, investorCount: actualInvestorCount, fetchAll } = useProjectDetailStore();
+  const { updates, threads, faqs, investorCount: actualInvestorCount, fetchAll, createThread } = useProjectDetailStore();
   const { authUser } = useAuthStore();
+  const { investments, fetchMyInvestments } = useBoosterStore();
+  const [commentBody, setCommentBody] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isLoggedIn = !!authUser;
   const project = currentPublicProject;
+  const isOwner = !!authUser?.id && !!project?.owner_user_id && authUser.id === project.owner_user_id;
+  const hasInvested = isLoggedIn && investments.some(
+    inv => inv.project_id === Number(id) && inv.status === 'verified'
+  );
 
   useEffect(() => {
     if (id) {
@@ -48,7 +57,22 @@ function ProjectDetail() {
       fetchAll(Number(id));
       window.scrollTo(0, 0);
     }
-  }, [id, fetchPublicProjectById, fetchAll]);
+    if (isLoggedIn) fetchMyInvestments();
+  }, [id, fetchPublicProjectById, fetchAll, fetchMyInvestments, isLoggedIn]);
+
+  const handlePostComment = async () => {
+    if (!commentBody.trim()) return;
+    setIsPosting(true);
+    try {
+      await createThread(Number(id), commentBody.trim(), isOwner);
+      setCommentBody('');
+      toast.success('โพสต์ความคิดเห็นสำเร็จ');
+    } catch {
+      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่');
+    } finally {
+      setIsPosting(false);
+    }
+  };
 
   // ─── Derived data ──────────────────────────────────────────────────────────
 
@@ -83,8 +107,6 @@ function ProjectDetail() {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   })();
 
-  const hasInvested = false; // TODO: check from investments API
-  const isOwner = !!authUser?.id && !!project?.owner_user_id && authUser.id === project.owner_user_id;
   const isAdmin = authUser?.role === 'admin';
   const cannotInvest = isOwner || isAdmin;
   const cannotInvestReason = isAdmin
@@ -136,41 +158,42 @@ function ProjectDetail() {
   const investorCount = actualInvestorCount;
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden w-full mt-[100px]">
+    <div className="min-h-screen bg-[#F8F9FA] overflow-x-hidden w-full mt-[100px] pb-[100px]">
       <Toaster
         toastOptions={{ duration: 3000 }}
         containerStyle={{ top: 20 }}
       />
 
       {/* ── Main Content ── */}
-      <div className="max-w-[1340px] mx-auto px-4 sm:px-6 pt-6 md:pt-8 pb-16">
-        {/* Tags */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          {project?.category && (
-            <Link to={`/projects?category=${project.category}`} className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer">
-              {project.category}
-            </Link>
-          )}
-          {project?.state === 'funding' && (
-            <span className="text-xs px-3 py-1 rounded-full text-white-foreground bg-[image:var(--gradient-primary)]">
-              Funding
-            </span>
-          )}
+      <div className="max-w-7xl mx-auto px-[20px] pt-[40px]">
+        {/* Header */}
+        <div className="flex flex-col gap-[10px] mb-[30px]">
+          <div className="flex flex-wrap items-center gap-2">
+            {project?.category && (
+              <Link to={`/projects?category=${project.category}`} className="inline-flex w-fit items-center px-[12px] py-[4px] rounded-full border border-border bg-white text-[12px] font-medium text-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer">
+                {project.category}
+              </Link>
+            )}
+            {project?.state === 'funding' && (
+              <span className="inline-flex items-center px-[12px] py-[4px] rounded-full text-white-foreground text-[12px] font-medium bg-[image:var(--gradient-primary)]">
+                Funding
+              </span>
+            )}
+          </div>
+          <h1 className="text-[36px] font-bold text-foreground leading-tight">
+            {project?.title || "กำลังโหลด..."}
+          </h1>
+          <p className="text-[16px] text-muted-foreground w-full max-w-[800px]">
+            {project?.description || "รายละเอียดโปรเจกต์จะแสดงที่นี่เมื่อข้อมูลมาถึง"}
+          </p>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 break-words">
-          {project?.title || "กำลังโหลด..."}
-        </h1>
-        <p className="text-sm text-muted-foreground mb-6 break-words">
-          {project?.description || "รายละเอียดโปรเจกต์จะแสดงที่นี่เมื่อข้อมูลมาถึง"}
-        </p>
-
         {/* Two-column layout */}
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-[30px] items-start">
           {/* ── LEFT COLUMN ── */}
-          <div className="flex-1 min-w-0 w-full lg:w-auto">
+          <div className="flex-1 min-w-0 w-full lg:w-auto flex flex-col gap-[20px]">
             {/* Main image */}
-            <div className="rounded-2xl overflow-hidden mb-3 w-full bg-primary-light min-h-[280px] sm:min-h-[380px] max-h-[420px]">
+            <div className="w-full aspect-[16/10] bg-white rounded-[16px] border border-border overflow-hidden">
               {selectedMedia.type === 'video' ? (
                 <video
                   src={selectedMedia.url}
@@ -187,16 +210,13 @@ function ProjectDetail() {
             </div>
 
             {/* Thumbnails */}
-            {displayMedia.length > 1 && (
-              <div className="flex gap-2 mb-8 overflow-x-auto scrollbar-hide">
+            {displayMedia.length > 1 ? (
+              <div className="flex gap-[10px] overflow-x-auto pb-2 scrollbar-hide">
                 {displayMedia.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
-                    className={`rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 w-20 h-14 sm:w-24 sm:h-16 ${selectedImage === i
-                      ? "border-primary"
-                      : "border-transparent opacity-70 hover:opacity-100"
-                      }`}
+                    className={`w-[80px] h-[60px] flex-shrink-0 border-2 rounded-[8px] overflow-hidden cursor-pointer transition-colors ${selectedImage === i ? 'border-primary' : 'border-border hover:border-primary/50'}`}
                   >
                     {img.type === 'video' ? (
                       <video src={img.url} className="w-full h-full object-cover pointer-events-none" />
@@ -206,348 +226,299 @@ function ProjectDetail() {
                   </button>
                 ))}
               </div>
+            ) : (
+              <div className="flex gap-[10px]">
+                {[1, 2, 3, 4, 5].map((_, i) => (
+                  <div key={i} className="w-[80px] h-[60px] bg-white border border-border rounded-[8px]" />
+                ))}
+              </div>
             )}
 
-            {/* ── Tabs Content ── */}
-            <div>
-              <div className="flex bg-[#f1f1f4] p-1.5 rounded-[10px] mb-8 border border-[#e4e4e7] w-full overflow-x-auto scrollbar-hide">
+            {/* ── Tabs Navigation ── */}
+            <div className="flex flex-nowrap bg-[#F1F3F5] rounded-[8px] p-[4px] overflow-x-auto scrollbar-hide">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex-shrink-0 py-2 px-3 sm:py-2.5 sm:px-6 text-xs sm:text-[13px] font-medium transition-all rounded-[8px] whitespace-nowrap ${activeTab === tab.id
-                      ? "bg-white text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                    className={`flex-1 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[12px] transition-colors cursor-pointer whitespace-nowrap ${activeTab === tab.id
+                      ? "bg-white text-foreground font-semibold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground font-medium"
                       }`}
                   >
                     {tab.label}
                     {tab.count !== undefined && (
-                      <span className="ml-1 opacity-60 text-[10px] sm:text-[11px]">({tab.count})</span>
+                      <span className="ml-1 opacity-60">({tab.count})</span>
                     )}
                   </button>
                 ))}
               </div>
 
-              <div className="min-h-[400px]">
+              <div className="w-full mt-[10px]">
 
                 {/* ── Story Content ── */}
                 {activeTab === "story" && (
-                  <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300 w-full">
-                    <section>
-                      {storyHtml ? (
-                        <div
-                          className="prose prose-sm sm:prose-base max-w-none text-muted-foreground"
-                          dangerouslySetInnerHTML={{ __html: storyHtml }}
-                        />
-                      ) : (
-                        <div className="space-y-6">
-                          <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 break-words">โปรเจกต์นี้ยังไม่ได้เขียนบรรยาย Story</h2>
-                        </div>
-                      )}
-                    </section>
-
-                    {project?.risk && (
-                      <div className="border border-orange-200 bg-orange-50/40 rounded-2xl p-4 sm:p-6 flex gap-4 mt-10">
-                        <AlertTriangle className="text-orange-500 flex-shrink-0 mt-0.5" size={20} />
-                        <div className="space-y-1">
-                          <h4 className="font-bold text-foreground text-sm sm:text-[16px]">ความเสี่ยงและความท้าทาย</h4>
-                          <p className="text-xs sm:text-[14px] text-muted-foreground leading-relaxed">
-                            {project.risk}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <PreviewStory story={storyHtml || undefined} risks={project?.risk || undefined} />
                 )}
 
                 {/* ── Milestone Content ── */}
                 {activeTab === "milestone" && (
-                  <div className="relative animate-in fade-in duration-500 py-6">
-                    <div className="absolute left-6 sm:left-[46px] top-14 bottom-14 w-[1px] bg-border z-0 hidden sm:block" />
-                    <div className="space-y-6 px-0 sm:px-6">
-                      {hasMilestones ? milestones.map((m, index) => {
+                  hasMilestones ? (
+                    <div className="flex flex-col gap-[24px] mt-[20px] relative w-full overflow-hidden">
+                      <div className="absolute left-[24px] top-[24px] bottom-[24px] w-[1px] bg-border z-0 hidden md:block" />
+                      {milestones.map((m, index) => {
                         const phaseNumber = m.phase_no || (index + 1);
                         const criteria = (m.acceptance_criteria ?? '').split('\n').filter((c: string) => c.trim());
                         return (
-                          <div key={m.id || index} className="flex gap-4 sm:gap-6 items-start relative z-10">
-                            <div className="w-10 h-10 sm:w-[44px] sm:h-[44px] mt-1 sm:mt-3 flex items-center justify-center flex-shrink-0 z-10 bg-background">
-                              {phaseNumber <= 2 ? (
-                                <div className={`w-full h-full rounded-full ${phaseNumber === 1 ? 'bg-primary' : 'bg-accent'} text-white-foreground flex items-center justify-center text-lg sm:text-xl font-bold`}>
-                                  {phaseNumber}
-                                </div>
-                              ) : (
-                                <div className="text-xl sm:text-2xl font-medium text-foreground">{phaseNumber}</div>
-                              )}
+                          <div key={m.id || index} className="flex gap-[20px] relative z-10 w-full">
+                            <div className={`hidden md:flex shrink-0 w-[48px] h-[48px] rounded-full items-center justify-center font-bold text-[20px] shadow-sm ${index === 0 ? 'bg-primary text-white' : 'bg-white border border-border text-foreground'}`}>
+                              {phaseNumber}
                             </div>
-                            <div className="flex-1 bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-sm">
-                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                                <div className="space-y-1">
-                                  <h4 className="font-bold text-base sm:text-lg text-foreground">{m.title}</h4>
-                                  <p className="text-sm text-muted-foreground whitespace-pre-line">{m.description}</p>
-                                  {/* Due dates */}
+                            <div className="flex-1 bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[20px]">
+                              <div className="flex flex-col xl:flex-row justify-between xl:items-start gap-[20px]">
+                                <div className="flex flex-col gap-[8px] flex-1">
+                                  <h3 className="text-[16px] font-bold text-foreground">Phase {phaseNumber}: {m.title}</h3>
+                                  {m.description && <p className="text-[14px] text-muted-foreground">{m.description}</p>}
                                   {m.duration && m.duration > 0 && (
-                                    <p className="inline-flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                    <p className="inline-flex items-center gap-[5px] text-[12px] text-muted-foreground">
                                       <Calendar size={12} /> กำหนดส่ง: {m.duration} วัน
                                     </p>
                                   )}
+                                  {criteria.length > 0 && (
+                                    <div className="flex flex-col gap-[8px] mt-[8px]">
+                                      <span className="text-[12px] font-bold text-foreground">สิ่งที่ส่งมอบ:</span>
+                                      <div className="flex flex-wrap gap-[8px]">
+                                        {criteria.map((c: string, i: number) => (
+                                          <span key={i} className="px-[12px] py-[4px] border border-border rounded-full text-[12px] text-foreground bg-white whitespace-nowrap">{c}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="flex flex-col items-start sm:items-end gap-2 flex-shrink-0">
-                                  <span className="text-primary font-bold text-lg sm:text-xl tracking-tight">
+                                <div className="flex flex-row xl:flex-col items-center xl:items-end justify-between xl:justify-start gap-[12px] shrink-0">
+                                  <span className="text-[20px] font-bold text-primary">
                                     {targetAmount > 0 ? `฿${((targetAmount * m.percent_release) / 100).toLocaleString()}` : `${m.percent_release}%`}
                                   </span>
-                                  <span className={`text-xs font-medium px-3 sm:px-4 py-1 rounded-full border ${m.status === "completed"
-                                    ? "bg-primary text-white-foreground border-primary"
-                                    : "bg-card text-foreground border-border"
-                                    }`}>
-                                    {m.status === "completed" ? "เสร็จสิ้น" : "รอดำเนินการ"}
+                                  <span className={`px-[12px] py-[4px] rounded-full text-[12px] font-medium border ${m.status === 'completed' ? 'bg-primary text-white border-primary' : 'bg-white text-foreground border-border'}`}>
+                                    {m.status === 'completed' ? 'เสร็จสิ้น' : 'รอดำเนินการ'}
                                   </span>
                                 </div>
                               </div>
-                              {/* Criteria chips */}
-                              {criteria.length > 0 && (
-                                <div className="mt-4">
-                                  <span className="text-xs font-bold text-foreground mb-2 block">สิ่งที่ส่งมอบ:</span>
-                                  <div className="flex flex-wrap gap-2">
-                                    {criteria.map((c: string, i: number) => (
-                                      <span key={i} className="px-3 py-1 border border-border rounded-full text-xs text-foreground bg-white whitespace-nowrap">
-                                        {c}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              <div className="flex justify-end mt-3">
-                                <Link to={`/projects/${id}/milestones`} className="text-xs text-primary hover:text-primary/70 transition-colors font-medium">
+                              <div className="flex justify-end">
+                                <Link to={`/projects/${id}/milestones`} className="text-[12px] text-primary hover:text-primary/70 transition-colors font-medium">
                                   ดูรายละเอียดเพิ่มเติม →
                                 </Link>
                               </div>
                             </div>
                           </div>
                         );
-                      }) : (
-                        <p className="text-center text-muted-foreground py-8">ยังไม่มี Milestone</p>
-                      )}
-                    </div>
-                    {/* View full roadmap button */}
-                    {hasMilestones && (
-                      <div className="flex justify-center mt-8">
-                        <Link
-                          to={`/projects/${id}/milestones`}
-                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/5 text-primary rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors border border-primary/20"
-                        >
+                      })}
+                      <div className="flex justify-center mt-4">
+                        <Link to={`/projects/${id}/milestones`} className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/5 text-primary rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors border border-primary/20">
                           ดูแผนงาน Milestone ทั้งหมด →
                         </Link>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-[12px] mt-[40px] p-[40px] border border-dashed border-border rounded-[16px] bg-white">
+                      <span className="text-muted-foreground text-[14px]">ยังไม่ได้กำหนด Milestone</span>
+                    </div>
+                  )
                 )}
 
                 {/* ── Updates ── */}
                 {activeTab === "updates" && (
-                  <div className="space-y-3 animate-in fade-in duration-300">
-                    {updates.length > 0 ? updates.map((u) => (
-                      <div key={u.id} className="border border-border rounded-xl p-3 sm:p-4">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
-                          <Calendar size={12} />
-                          <span>{new Date(u.created_at).toLocaleDateString('th-TH')}</span>
-                        </div>
-                        <h4 className="font-semibold text-sm text-foreground leading-snug">{u.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{u.body}</p>
-                      </div>
-                    )) : (
-                      <p className="text-center text-muted-foreground py-8">ยังไม่มีอัปเดต</p>
-                    )}
-                  </div>
+                  <PreviewUpdate
+                    updates={updates}
+                    creatorName={project?.owner_profile ? `${project.owner_profile.first_name} ${project.owner_profile.last_name}`.trim() : undefined}
+                    creatorAvatar={project?.owner_profile?.picture || undefined}
+                  />
                 )}
 
-                {/* ── Comments (Threads) ── */}
+                {/* ── Comments ── */}
                 {activeTab === "comments" && (
-                  <div className="space-y-4 animate-in fade-in duration-300">
-                    {!hasInvested && (
-                      <div className="border-2 border-dashed border-border rounded-3xl p-8 sm:p-12 flex flex-col items-center gap-2 text-center bg-background">
-                        <Lock size={24} className="text-placeholder mb-3" strokeWidth={1.5} />
-                        <p className="font-medium text-sm text-foreground">เฉพาะผู้ลงทุนเท่านั้นที่สามารถดูและแสดงความคิดเห็นได้</p>
-                        <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">เข้าสู่ระบบ แล้วลงทุนในโปรเจคต์นี้เพื่อร่วมแสดงความคิดเห็น</p>
-                      </div>
-                    )}
-                    <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                      <MessageCircle size={15} className="text-primary" />
-                      ความคิดเห็น ({threads.length})
-                    </p>
-                    <div className={`space-y-3 ${!hasInvested ? "blur-sm pointer-events-none select-none" : ""}`}>
-                      {threads.map((t) => (
-                        <div key={t.id} className="border border-border rounded-xl p-3 sm:p-4 flex gap-3">
-                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-accent to-primary flex-shrink-0 flex items-center justify-center text-white-foreground text-xs font-bold shadow-md">
-                            {(t.user_name || '?').charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-foreground leading-snug">{t.user_name || 'ผู้ใช้'}</span>
-                              <span className="text-xs text-placeholder ml-auto">{new Date(t.created_at).toLocaleDateString('th-TH')}</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{t.body}</p>
-                          </div>
-                        </div>
-                      ))}
+                  !isLoggedIn ? (
+                    <div className="flex flex-col items-center justify-center gap-[12px] mt-[40px] p-[40px] border border-dashed border-border rounded-[16px] bg-white">
+                      <Lock size={20} className="text-muted-foreground" strokeWidth={1.5} />
+                      <p className="text-[13px] font-medium text-foreground">กรุณาเข้าสู่ระบบก่อนแสดงความคิดเห็น</p>
+                      <button onClick={() => navigate('/login')} className="text-[13px] text-primary font-medium hover:underline cursor-pointer">
+                        เข้าสู่ระบบ
+                      </button>
                     </div>
-                  </div>
+                  ) : !hasInvested && !isOwner ? (
+                    <div className="flex flex-col items-center justify-center gap-[12px] mt-[40px] p-[40px] border border-dashed border-border rounded-[16px] bg-white">
+                      <Lock size={20} className="text-muted-foreground" strokeWidth={1.5} />
+                      <p className="text-[13px] font-medium text-foreground">เฉพาะผู้ลงทุนเท่านั้นที่สามารถแสดงความคิดเห็นได้</p>
+                      <p className="text-[12px] text-muted-foreground text-center max-w-[260px] leading-relaxed">ลงทุนในโปรเจกต์นี้เพื่อร่วมสอบถามและติดตามความคืบหน้า</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-[16px] mt-[16px]">
+                      {/* Comment form */}
+                      <div className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[12px]">
+                        <textarea
+                          ref={textareaRef}
+                          value={commentBody}
+                          onChange={e => setCommentBody(e.target.value)}
+                          placeholder="แสดงความคิดเห็น..."
+                          rows={3}
+                          className="w-full resize-none text-[14px] text-foreground placeholder:text-muted-foreground bg-transparent outline-none leading-relaxed"
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            onClick={handlePostComment}
+                            disabled={isPosting || !commentBody.trim()}
+                            className="flex items-center gap-[6px] px-[20px] py-[8px] bg-primary text-white rounded-[8px] text-[13px] font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            {isPosting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                            โพสต์
+                          </button>
+                        </div>
+                      </div>
+                      {/* Comment list */}
+                      <PreviewComment comments={threads} />
+                    </div>
+                  )
                 )}
 
-                {/* ── Questions (FAQs) ── */}
+                {/* ── Questions ── */}
                 {activeTab === "questions" && (
-                  <div className="space-y-3 animate-in fade-in duration-300">
-                    {faqs.length > 0 ? faqs.map((q) => (
-                      <div key={q.id} className="border border-border rounded-xl p-3 sm:p-4">
-                        <div className="flex gap-2.5">
-                          <MessageCircle size={16} className="text-primary flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="font-medium text-sm text-foreground leading-snug">{q.question}</p>
-                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{q.answer}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )) : (
-                      <p className="text-center text-muted-foreground py-8">ยังไม่มีคำถาม</p>
-                    )}
-                  </div>
+                  <PreviewQuestion questions={faqs} />
                 )}
               </div>
-            </div>
           </div>
 
           {/* ── RIGHT COLUMN ── */}
-          <div className="lg:w-80 flex-shrink-0 space-y-4 w-full lg:w-auto">
+          <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col gap-[20px]">
 
             {/* ── Fund Card ── */}
-            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-              <div className="h-2 w-full bg-muted relative">
-                <div
-                  className="h-full absolute left-0 top-0 transition-all duration-1000 ease-out bg-[image:var(--gradient-primary)]"
-                  style={{ width: `${fundedPercent}%` }}
-                />
+            <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-primary to-purple-300" />
+
+              <h2 className="text-[32px] font-bold text-primary tracking-tight mt-[4px]">
+                ฿{fundedAmount.toLocaleString()}
+              </h2>
+              <p className="text-[13px] text-muted-foreground mt-[2px]">
+                {targetAmount > 0 ? `เป้าหมาย ฿${targetAmount.toLocaleString()} · ${fundedPercent}%` : 'ยังไม่ตั้งเป้าหมาย'}
+              </p>
+
+              <div className="flex items-center justify-between border-y border-border py-[16px] mt-[24px]">
+                <div className="flex flex-col items-center flex-1 border-r border-border">
+                  <div className="flex items-center gap-[6px] text-foreground font-semibold text-[16px]">
+                    <Users size={16} /> {investorCount}
+                  </div>
+                  <span className="text-[12px] text-muted-foreground">ผู้สนับสนุน</span>
+                </div>
+                <div className="flex flex-col items-center flex-1 border-r border-border">
+                  <div className="flex items-center gap-[6px] text-foreground font-semibold text-[16px]">
+                    <Clock size={16} /> {daysLeft}
+                  </div>
+                  <span className="text-[12px] text-muted-foreground">วันที่เหลือ</span>
+                </div>
+                <div className="flex flex-col items-center flex-1">
+                  <div className="flex items-center gap-[6px] text-foreground font-semibold text-[16px]">
+                    <TrendingUp size={16} /> {project?.profit_share_pct || 0}%
+                  </div>
+                  <span className="text-[12px] text-muted-foreground">ส่วนแบ่งกำไร</span>
+                </div>
               </div>
 
-              <div className="p-4 sm:p-5">
-                <p className="text-3xl sm:text-4xl font-black mb-0.5 text-primary">
-                  ฿{fundedAmount.toLocaleString()}
-                </p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {targetAmount > 0 ? `เป้าหมาย ฿${targetAmount.toLocaleString()} · ${fundedPercent}%` : 'ยังไม่ตั้งเป้าหมาย'}
-                </p>
-
-                <div className="border-t border-muted pt-4 mb-4 leading-none">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                        <Users size={13} />
-                        <span className="font-semibold text-base text-foreground">{investorCount}</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">ผู้สนับสนุน</p>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                        <Clock size={13} />
-                        <span className="font-semibold text-base text-foreground">{daysLeft}</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">วันที่เหลือ</p>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                        <BarChart2 size={13} />
-                        <span className="font-semibold text-base text-foreground">{project?.profit_share_pct || 0}%</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">ส่วนแบ่งกำไร</p>
-                    </div>
-                  </div>
+              <div className="flex flex-col gap-[12px] mt-[20px] mb-[24px]">
+                <div className="flex justify-between items-center text-[13px]">
+                  <span className="text-muted-foreground">ลงทุนขั้นต่ำ</span>
+                  <span className="font-semibold text-foreground">
+                    {project?.min_invest_amount ? `${project.min_invest_amount.toLocaleString()}฿` : '—'}
+                  </span>
                 </div>
-
-                <div className="text-[11px] space-y-1 mb-4 leading-snug">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground font-bold">ลงทุนขั้นต่ำ</span>
-                    <span className="text-foreground font-medium">{project?.min_invest_amount ? `${project.min_invest_amount.toLocaleString()}฿` : '—'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground font-bold">ลงทุนได้สูงสุด</span>
-                    <span className="text-foreground font-medium">{(() => {
-                      const remaining = Math.max(0, targetAmount - fundedAmount);
-                      // เพดานต่อรายการของ payment gateway
-                      const MAX_PER_TRANSACTION = 500_000;
-                      const projectMax = project?.max_invest_amount && project.max_invest_amount > 0
-                        ? Math.min(project.max_invest_amount, remaining)
-                        : remaining;
-                      const effectiveMax = Math.min(projectMax, MAX_PER_TRANSACTION);
-                      return effectiveMax > 0 ? `${effectiveMax.toLocaleString()}฿` : '—';
-                    })()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground font-bold">ค่าธรรมเนียม</span>
-                    <span className="text-foreground font-medium">{project?.platform_fee || 5}%</span>
-                  </div>
+                <div className="flex justify-between items-center text-[13px]">
+                  <span className="text-muted-foreground">ลงทุนได้สูงสุด</span>
+                  <span className="font-semibold text-foreground">{(() => {
+                    const remaining = Math.max(0, targetAmount - fundedAmount);
+                    const MAX_PER_TRANSACTION = 500_000;
+                    const projectMax = project?.max_invest_amount && project.max_invest_amount > 0
+                      ? Math.min(project.max_invest_amount, remaining)
+                      : remaining;
+                    const effectiveMax = Math.min(projectMax, MAX_PER_TRANSACTION);
+                    return effectiveMax > 0 ? `${effectiveMax.toLocaleString()}฿` : '—';
+                  })()}</span>
                 </div>
+                <div className="flex justify-between items-center text-[13px]">
+                  <span className="text-muted-foreground">ค่าธรรมเนียม</span>
+                  <span className="font-semibold text-foreground">{project?.platform_fee || 5}%</span>
+                </div>
+              </div>
 
-                <button className="w-full text-sm text-primary font-medium text-center mb-3 hover:underline">
-                  กำลังระดมทุน
+              <div className="w-full flex justify-center text-primary font-bold text-[14px] mb-[12px]">
+                กำลังระดมทุน
+              </div>
+
+              <div className="flex gap-[12px]">
+                <button
+                  onClick={handleInvest}
+                  disabled={cannotInvest}
+                  title={cannotInvestReason || undefined}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-white-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors cursor-pointer duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <TrendingUp size={18} />
+                  <span>{isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้' : isOwner ? 'โปรเจกต์ของคุณ' : 'ลงทุนโปรเจกต์นี้'}</span>
                 </button>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleInvest}
-                    disabled={cannotInvest}
-                    title={cannotInvestReason || undefined}
-                    className="flex-1 py-3 rounded-xl text-white-foreground bg-primary font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:opacity-50"
-                  >
-                    <TrendingUp size={16} />
-                    {isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้' : isOwner ? 'โปรเจกต์ของคุณ' : 'ลงทุนโปรเจคต์นี้'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!isLoggedIn) {
-                        toast.error('กรุณาเข้าสู่ระบบก่อนร้องเรียน');
-                        navigate('/login');
-                        return;
-                      }
-                      setShowComplaintModal(true);
-                    }}
-                    title="ร้องเรียนโปรเจกต์นี้"
-                    className="w-11 h-11 rounded-xl border border-border flex items-center justify-center text-placeholder hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors flex-shrink-0"
-                  >
-                    <Flag size={16} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      toast.error('กรุณาเข้าสู่ระบบก่อนร้องเรียน');
+                      navigate('/login');
+                      return;
+                    }
+                    setShowComplaintModal(true);
+                  }}
+                  title="ร้องเรียนโปรเจกต์นี้"
+                  className="w-[44px] h-[44px] bg-secondary border border-border rounded-[10px] flex justify-center items-center text-foreground hover:bg-muted transition-colors cursor-pointer duration-200"
+                >
+                  <Flag size={18} />
+                </button>
               </div>
             </div>
 
             {/* ── Creator Card ── */}
-            <div className="bg-card rounded-2xl border border-border shadow-sm p-4 sm:p-5 leading-snug">
-              <p className="text-xs text-muted-foreground mb-3 uppercase font-bold text-[10px] tracking-wide">ผู้สร้างโปรเจคต์</p>
-              <div className="flex items-center gap-3 mb-3 leading-none">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-white-foreground text-lg font-bold shadow-sm border border-background flex-shrink-0">
-                  {(project?.owner_profile?.first_name || '?').charAt(0)}
+            <div className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[14px]">
+              <h3 className="text-[13px] text-foreground font-semibold">ผู้สร้างโปรเจกต์</h3>
+              <div className="flex items-center gap-[14px]">
+                <div className="w-[48px] h-[48px] rounded-full bg-gray-200 overflow-hidden border border-border flex-shrink-0 flex items-center justify-center">
+                  {project?.owner_profile?.picture ? (
+                    <img src={project.owner_profile.picture} alt="Creator" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-foreground font-bold text-[18px]">
+                      {(project?.owner_profile?.first_name || '?').charAt(0)}
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <p className="font-semibold text-sm text-foreground">
+                <div className="flex flex-col gap-[2px]">
+                  <span className="text-[14px] font-bold text-foreground leading-tight">
                     {project?.owner_profile ? `${project.owner_profile.first_name} ${project.owner_profile.last_name}` : '—'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{project?.owner_profile?.university || '—'}</p>
+                  </span>
+                  <span className="text-[12px] text-muted-foreground">{project?.owner_profile?.university || '—'}</span>
                 </div>
               </div>
               {project?.owner_profile?.bio && (
-                <p className="text-xs text-muted-foreground leading-relaxed mb-3">{project.owner_profile.bio}</p>
+                <p className="text-[12px] text-muted-foreground leading-relaxed">{project.owner_profile.bio}</p>
               )}
-              <div className="flex items-center gap-2">
-                <button className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors leading-none">
-                  <BadgeCheck size={13} className="text-primary" />
+              <div className="flex gap-[20px]">
+                <span className="inline-flex items-center gap-[5px] border border-primary text-primary px-[10px] py-[4px] rounded-full text-[11px] font-medium">
+                  <CheckCircle2 size={13} />
                   {project?.owner_profile?.verify_status === 'verified' ? 'ยืนยันแล้ว' : 'รอยืนยัน'}
-                </button>
-                <span className="text-xs text-muted-foreground">{project?.owner_profile?.project_count || 0} โปรเจคต์</span>
+                </span>
+                {(project?.owner_profile?.project_count ?? 0) > 0 && (
+                  <span className="inline-flex items-center gap-[5px] border border-green-500 text-green-600 px-[10px] py-[4px] rounded-full text-[11px] font-medium">
+                    <CheckCircle2 size={13} />
+                    {project.owner_profile!.project_count} โปรเจกต์
+                  </span>
+                )}
               </div>
             </div>
 
             {/* ── Milestone Safety Card ── */}
-            <div className="bg-card rounded-2xl border border-border shadow-sm p-4 sm:p-5 flex flex-col items-center text-center">
-              <ShieldCheck size={24} className="text-foreground mb-2" strokeWidth={1.5} />
-              <p className="font-semibold text-sm text-foreground mb-1">ปลอดภัยด้วยระบบ Milestone</p>
-              <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto">
+            <div className="bg-[#FAF8FF] border border-[#E9D5FF] rounded-[16px] p-[20px] flex flex-col items-center justify-center text-center gap-[8px]">
+              <ShieldCheck size={24} className="text-foreground" />
+              <h4 className="text-[13px] font-bold text-foreground">ปลอดภัยด้วยระบบ Milestone</h4>
+              <p className="text-[11px] text-muted-foreground leading-snug">
                 เงินลงทุนจะถูกปล่อยเป็นงวดตาม Milestone ที่ผ่านการโหวตจากผู้สนับสนุน
               </p>
             </div>
