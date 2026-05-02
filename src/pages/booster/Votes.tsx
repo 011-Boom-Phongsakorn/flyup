@@ -49,7 +49,7 @@ const Votes = () => {
           projectIds.map(async (pid) => {
             try {
               const res = await api.get(`/projects/${pid}/milestones`);
-              const raw: VoteMilestone[] = (res.data?.data ?? []).map((m: any) => ({
+              const raw: VoteMilestone[] = (res.data?.data ?? []).map((m: Omit<VoteMilestone, 'project_id' | 'projectTitle'>) => ({
                 ...m,
                 project_id: pid,
                 projectTitle: investments.find(inv => inv.project_id === pid)?.project?.title || `โปรเจกต์ #${pid}`,

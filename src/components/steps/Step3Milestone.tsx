@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { useProjectStore, type Milestone } from '../../store/useProjectStore'
-import { Plus, Trash2, Upload, Video, X, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Upload, Video, X, Loader2, ChevronRight } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
 import toast from 'react-hot-toast'
 import { useParams, useSearchParams } from 'react-router'
@@ -584,6 +584,19 @@ const Step3Milestone = () => {
             </div>
           </div>
         </div>
+
+        {activePhase < 3 && (
+          <div className="flex justify-end pt-[4px]">
+            <button
+              type="button"
+              onClick={() => setActivePhase(activePhase + 1)}
+              className="flex items-center gap-[6px] px-[20px] py-[10px] bg-primary text-white rounded-[10px] text-[14px] font-medium hover:bg-primary/90 transition-all cursor-pointer"
+            >
+              Phase {activePhase + 2} ต่อไป
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ปุ่มถอยกลับ/จัดเก็บ/ถัดไป */}

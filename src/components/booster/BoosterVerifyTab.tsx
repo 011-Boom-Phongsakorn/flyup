@@ -101,16 +101,22 @@ const BoosterVerifyTab = () => {
         selfieUrl = res.data.data.url;
       }
 
+      let autoApproved = false;
       if (!idCardLocked) {
-        await api.post("/user/id-verify", {
+        const verifyRes = await api.post("/user/id-verify", {
           id_card_url: idCardUrl,
           selfie_url: selfieUrl,
           declare_truth: acceptAccuracy,
         });
+        autoApproved = verifyRes.data?.data?.status === "approved";
       }
 
       await checkAuth();
-      toast.success("ส่งข้อมูลยืนยันตัวตนแล้ว รอ admin อนุมัติ");
+      if (autoApproved) {
+        toast.success("ยืนยันตัวตนสำเร็จ ระบบอนุมัติอัตโนมัติ");
+      } else {
+        toast.success("ส่งข้อมูลยืนยันตัวตนแล้ว รอ admin อนุมัติ");
+      }
     } catch {
       toast.error("เกิดข้อผิดพลาด");
     } finally {
