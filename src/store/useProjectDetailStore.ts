@@ -38,6 +38,7 @@ interface ProjectDetailState {
   fetchFAQs: (id: number) => Promise<void>;
   fetchInvestorCount: (id: number) => Promise<void>;
   fetchAll: (id: number) => Promise<void>;
+  createThread: (projectId: number, body: string, isOwner?: boolean) => Promise<void>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -84,6 +85,15 @@ export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
       console.warn('fetchInvestorCount:', error);
       set({ investorCount: 0 });
     }
+  },
+
+  createThread: async (projectId: number, body: string, isOwner = false) => {
+    const endpoint = isOwner
+      ? `/pioneer/projects/${projectId}/threads`
+      : `/booster/projects/${projectId}/threads`;
+    await api.post(endpoint, { body });
+    const res = await api.get(`/projects/${projectId}/threads`);
+    set({ threads: res.data?.data ?? [] });
   },
 
   fetchAll: async (id: number) => {

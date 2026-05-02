@@ -12,6 +12,7 @@ export interface OwnerProfile {
   bio: string | null;
   verify_status: string;
   project_count: number;
+  picture?: string;
 }
 
 export interface PublicMilestone {

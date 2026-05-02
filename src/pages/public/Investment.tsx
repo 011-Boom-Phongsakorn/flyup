@@ -73,17 +73,22 @@ const Investment = () => {
     }
   }, [id, fetchPublicProjectById]);
 
-  // Guard: เจ้าของโปรเจกต์ และ admin ลงทุนไม่ได้
+  // Guard: ต้องยืนยันตัวตน / ไม่ใช่เจ้าของ / ไม่ใช่ admin
   useEffect(() => {
-    if (!project || !authUser) return;
-    const isOwner = !!project.owner_user_id && authUser.id === project.owner_user_id;
+    if (!authUser) return;
     const isAdmin = authUser.role === 'admin';
+    const isOwner = !!project?.owner_user_id && authUser.id === project.owner_user_id;
+    const kycApproved = authUser.id_card_verification?.status === 'approved';
+
     if (isAdmin) {
       toast.error('ผู้ดูแลระบบไม่สามารถลงทุนได้');
       navigate(`/projects/${id}`, { replace: true });
     } else if (isOwner) {
       toast.error('เจ้าของโปรเจกต์ไม่สามารถลงทุนในโปรเจกต์ของตัวเองได้');
       navigate(`/projects/${id}`, { replace: true });
+    } else if (!kycApproved) {
+      toast.error('กรุณายืนยันตัวตนด้วยบัตรประชาชนก่อนลงทุน', { duration: 4000 });
+      navigate('/booster/profile?tab=verify', { replace: true });
     }
   }, [project, authUser, id, navigate]);
 
