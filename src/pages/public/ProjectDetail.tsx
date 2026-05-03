@@ -232,7 +232,7 @@ function ProjectDetail() {
             </div>
 
             {/* Thumbnails */}
-            {displayMedia.length > 1 ? (
+            {displayMedia.length > 1 && (
               <div className="flex gap-[10px] overflow-x-auto pb-2 scrollbar-hide">
                 {displayMedia.map((img, i) => (
                   <button
@@ -246,12 +246,6 @@ function ProjectDetail() {
                       <img src={img.url} alt="thumbnail" className="w-full h-full object-cover" />
                     )}
                   </button>
-                ))}
-              </div>
-            ) : (
-              <div className="flex gap-[10px]">
-                {[1, 2, 3, 4, 5].map((_, i) => (
-                  <div key={i} className="w-[80px] h-[60px] bg-white border border-border rounded-[8px]" />
                 ))}
               </div>
             )}
