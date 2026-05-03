@@ -225,6 +225,17 @@ interface PreviewCommentProps {
   comments: ProjectThread[];
 }
 
+const formatCommentDate = (dateStr: string) => {
+  try {
+    return new Date(dateStr).toLocaleDateString('th-TH', {
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
 export const PreviewComment = ({ comments }: PreviewCommentProps) => {
   if (comments.length === 0) {
     return (
@@ -236,20 +247,28 @@ export const PreviewComment = ({ comments }: PreviewCommentProps) => {
 
   return (
     <div className="flex flex-col gap-[12px] mt-[16px]">
-      {comments.map((c) => (
-        <div key={c.id} className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm">
-          <div className="flex items-center gap-[10px] mb-[10px]">
-            <div className="w-[36px] h-[36px] rounded-full bg-gray-200 flex items-center justify-center text-foreground font-bold text-[14px] flex-shrink-0">
-              {c.user_name?.[0] ?? '?'}
+      {comments.map((c) => {
+        const initials = c.user_name?.trim()
+          ? c.user_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+          : '?';
+        return (
+          <div key={c.id} className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm">
+            <div className="flex items-center gap-[10px] mb-[10px]">
+              <div className="w-[36px] h-[36px] rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-[13px] flex-shrink-0 overflow-hidden">
+                {c.user_avatar
+                  ? <img src={c.user_avatar} alt={c.user_name} className="w-full h-full object-cover" />
+                  : initials
+                }
+              </div>
+              <div className="flex flex-col gap-[2px]">
+                <span className="text-[14px] font-semibold text-foreground">{c.user_name || 'ผู้ใช้ไม่ระบุชื่อ'}</span>
+                <span className="text-[12px] text-muted-foreground">{formatCommentDate(c.created_at)}</span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-[14px] font-semibold text-foreground">{c.user_name}</span>
-              <span className="text-[12px] text-muted-foreground">{c.created_at}</span>
-            </div>
+            <p className="text-[14px] text-muted-foreground leading-relaxed">{c.body}</p>
           </div>
-          <p className="text-[14px] text-muted-foreground leading-relaxed">{c.body}</p>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

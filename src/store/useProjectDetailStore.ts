@@ -16,6 +16,7 @@ export interface ProjectThread {
   title: string;
   body: string;
   user_name: string;
+  user_avatar?: string;
   created_at: string;
 }
 
@@ -25,6 +26,17 @@ export interface ProjectFAQ {
   answer: string;
 }
 
+export interface ProjectInvestorItem {
+  user_id: number;
+  first_name: string;
+  last_name: string;
+  picture?: string;
+  principal_amount: number;
+  total_amount: number;
+  investment_count: number;
+  first_invested_at?: string;
+}
+
 // ─── Store Interface ─────────────────────────────────────────────────────────
 
 interface ProjectDetailState {
@@ -32,6 +44,7 @@ interface ProjectDetailState {
   threads: ProjectThread[];
   faqs: ProjectFAQ[];
   investorCount: number;
+  investors: ProjectInvestorItem[];
   isLoading: boolean;
   fetchUpdates: (id: number) => Promise<void>;
   fetchThreads: (id: number) => Promise<void>;
@@ -48,6 +61,7 @@ export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
   threads: [],
   faqs: [],
   investorCount: 0,
+  investors: [],
   isLoading: false,
 
   fetchUpdates: async (id: number) => {
@@ -110,6 +124,7 @@ export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
         threads: threadsRes.status === 'fulfilled' ? threadsRes.value.data?.data ?? [] : [],
         faqs: faqsRes.status === 'fulfilled' ? faqsRes.value.data?.data ?? [] : [],
         investorCount: invCountRes.status === 'fulfilled' ? invCountRes.value.data?.data?.total ?? 0 : 0,
+        investors: invCountRes.status === 'fulfilled' ? invCountRes.value.data?.data?.investors ?? [] : [],
       });
     } catch (error) {
       console.warn('fetchAll:', error);
