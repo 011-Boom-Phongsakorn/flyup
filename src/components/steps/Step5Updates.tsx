@@ -153,6 +153,7 @@ const Step5Updates = () => {
                     className="border border-border rounded-[8px] px-[12px] py-[8px] text-[14px] outline-none focus:border-primary bg-background"
                   />
                   <textarea
+                    ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
                     value={editForm.content}
                     onChange={e => setEditForm(p => ({ ...p, content: e.target.value }))}
                     onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }}

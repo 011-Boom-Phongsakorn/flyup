@@ -72,9 +72,7 @@ const Step2Story = () => {
   const { projectId } = useParams()
   const { currentProject, updateProjectInfo, updateProject, saveStory, setSaveStatus } = useProjectStore()
 
-  const isFundingOrLater = !!currentProject.state &&
-    currentProject.state !== 'draft' &&
-    currentProject.state !== 'pending_review'
+  const showFaqSection = ['draft', 'funding', 'executing'].includes(currentProject.state ?? '')
 
   const triggerSaved = () => {
     setSaveStatus('saved');
@@ -96,12 +94,12 @@ const Step2Story = () => {
   const [editFaqForm, setEditFaqForm] = useState({ question: '', answer: '' })
 
   useEffect(() => {
-    if (isFundingOrLater && projectId) {
+    if (showFaqSection && projectId) {
       api.get(`/projects/${projectId}/faqs`)
         .then(res => setFaqs(res.data?.data ?? []))
         .catch(() => {})
     }
-  }, [isFundingOrLater, projectId])
+  }, [showFaqSection, projectId])
 
   const handleAddFaq = async () => {
     if (!faqForm.question.trim() || !faqForm.answer.trim()) {
@@ -669,8 +667,8 @@ const Step2Story = () => {
         </div>
       </div>
 
-      {/* FAQ Section — แสดงเมื่อผ่าน funding ขึ้นไปแล้ว */}
-      {isFundingOrLater && (
+      {/* FAQ Section */}
+      {showFaqSection && (
         <div className='flex flex-col p-[30px] bg-white-foreground rounded-[12px] gap-[20px]'>
           <div className='flex items-center gap-[8px]'>
             <HelpCircle size={18} className='text-foreground' />
@@ -692,11 +690,13 @@ const Step2Story = () => {
                         className='border border-border rounded-[8px] px-[12px] py-[8px] text-[14px] outline-none focus:border-primary transition-colors bg-white'
                       />
                       <textarea
+                        ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
                         value={editFaqForm.answer}
                         onChange={e => setEditFaqForm(p => ({ ...p, answer: e.target.value }))}
+                        onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }}
                         placeholder='คำตอบ'
                         rows={3}
-                        className='border border-border rounded-[8px] px-[12px] py-[8px] text-[14px] outline-none focus:border-primary transition-colors bg-white resize-none'
+                        className='border border-border rounded-[8px] px-[12px] py-[8px] text-[14px] outline-none focus:border-primary transition-colors bg-white resize-none overflow-hidden'
                       />
                       <div className='flex gap-[8px]'>
                         <button
@@ -752,9 +752,10 @@ const Step2Story = () => {
             <textarea
               value={faqForm.answer}
               onChange={e => setFaqForm(p => ({ ...p, answer: e.target.value }))}
+              onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }}
               placeholder='คำตอบ'
               rows={3}
-              className='border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors bg-background resize-none'
+              className='border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors bg-background resize-none overflow-hidden'
             />
             <button
               onClick={handleAddFaq}
