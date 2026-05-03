@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import Swal from "sweetalert2";
 import {
   Calendar,
   Users,
@@ -35,9 +36,10 @@ function ProjectDetail() {
   const [activeTab, setActiveTab] = useState<Tab>("story");
   const [selectedImage, setSelectedImage] = useState(0);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [showInvestorsModal, setShowInvestorsModal] = useState(false);
 
   const { currentPublicProject, isDetailLoading, fetchPublicProjectById } = usePublicProjectStore();
-  const { updates, threads, faqs, investorCount: actualInvestorCount, fetchAll, createThread } = useProjectDetailStore();
+  const { updates, threads, faqs, investorCount: actualInvestorCount, investors, fetchAll, createThread } = useProjectDetailStore();
   const { authUser } = useAuthStore();
   const { investments, fetchMyInvestments } = useBoosterStore();
   const [commentBody, setCommentBody] = useState('');
@@ -109,16 +111,14 @@ function ProjectDetail() {
 
   const isAdmin = authUser?.role === 'admin';
   const isIdVerified = authUser?.id_card_verification?.status === 'approved';
-  const cannotInvest = isOwner || isAdmin || (isLoggedIn && !isIdVerified);
+  const hasBank = !!authUser?.bank_account?.id;
   const cannotInvestReason = isAdmin
     ? 'ผู้ดูแลระบบไม่สามารถลงทุนได้'
     : isOwner
     ? 'เจ้าของโปรเจกต์ไม่สามารถลงทุนในโปรเจกต์ของตัวเองได้'
-    : (isLoggedIn && !isIdVerified)
-    ? 'กรุณายืนยันตัวตนก่อนลงทุน'
     : '';
 
-  const handleInvest = () => {
+  const handleInvest = async () => {
     if (!isLoggedIn) {
       toast.error("กรุณาเข้าสู่ระบบก่อนลงทุน", {
         id: "login-required",
@@ -135,11 +135,27 @@ function ProjectDetail() {
       });
       return;
     }
-    if (cannotInvest) {
+    if (isAdmin || isOwner) {
       toast.error(cannotInvestReason, { id: "cannot-invest", position: "top-right", duration: 3000 });
-      if (isLoggedIn && !isIdVerified) {
-        navigate('/booster/profile');
-      }
+      return;
+    }
+    if (!isIdVerified || !hasBank) {
+      const missing: string[] = [];
+      if (!isIdVerified) missing.push('ยืนยันตัวตนด้วยบัตรประชาชน');
+      if (!hasBank) missing.push('ผูกบัญชีธนาคาร');
+      const missingHtml = missing.map(m => `<div style="font-size:14px;color:#374151;margin:4px 0">✗ ${m}</div>`).join('');
+      const result = await Swal.fire({
+        icon: 'warning',
+        title: 'ยังไม่ครบเงื่อนไขการลงทุน',
+        html: `<p style="margin-bottom:8px">กรุณาดำเนินการให้ครบก่อนลงทุน:</p>${missingHtml}<p style="font-size:12px;color:#6b7280;margin-top:10px">ไปที่ <b>โปรไฟล์ของฉัน → แท็บยืนยันตัวตน</b></p>`,
+        confirmButtonText: 'ไปยืนยันตัวตน',
+        confirmButtonColor: '#8B5CF6',
+        showCancelButton: true,
+        cancelButtonText: 'ยกเลิก',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+      });
+      if (result.isConfirmed) navigate('/booster/profile?tab=verify');
       return;
     }
     navigate(`/projects/${id}/invest`);
@@ -407,12 +423,15 @@ function ProjectDetail() {
               </p>
 
               <div className="flex items-center justify-between border-y border-border py-[16px] mt-[24px]">
-                <div className="flex flex-col items-center flex-1 border-r border-border">
+                <button
+                  onClick={() => investorCount > 0 && setShowInvestorsModal(true)}
+                  className={`flex flex-col items-center flex-1 border-r border-border ${investorCount > 0 ? 'cursor-pointer hover:text-primary transition-colors' : 'cursor-default'}`}
+                >
                   <div className="flex items-center gap-[6px] text-foreground font-semibold text-[16px]">
                     <Users size={16} /> {investorCount}
                   </div>
-                  <span className="text-[12px] text-muted-foreground">ผู้สนับสนุน</span>
-                </div>
+                  <span className={`text-[12px] ${investorCount > 0 ? 'text-primary underline underline-offset-2' : 'text-muted-foreground'}`}>ผู้สนับสนุน</span>
+                </button>
                 <div className="flex flex-col items-center flex-1 border-r border-border">
                   <div className="flex items-center gap-[6px] text-foreground font-semibold text-[16px]">
                     <Clock size={16} /> {daysLeft}
@@ -459,12 +478,12 @@ function ProjectDetail() {
               <div className="flex gap-[12px]">
                 <button
                   onClick={handleInvest}
-                  disabled={cannotInvest}
+                  disabled={isAdmin || isOwner}
                   title={cannotInvestReason || undefined}
                   className="flex-1 bg-primary hover:bg-primary/90 text-white-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors cursor-pointer duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <TrendingUp size={18} />
-                  <span>{isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้' : isOwner ? 'โปรเจกต์ของคุณ' : (isLoggedIn && !isIdVerified) ? 'ยืนยันตัวตนก่อนลงทุน' : 'ลงทุนโปรเจกต์นี้'}</span>
+                  <span>{isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้' : isOwner ? 'โปรเจกต์ของคุณ' : 'ลงทุนโปรเจกต์นี้'}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -538,6 +557,68 @@ function ProjectDetail() {
           projectTitle={project.title}
           onClose={() => setShowComplaintModal(false)}
         />
+      )}
+
+      {showInvestorsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-[16px]"
+          onClick={() => setShowInvestorsModal(false)}
+        >
+          <div
+            className="bg-white rounded-[20px] w-full max-w-[480px] max-h-[80vh] flex flex-col shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px] border-b border-border">
+              <div>
+                <h2 className="text-[18px] font-bold text-foreground">ผู้สนับสนุน</h2>
+                <p className="text-[13px] text-muted-foreground mt-[2px]">{investorCount} คน · ฿{fundedAmount.toLocaleString()} รวมทั้งสิ้น</p>
+              </div>
+              <button
+                onClick={() => setShowInvestorsModal(false)}
+                className="w-[32px] h-[32px] rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="overflow-y-auto flex-1 px-[24px] py-[16px] flex flex-col gap-[12px]">
+              {investors.length === 0 ? (
+                <p className="text-center text-muted-foreground text-[14px] py-[32px]">ยังไม่มีข้อมูลผู้สนับสนุน</p>
+              ) : (
+                investors.map((inv, idx) => {
+                  const name = `${inv.first_name} ${inv.last_name}`.trim();
+                  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+                  const pct = fundedAmount > 0 ? ((inv.principal_amount / fundedAmount) * 100).toFixed(1) : '0.0';
+                  return (
+                    <div key={inv.user_id} className="flex items-center gap-[12px]">
+                      {/* Rank */}
+                      <span className="text-[12px] text-muted-foreground w-[18px] text-center flex-shrink-0">{idx + 1}</span>
+                      {/* Avatar */}
+                      <div className="w-[40px] h-[40px] rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-[14px] flex-shrink-0 overflow-hidden">
+                        {inv.picture
+                          ? <img src={inv.picture} alt={name} className="w-full h-full object-cover" />
+                          : initials
+                        }
+                      </div>
+                      {/* Name */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-semibold text-foreground truncate">{name || 'ไม่ระบุชื่อ'}</p>
+                        <p className="text-[12px] text-muted-foreground">{inv.investment_count} ครั้ง</p>
+                      </div>
+                      {/* Amount + % */}
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-[14px] font-bold text-foreground">฿{inv.principal_amount.toLocaleString()}</p>
+                        <p className="text-[12px] text-primary font-medium">{pct}%</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

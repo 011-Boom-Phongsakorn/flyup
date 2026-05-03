@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ShieldCheck, Camera, Phone, Mail, MapPin, Briefcase } from "lucide-react";
+import { ShieldCheck, Camera, Phone, Mail, MapPin } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
 import api from "../../services/api";
@@ -176,27 +176,6 @@ const BoosterProfileTab = () => {
         </div>
       </div>
 
-      {/* ข้อมูล Booster */}
-      <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col gap-[20px]">
-        <div>
-          <h2 className="font-semibold text-foreground">ข้อมูล Booster</h2>
-          <p className="text-[12px] text-muted-foreground mt-[2px]">ข้อมูลเพิ่มเติมสำหรับนักลงทุน</p>
-        </div>
-
-        <div className="flex flex-col gap-[6px]">
-          <label className="text-[13px] font-medium text-foreground flex items-center gap-[6px]">
-            <span><Briefcase size={14} /></span> แนะนำตัวเอง (Bio)
-          </label>
-          <textarea
-            name="bio"
-            value={form.bio}
-            onChange={handleChange}
-            rows={4}
-            placeholder="บอกเล่าประสบการณ์การลงทุนหรือสิ่งที่คุณสนใจ..."
-            className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors resize-none"
-          />
-        </div>
-      </div>
 
       <button
         onClick={handleSave}
