@@ -72,10 +72,6 @@ const Step2Story = () => {
   const { projectId } = useParams()
   const { currentProject, updateProjectInfo, updateProject, saveStory, setSaveStatus } = useProjectStore()
 
-  const isFundingOrLater = !!currentProject.state &&
-    currentProject.state !== 'draft' &&
-    currentProject.state !== 'pending_review'
-
   const showFaqSection = ['draft', 'funding', 'executing'].includes(currentProject.state ?? '')
 
   const triggerSaved = () => {
