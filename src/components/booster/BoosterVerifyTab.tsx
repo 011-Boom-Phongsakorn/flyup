@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Lock, Upload, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
@@ -153,13 +153,15 @@ const BoosterVerifyTab = () => {
     }
   };
 
-  const idCardPreview = idCardFile
-    ? URL.createObjectURL(idCardFile)
-    : storedIdCardUrl || null;
+  const idCardPreview = useMemo(
+    () => idCardFile ? URL.createObjectURL(idCardFile) : storedIdCardUrl || null,
+    [idCardFile, storedIdCardUrl]
+  );
 
-  const selfiePreview = selfieFile
-    ? URL.createObjectURL(selfieFile)
-    : storedSelfieUrl || null;
+  const selfiePreview = useMemo(
+    () => selfieFile ? URL.createObjectURL(selfieFile) : storedSelfieUrl || null,
+    [selfieFile, storedSelfieUrl]
+  );
 
   const uploadBorderClass = (approved: boolean, pending: boolean, rejected: boolean, locked: boolean) =>
     `border-2 border-dashed rounded-xl overflow-hidden transition-colors block
