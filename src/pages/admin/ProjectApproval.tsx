@@ -11,6 +11,18 @@ const ProjectApproval = () => {
 
     useEffect(() => {
         fetchPendingProjects()
+
+        const interval = setInterval(fetchPendingProjects, 30_000)
+
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') fetchPendingProjects()
+        }
+        document.addEventListener('visibilitychange', onVisible)
+
+        return () => {
+            clearInterval(interval)
+            document.removeEventListener('visibilitychange', onVisible)
+        }
     }, [fetchPendingProjects])
 
     const filtered = pendingProjects.filter((p) => {
