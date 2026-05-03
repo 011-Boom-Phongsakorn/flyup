@@ -279,7 +279,7 @@ function ProjectDetail() {
                 {/* ── Milestone Content ── */}
                 {activeTab === "milestone" && (
                   hasMilestones ? (
-                    <div className="flex flex-col gap-[24px] mt-[20px] relative w-full overflow-hidden">
+                    <div className="flex flex-col gap-[24px] mt-[20px] relative w-full">
                       <div className="absolute left-[24px] top-[24px] bottom-[24px] w-[1px] bg-border z-0 hidden md:block" />
                       {milestones.map((m, index) => {
                         const phaseNumber = m.phase_no || (index + 1);
@@ -291,7 +291,7 @@ function ProjectDetail() {
                             </div>
                             <div className="flex-1 bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[20px]">
                               <div className="flex flex-col xl:flex-row justify-between xl:items-start gap-[20px]">
-                                <div className="flex flex-col gap-[8px] flex-1">
+                                <div className="flex flex-col gap-[8px] flex-1 min-w-0">
                                   <h3 className="text-[16px] font-bold text-foreground">Phase {phaseNumber}: {m.title}</h3>
                                   {m.description && <p className="text-[14px] text-muted-foreground">{m.description}</p>}
                                   {m.duration && m.duration > 0 && (
