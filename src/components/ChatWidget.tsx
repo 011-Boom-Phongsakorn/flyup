@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MessageCircle, X, SquarePen, Clock, Send, Loader2, Check, XCircle } from 'lucide-react'
+import { MessageCircle, X, SquarePen, Clock, Send, Loader2, Check, XCircle, Bot } from 'lucide-react'
 import { Link } from 'react-router'
 import { useChatStore } from '../store/useChatStore'
 import { useAuthStore } from '../store/useAuthStore'
@@ -49,20 +49,20 @@ export default function ChatWidget() {
           <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-gray-100">
             <button
               onClick={() => { clearSession(); inputRef.current?.focus() }}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
               title="เริ่มแชทใหม่"
             >
               <SquarePen size={16} />
             </button>
             <button
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
               title="ประวัติ"
             >
               <Clock size={16} />
             </button>
             <button
               onClick={close}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -77,16 +77,11 @@ export default function ChatWidget() {
               </div>
             ) : messages.length === 0 && !isSending ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-2 text-gray-300">
-                <Loader2 size={28} className="animate-spin" />
+                <Bot size={36} strokeWidth={1} />
+                <p className="text-xs text-gray-400">ถามอะไรก็ได้เกี่ยวกับ FlyUp</p>
               </div>
             ) : (
               <>
-                {messages.length === 0 && (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-2 text-gray-300">
-                    <MessageCircle size={36} strokeWidth={1} />
-                    <p className="text-xs text-gray-400">ถามอะไรก็ได้เกี่ยวกับ FlyUp</p>
-                  </div>
-                )}
                 {messages.map(msg => (
                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div
@@ -122,13 +117,13 @@ export default function ChatWidget() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => confirmAction(pendingAction.id, true)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-black transition-colors"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-black transition-colors cursor-pointer"
                         >
                           <Check size={12} /> ยืนยัน
                         </button>
                         <button
                           onClick={() => confirmAction(pendingAction.id, false)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer"
                         >
                           <XCircle size={12} /> ปฏิเสธ
                         </button>
@@ -145,7 +140,7 @@ export default function ChatWidget() {
           {/* Input */}
           <div className="px-4 pb-2 pt-2 border-t border-gray-100">
             <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
-              <button className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0">
+              <button className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0 cursor-pointer">
                 <span className="text-lg leading-none">+</span>
               </button>
               <input
@@ -160,7 +155,7 @@ export default function ChatWidget() {
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isSending || !authUser}
-                className="w-8 h-8 flex-shrink-0 bg-[#1a1a1a] text-white rounded-full flex items-center justify-center disabled:opacity-30 hover:bg-black transition-colors"
+                className="w-8 h-8 flex-shrink-0 bg-[#1a1a1a] text-white rounded-full flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black transition-colors cursor-pointer"
               >
                 {isSending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
@@ -173,7 +168,7 @@ export default function ChatWidget() {
       {/* Toggle button */}
       <button
         onClick={toggle}
-        className="w-12 h-12 bg-[#1a1a1a] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-black transition-all hover:scale-105 active:scale-95"
+        className="w-12 h-12 bg-[#1a1a1a] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-black transition-all hover:scale-105 active:scale-95 cursor-pointer"
       >
         {isOpen ? <X size={20} /> : <MessageCircle size={20} />}
       </button>
