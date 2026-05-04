@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
+import { useAuthStore } from "../../store/useAuthStore";
+import api from "../../services/api";
+import toast from "react-hot-toast";
 
 interface NotifItem {
   key: string;
@@ -9,20 +12,51 @@ interface NotifItem {
 }
 
 const notifItems: NotifItem[] = [
-  { key: "new_investment", label: "การลงทุน", desc: "แจ้งเมื่อมีการลงทุนใหม่", defaultOn: false },
-  { key: "milestone", label: "Milestone", desc: "แจ้งเมื่อมีการส่งงานหรืออนุมัติ", defaultOn: false },
-  { key: "meeting", label: "การประชุม", desc: "แจ้งเมื่อมีนัดหมายใหม่", defaultOn: false },
-  { key: "vote", label: "การลงทุน", desc: "แจ้งเมื่อมีเหตุหรือปิดการโหวต", defaultOn: true },
-  { key: "profit", label: "กำไร", desc: "แจ้งเมื่อมีการแจกจ่ายกำไร", defaultOn: true },
-  { key: "complaint", label: "การร้องเรียน", desc: "แจ้งเมื่อมีสิทธิพิเศษเรื่องร้องเรียน", defaultOn: true },
+  { key: "new_investment", label: "การลงทุน",    desc: "แจ้งเมื่อมีการลงทุนใหม่",              defaultOn: false },
+  { key: "milestone",      label: "Milestone",   desc: "แจ้งเมื่อมีการส่งงานหรืออนุมัติ",      defaultOn: false },
+  { key: "meeting",        label: "การประชุม",   desc: "แจ้งเมื่อมีนัดหมายใหม่",               defaultOn: false },
+  { key: "vote",           label: "การโหวต",     desc: "แจ้งเมื่อมีเหตุหรือปิดการโหวต",        defaultOn: true  },
+  { key: "profit",         label: "กำไร",         desc: "แจ้งเมื่อมีการแจกจ่ายกำไร",            defaultOn: true  },
+  { key: "complaint",      label: "การร้องเรียน", desc: "แจ้งเมื่อมีสิทธิพิเศษเรื่องร้องเรียน", defaultOn: true  },
 ];
 
-const NotificationTab = () => {
-  const [toggles, setToggles] = useState<Record<string, boolean>>(
-    Object.fromEntries(notifItems.map((n) => [n.key, n.defaultOn]))
-  );
+const defaultToggles = Object.fromEntries(notifItems.map((n) => [n.key, n.defaultOn]));
 
-  const toggle = (key: string) => setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
+const NotificationTab = () => {
+  const { authUser, checkAuth } = useAuthStore();
+
+  const [toggles, setToggles] = useState<Record<string, boolean>>(() => ({
+    ...defaultToggles,
+    ...(authUser?.notification_preferences ?? {}),
+  }));
+  const [saving, setSaving] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (authUser?.notification_preferences) {
+      setToggles((prev) => ({ ...prev, ...authUser.notification_preferences }));
+    }
+  }, [authUser?.notification_preferences]);
+
+  const handleToggle = (key: string) => {
+    const newValue = !toggles[key];
+    const newToggles = { ...toggles, [key]: newValue };
+    setToggles(newToggles);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setSaving(key);
+      try {
+        await api.patch("/user/notification-preferences", { preferences: newToggles });
+        await checkAuth();
+      } catch {
+        setToggles((prev) => ({ ...prev, [key]: !newValue }));
+        toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
+      } finally {
+        setSaving(null);
+      }
+    }, 400);
+  };
 
   return (
     <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col gap-[4px]">
@@ -41,11 +75,16 @@ const NotificationTab = () => {
             <p className="text-[12px] text-muted-foreground mt-[2px]">{item.desc}</p>
           </div>
           <button
-            onClick={() => toggle(item.key)}
-            className={`w-[48px] h-[26px] rounded-full transition-colors relative ${toggles[item.key] ? "bg-primary" : "bg-[#E9ECEF]"}`}
+            onClick={() => handleToggle(item.key)}
+            disabled={saving !== null}
+            className={`w-[48px] h-[26px] rounded-full transition-colors relative cursor-pointer disabled:opacity-70 ${
+              toggles[item.key] ? "bg-primary" : "bg-[#E9ECEF]"
+            }`}
           >
             <span
-              className={`absolute top-[3px] w-[20px] h-[20px] rounded-full bg-white shadow transition-all ${toggles[item.key] ? "left-[25px]" : "left-[3px]"}`}
+              className={`absolute top-[3px] w-[20px] h-[20px] rounded-full bg-white shadow transition-all ${
+                toggles[item.key] ? "left-[25px]" : "left-[3px]"
+              }`}
             />
           </button>
         </div>

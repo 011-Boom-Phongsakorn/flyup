@@ -52,6 +52,7 @@ interface DecodedUser extends Record<string, unknown> {
     bank_account?: BankAccount;
     student_card_verification?: CardVerification;
     id_card_verification?: CardVerification;
+    notification_preferences?: Record<string, boolean>;
 }
 
 interface RegisterData {
