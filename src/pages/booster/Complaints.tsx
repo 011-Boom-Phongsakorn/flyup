@@ -31,7 +31,7 @@ const Complaints = () => {
           <h1 className="text-2xl font-bold text-foreground">การร้องเรียน</h1>
           <p className="text-sm text-muted-foreground mt-1">แจ้งปัญหาเกี่ยวกับโปรเจกต์ที่คุณลงทุน</p>
         </div>
-        <Link 
+        <Link
           to="/booster/complaints/new"
           className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex-shrink-0"
         >
@@ -42,8 +42,8 @@ const Complaints = () => {
       {/* List */}
       <div className="space-y-4">
         {complaintsList.map((item) => (
-          <Link 
-            key={item.id} 
+          <Link
+            key={item.id}
             to={`/booster/complaints/${item.id}`}
             className="bg-white border border-border rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/50 transition-colors group/card block"
           >
