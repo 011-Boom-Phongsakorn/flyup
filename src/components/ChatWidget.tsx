@@ -140,16 +140,13 @@ export default function ChatWidget() {
           {/* Input */}
           <div className="px-4 pb-2 pt-2 border-t border-gray-100">
             <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
-              <button className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0 cursor-pointer">
-                <span className="text-lg leading-none">+</span>
-              </button>
               <input
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
                 disabled={!authUser || isSending}
-                placeholder="ถามคำถามฝ่ายสนับสนุน..."
+                placeholder="พิมพ์ข้อความ..."
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 disabled:opacity-50"
               />
               <button
