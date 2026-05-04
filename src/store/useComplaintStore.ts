@@ -40,6 +40,7 @@ interface ComplaintStore {
 
     // user-side
     fileComplaint: (projectId: number, subject: string, body: string) => Promise<boolean>
+    fetchMyComplaints: () => Promise<void>
 
     // admin-side
     fetchAdminList: (status?: ComplaintStatus | 'all') => Promise<void>
@@ -74,6 +75,19 @@ export const useComplaintStore = create<ComplaintStore>((set, get) => ({
             return false
         } finally {
             set({ isSubmitting: false })
+        }
+    },
+
+    fetchMyComplaints: async () => {
+        set({ isLoading: true })
+        try {
+            const res = await api.get('/complaints/me')
+            set({ complaints: res.data?.data ?? [] })
+        } catch {
+            toast.error('โหลดข้อมูลคำร้องเรียนไม่สำเร็จ')
+            set({ complaints: [] })
+        } finally {
+            set({ isLoading: false })
         }
     },
 
