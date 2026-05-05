@@ -101,8 +101,8 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
       try {
         const myProjectsRes = await api.get('/investments/my-projects');
         const myProjects = myProjectsRes.data?.data ?? [];
-        const projectMap = new Map();
-        myProjects.forEach((p: any) => projectMap.set(p.id, p));
+        const projectMap = new Map<number, PublicProject>();
+        myProjects.forEach((p: PublicProject) => projectMap.set(p.id, p));
 
         investmentsArray = investmentsArray.map(inv => {
           if (!inv.project && inv.project_id) {
