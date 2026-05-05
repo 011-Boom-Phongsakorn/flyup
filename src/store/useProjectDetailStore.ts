@@ -52,6 +52,7 @@ export interface ProjectInvestorItem {
 interface ProjectDetailState {
   updates: ProjectUpdate[];
   threads: ProjectThread[];
+  updateThreads: Record<number, ProjectThread[]>;
   threadMessages: Record<number, ProjectThreadMessage[]>;
   faqs: ProjectFAQ[];
   investorCount: number;
@@ -63,6 +64,8 @@ interface ProjectDetailState {
   fetchInvestorCount: (id: number) => Promise<void>;
   fetchAll: (id: number) => Promise<void>;
   createThread: (projectId: number, body: string, isOwner?: boolean) => Promise<void>;
+  fetchUpdateThreads: (projectId: number, updateId: number) => Promise<void>;
+  createUpdateThread: (projectId: number, updateId: number, body: string, isOwner: boolean) => Promise<void>;
   fetchThreadMessages: (threadId: number) => Promise<void>;
   createThreadMessage: (threadId: number, body: string, isOwner: boolean) => Promise<void>;
 }
@@ -72,6 +75,7 @@ interface ProjectDetailState {
 export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
   updates: [],
   threads: [],
+  updateThreads: {},
   threadMessages: {},
   faqs: [],
   investorCount: 0,
@@ -122,6 +126,28 @@ export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
     await api.post(endpoint, { body });
     const res = await api.get(`/projects/${projectId}/threads`);
     set({ threads: res.data?.data ?? [] });
+  },
+
+  fetchUpdateThreads: async (projectId: number, updateId: number) => {
+    try {
+      const res = await api.get(`/projects/${projectId}/updates/${updateId}/threads`);
+      set((state) => ({
+        updateThreads: { ...state.updateThreads, [updateId]: res.data?.data ?? [] },
+      }));
+    } catch (error) {
+      console.warn('fetchUpdateThreads:', error);
+    }
+  },
+
+  createUpdateThread: async (projectId: number, updateId: number, body: string, isOwner: boolean) => {
+    const endpoint = isOwner
+      ? `/pioneer/projects/${projectId}/updates/${updateId}/threads`
+      : `/booster/projects/${projectId}/updates/${updateId}/threads`;
+    await api.post(endpoint, { body });
+    const res = await api.get(`/projects/${projectId}/updates/${updateId}/threads`);
+    set((state) => ({
+      updateThreads: { ...state.updateThreads, [updateId]: res.data?.data ?? [] },
+    }));
   },
 
   fetchThreadMessages: async (threadId: number) => {

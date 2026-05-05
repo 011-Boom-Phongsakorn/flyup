@@ -19,10 +19,16 @@ export const PreviewUpdate = ({ updates, creatorName = 'ผู้พัฒนา
   const [visibleCount, setVisibleCount] = useState(10);
   const [updateComment, setUpdateComment] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
-  const { createThread } = useProjectDetailStore();
+  const { updateThreads, fetchUpdateThreads, createUpdateThread } = useProjectDetailStore();
 
   const selectedUpdate = updates.find(u => u.id === selectedId) ?? null;
   const selectedIndex = updates.findIndex(u => u.id === selectedId);
+  const currentUpdateComments = selectedId ? (updateThreads[selectedId] ?? []) : [];
+
+  const handleSelectUpdate = (id: number) => {
+    setSelectedId(id);
+    if (projectId) fetchUpdateThreads(projectId, id);
+  };
 
   const formatDate = (dateStr: string) => {
     try {
@@ -91,7 +97,31 @@ export const PreviewUpdate = ({ updates, creatorName = 'ผู้พัฒนา
             ความคิดเห็น
           </h3>
 
-          {(hasInvested || isOwner) && projectId ? (
+          {/* Existing comments for this update */}
+          {currentUpdateComments.length > 0 && (
+            <div className="flex flex-col gap-[10px]">
+              {currentUpdateComments.map((c) => {
+                const cInitials = c.user_name?.trim()
+                  ? c.user_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+                  : '?';
+                return (
+                  <div key={c.id} className="flex gap-[10px] p-[14px] bg-[#F8F9FA] rounded-[12px]">
+                    <div className="w-[32px] h-[32px] rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-[12px] flex-shrink-0 overflow-hidden">
+                      {c.user_avatar
+                        ? <img src={c.user_avatar} alt={c.user_name} className="w-full h-full object-cover" />
+                        : cInitials}
+                    </div>
+                    <div className="flex flex-col gap-[2px] flex-1">
+                      <span className="text-[13px] font-semibold text-foreground">{c.user_name || 'ผู้ใช้ไม่ระบุชื่อ'}</span>
+                      <p className="text-[13px] text-muted-foreground leading-relaxed">{c.body}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {(hasInvested || isOwner) && projectId && selectedId ? (
             <div className="flex flex-col gap-[10px]">
               <textarea
                 value={updateComment}
@@ -103,10 +133,10 @@ export const PreviewUpdate = ({ updates, creatorName = 'ผู้พัฒนา
               <div className="flex justify-end">
                 <button
                   onClick={async () => {
-                    if (!updateComment.trim()) return;
+                    if (!updateComment.trim() || !projectId || !selectedId) return;
                     setIsPostingComment(true);
                     try {
-                      await createThread(projectId, updateComment.trim(), isOwner);
+                      await createUpdateThread(projectId, selectedId, updateComment.trim(), !!isOwner);
                       setUpdateComment('');
                     } finally {
                       setIsPostingComment(false);
@@ -120,7 +150,7 @@ export const PreviewUpdate = ({ updates, creatorName = 'ผู้พัฒนา
                 </button>
               </div>
             </div>
-          ) : (
+          ) : (hasInvested === false && isOwner === false) ? (
             <div className="flex flex-col items-center gap-[10px] py-[24px] border border-dashed border-border rounded-[12px]">
               <Lock size={20} className="text-muted-foreground" strokeWidth={1.5} />
               <p className="text-[13px] font-medium text-foreground">เฉพาะผู้ลงทุนเท่านั้นที่แสดงความเห็นได้</p>
@@ -128,7 +158,7 @@ export const PreviewUpdate = ({ updates, creatorName = 'ผู้พัฒนา
                 ลงทุนในโปรเจกต์นี้เพื่อร่วมสอบถามและติดตามความคืบหน้า
               </p>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     );
@@ -151,7 +181,7 @@ export const PreviewUpdate = ({ updates, creatorName = 'ผู้พัฒนา
         const updateNumber = updates.length - idx;
 
         return (
-          <div key={u.id} onClick={() => setSelectedId(u.id)} className="bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[14px] hover:border-primary/40 transition-colors cursor-pointer">
+          <div key={u.id} onClick={() => handleSelectUpdate(u.id)} className="bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[14px] hover:border-primary/40 transition-colors cursor-pointer">
             {/* Update number */}
             <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-wide">
               อัปเดต #{updateNumber}
