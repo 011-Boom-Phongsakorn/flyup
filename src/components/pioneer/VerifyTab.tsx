@@ -213,8 +213,13 @@ const VerifyTab = () => {
       await checkAuth();
       setIsBankEditing(false);
       toast.success("บันทึกข้อมูลบัญชีสำเร็จ");
-    } catch {
-      toast.error("เกิดข้อผิดพลาด");
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (message === "account number already exists") {
+        toast.error("เลขบัญชีนี้มีในระบบแล้ว กรุณาใช้เลขบัญชีอื่น");
+      } else {
+        toast.error("เกิดข้อผิดพลาด");
+      }
     } finally {
       setIsSavingBank(false);
     }
