@@ -12,9 +12,9 @@ interface NotifItem {
 }
 
 const notifItems: NotifItem[] = [
-  { key: "new_investment", label: "การลงทุน",    desc: "แจ้งเมื่อมีการลงทุนใหม่",              defaultOn: false },
-  { key: "milestone",      label: "Milestone",   desc: "แจ้งเมื่อมีการส่งงานหรืออนุมัติ",      defaultOn: false },
-  { key: "meeting",        label: "การประชุม",   desc: "แจ้งเมื่อมีนัดหมายใหม่",               defaultOn: false },
+  { key: "new_investment", label: "การลงทุน",    desc: "แจ้งเมื่อมีการลงทุนใหม่",              defaultOn: true },
+  { key: "milestone",      label: "Milestone",   desc: "แจ้งเมื่อมีการส่งงานหรืออนุมัติ",      defaultOn: true },
+  { key: "meeting",        label: "การประชุม",   desc: "แจ้งเมื่อมีนัดหมายใหม่",               defaultOn: true },
   { key: "vote",           label: "การโหวต",     desc: "แจ้งเมื่อมีเหตุหรือปิดการโหวต",        defaultOn: true  },
   { key: "profit",         label: "กำไร",         desc: "แจ้งเมื่อมีการแจกจ่ายกำไร",            defaultOn: true  },
   { key: "complaint",      label: "การร้องเรียน", desc: "แจ้งเมื่อมีสิทธิพิเศษเรื่องร้องเรียน", defaultOn: true  },
@@ -22,21 +22,38 @@ const notifItems: NotifItem[] = [
 
 const defaultToggles = Object.fromEntries(notifItems.map((n) => [n.key, n.defaultOn]));
 
+function safePrefs(raw: unknown): Record<string, boolean> {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, boolean>;
+  }
+  return {};
+}
+
 const NotificationTab = () => {
-  const { authUser, checkAuth } = useAuthStore();
+  const authUser = useAuthStore((s) => s.authUser);
 
   const [toggles, setToggles] = useState<Record<string, boolean>>(() => ({
     ...defaultToggles,
-    ...(authUser?.notification_preferences ?? {}),
+    ...safePrefs(authUser?.notification_preferences),
   }));
   const [saving, setSaving] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (authUser?.notification_preferences) {
-      setToggles((prev) => ({ ...prev, ...authUser.notification_preferences }));
-    }
-  }, [authUser?.notification_preferences]);
+    api.get("/user/notification-preferences")
+      .then((res) => {
+        const prefs = safePrefs(res.data?.data);
+        if (Object.keys(prefs).length > 0) {
+          setToggles({ ...defaultToggles, ...prefs });
+          useAuthStore.setState((state) => ({
+            authUser: state.authUser
+              ? { ...state.authUser, notification_preferences: prefs }
+              : state.authUser,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleToggle = (key: string) => {
     const newValue = !toggles[key];
@@ -47,8 +64,12 @@ const NotificationTab = () => {
     debounceRef.current = setTimeout(async () => {
       setSaving(key);
       try {
-        await api.patch("/user/notification-preferences", { preferences: newToggles });
-        await checkAuth();
+        await api.patch("/user/notification-preferences", { notification_preferences: newToggles });
+        useAuthStore.setState((state) => ({
+          authUser: state.authUser
+            ? { ...state.authUser, notification_preferences: newToggles }
+            : state.authUser,
+        }));
       } catch {
         setToggles((prev) => ({ ...prev, [key]: !newValue }));
         toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
