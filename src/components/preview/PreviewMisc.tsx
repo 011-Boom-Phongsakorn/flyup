@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { MessageCircle, ChevronLeft, Lock } from 'lucide-react';
+import { MessageCircle, ChevronLeft, Lock, Send, Loader2, CornerDownRight } from 'lucide-react';
 import type { ProjectUpdate, ProjectFAQ, ProjectThread } from '../../store/useProjectDetailStore';
+import { useProjectDetailStore } from '../../store/useProjectDetailStore';
 
 // ─── PreviewUpdate ────────────────────────────────────────────────────────────
 
@@ -8,11 +9,17 @@ interface PreviewUpdateProps {
   updates: ProjectUpdate[];
   creatorName?: string;
   creatorAvatar?: string;
+  projectId?: number;
+  hasInvested?: boolean;
+  isOwner?: boolean;
 }
 
-export const PreviewUpdate = ({ updates, creatorName = 'ผู้พัฒนาโปรเจกต์', creatorAvatar }: PreviewUpdateProps) => {
+export const PreviewUpdate = ({ updates, creatorName = 'ผู้พัฒนาโปรเจกต์', creatorAvatar, projectId, hasInvested, isOwner }: PreviewUpdateProps) => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [updateComment, setUpdateComment] = useState('');
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const { createThread } = useProjectDetailStore();
 
   const selectedUpdate = updates.find(u => u.id === selectedId) ?? null;
   const selectedIndex = updates.findIndex(u => u.id === selectedId);
@@ -84,13 +91,44 @@ export const PreviewUpdate = ({ updates, creatorName = 'ผู้พัฒนา
             ความคิดเห็น
           </h3>
 
-          <div className="flex flex-col items-center gap-[10px] py-[24px] border border-dashed border-border rounded-[12px]">
-            <Lock size={20} className="text-muted-foreground" strokeWidth={1.5} />
-            <p className="text-[13px] font-medium text-foreground">เฉพาะผู้ลงทุนเท่านั้นที่แสดงความเห็นได้</p>
-            <p className="text-[12px] text-muted-foreground text-center max-w-[260px] leading-relaxed">
-              ลงทุนในโปรเจกต์นี้เพื่อร่วมสอบถามและติดตามความคืบหน้า
-            </p>
-          </div>
+          {(hasInvested || isOwner) && projectId ? (
+            <div className="flex flex-col gap-[10px]">
+              <textarea
+                value={updateComment}
+                onChange={(e) => setUpdateComment(e.target.value)}
+                placeholder="แสดงความคิดเห็นเกี่ยวกับอัปเดตนี้..."
+                rows={3}
+                className="w-full resize-none text-[14px] text-foreground placeholder:text-muted-foreground bg-transparent outline-none leading-relaxed border border-border rounded-[10px] px-[12px] py-[10px] focus:border-primary/50 transition-colors"
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={async () => {
+                    if (!updateComment.trim()) return;
+                    setIsPostingComment(true);
+                    try {
+                      await createThread(projectId, updateComment.trim(), isOwner);
+                      setUpdateComment('');
+                    } finally {
+                      setIsPostingComment(false);
+                    }
+                  }}
+                  disabled={isPostingComment || !updateComment.trim()}
+                  className="flex items-center gap-[6px] px-[16px] py-[7px] bg-primary text-white rounded-[8px] text-[13px] font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isPostingComment ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                  โพสต์
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-[10px] py-[24px] border border-dashed border-border rounded-[12px]">
+              <Lock size={20} className="text-muted-foreground" strokeWidth={1.5} />
+              <p className="text-[13px] font-medium text-foreground">เฉพาะผู้ลงทุนเท่านั้นที่แสดงความเห็นได้</p>
+              <p className="text-[12px] text-muted-foreground text-center max-w-[260px] leading-relaxed">
+                ลงทุนในโปรเจกต์นี้เพื่อร่วมสอบถามและติดตามความคืบหน้า
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -223,6 +261,8 @@ export const PreviewQuestion = ({ questions }: PreviewQuestionProps) => {
 
 interface PreviewCommentProps {
   comments: ProjectThread[];
+  canInteract?: boolean;
+  isOwner?: boolean;
 }
 
 const formatCommentDate = (dateStr: string) => {
@@ -236,7 +276,114 @@ const formatCommentDate = (dateStr: string) => {
   }
 };
 
-export const PreviewComment = ({ comments }: PreviewCommentProps) => {
+function CommentCard({ c, canInteract, isOwner }: { c: ProjectThread; canInteract: boolean; isOwner: boolean }) {
+  const { threadMessages, fetchThreadMessages, createThreadMessage } = useProjectDetailStore();
+  const [showReplies, setShowReplies] = useState(false);
+  const [replyBody, setReplyBody] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
+
+  const messages = threadMessages[c.id] ?? [];
+
+  const handleToggleReplies = async () => {
+    if (!showReplies && messages.length === 0) {
+      await fetchThreadMessages(c.id);
+    }
+    setShowReplies((v) => !v);
+  };
+
+  const handlePostReply = async () => {
+    if (!replyBody.trim()) return;
+    setIsPosting(true);
+    try {
+      await createThreadMessage(c.id, replyBody.trim(), isOwner);
+      setReplyBody('');
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const initials = c.user_name?.trim()
+    ? c.user_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : '?';
+
+  return (
+    <div className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[12px]">
+      {/* Header */}
+      <div className="flex items-center gap-[10px]">
+        <div className="w-[36px] h-[36px] rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-[13px] flex-shrink-0 overflow-hidden">
+          {c.user_avatar
+            ? <img src={c.user_avatar} alt={c.user_name} className="w-full h-full object-cover" />
+            : initials
+          }
+        </div>
+        <div className="flex flex-col gap-[2px]">
+          <span className="text-[14px] font-semibold text-foreground">{c.user_name || 'ผู้ใช้ไม่ระบุชื่อ'}</span>
+          <span className="text-[12px] text-muted-foreground">{formatCommentDate(c.created_at)}</span>
+        </div>
+      </div>
+
+      {/* Body */}
+      <p className="text-[14px] text-muted-foreground leading-relaxed">{c.body}</p>
+
+      {/* Reply toggle */}
+      <button
+        onClick={handleToggleReplies}
+        className="flex items-center gap-[5px] text-[12px] text-primary hover:text-primary/70 transition-colors w-fit cursor-pointer font-medium"
+      >
+        <CornerDownRight size={13} />
+        {showReplies ? 'ซ่อนการตอบกลับ' : `ตอบกลับ${messages.length > 0 ? ` (${messages.length})` : ''}`}
+      </button>
+
+      {/* Replies section */}
+      {showReplies && (
+        <div className="flex flex-col gap-[10px] pl-[16px] border-l-2 border-border">
+          {messages.map((m) => {
+            const mInitials = m.user_name?.trim()
+              ? m.user_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+              : '?';
+            return (
+              <div key={m.id} className="flex gap-[10px]">
+                <div className="w-[28px] h-[28px] rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[11px] flex-shrink-0 overflow-hidden">
+                  {m.user_avatar
+                    ? <img src={m.user_avatar} alt={m.user_name} className="w-full h-full object-cover" />
+                    : mInitials
+                  }
+                </div>
+                <div className="flex flex-col gap-[2px] flex-1">
+                  <span className="text-[13px] font-semibold text-foreground">{m.user_name || 'ผู้ใช้ไม่ระบุชื่อ'}</span>
+                  <p className="text-[13px] text-muted-foreground leading-relaxed">{m.body}</p>
+                  <span className="text-[11px] text-muted-foreground">{formatCommentDate(m.created_at)}</span>
+                </div>
+              </div>
+            );
+          })}
+
+          {canInteract && (
+            <div className="flex gap-[8px] items-end mt-[4px]">
+              <textarea
+                value={replyBody}
+                onChange={(e) => setReplyBody(e.target.value)}
+                placeholder="เขียนการตอบกลับ..."
+                rows={2}
+                className="flex-1 resize-none text-[13px] text-foreground placeholder:text-muted-foreground bg-transparent outline-none leading-relaxed border border-border rounded-[8px] px-[10px] py-[8px] focus:border-primary/50 transition-colors"
+              />
+              <button
+                onClick={handlePostReply}
+                disabled={isPosting || !replyBody.trim()}
+                className="flex items-center gap-[5px] px-[12px] py-[8px] bg-primary text-white rounded-[8px] text-[12px] font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex-shrink-0"
+              >
+                {isPosting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                ส่ง
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export const PreviewComment = ({ comments, canInteract = false, isOwner = false }: PreviewCommentProps) => {
   if (comments.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-[12px] mt-[40px] p-[40px] border border-dashed border-border rounded-[16px] bg-white">
@@ -247,28 +394,9 @@ export const PreviewComment = ({ comments }: PreviewCommentProps) => {
 
   return (
     <div className="flex flex-col gap-[12px] mt-[16px]">
-      {comments.map((c) => {
-        const initials = c.user_name?.trim()
-          ? c.user_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-          : '?';
-        return (
-          <div key={c.id} className="bg-white border border-border rounded-[16px] p-[20px] shadow-sm">
-            <div className="flex items-center gap-[10px] mb-[10px]">
-              <div className="w-[36px] h-[36px] rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-[13px] flex-shrink-0 overflow-hidden">
-                {c.user_avatar
-                  ? <img src={c.user_avatar} alt={c.user_name} className="w-full h-full object-cover" />
-                  : initials
-                }
-              </div>
-              <div className="flex flex-col gap-[2px]">
-                <span className="text-[14px] font-semibold text-foreground">{c.user_name || 'ผู้ใช้ไม่ระบุชื่อ'}</span>
-                <span className="text-[12px] text-muted-foreground">{formatCommentDate(c.created_at)}</span>
-              </div>
-            </div>
-            <p className="text-[14px] text-muted-foreground leading-relaxed">{c.body}</p>
-          </div>
-        );
-      })}
+      {comments.map((c) => (
+        <CommentCard key={c.id} c={c} canInteract={canInteract} isOwner={isOwner} />
+      ))}
     </div>
   );
 };

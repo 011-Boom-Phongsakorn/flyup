@@ -48,9 +48,12 @@ function ProjectDetail() {
 
   const isLoggedIn = !!authUser;
   const project = currentPublicProject;
-  const isOwner = !!authUser?.id && !!project?.owner_user_id && authUser.id === project.owner_user_id;
+  // authUser.id มาจาก /user/me, authUser.user_id มาจาก JWT decode (Google OAuth)
+  const authUserId = (authUser?.id ?? authUser?.user_id) as number | undefined;
+  const isOwner = !!authUserId && !!project?.owner_user_id && authUserId === project.owner_user_id;
+  // ตรง backend HasVerifiedInvestment ต้องการ status = 'verified' เท่านั้น
   const hasInvested = isLoggedIn && investments.some(
-    inv => inv.project_id === Number(id) && inv.status !== 'cancelled' && inv.status !== 'refunded'
+    inv => inv.project_id === Number(id) && inv.status === 'verified'
   );
 
   useEffect(() => {
@@ -347,6 +350,9 @@ function ProjectDetail() {
                     updates={updates}
                     creatorName={project?.owner_profile ? `${project.owner_profile.first_name} ${project.owner_profile.last_name}`.trim() : undefined}
                     creatorAvatar={project?.owner_profile?.picture || undefined}
+                    projectId={Number(id)}
+                    hasInvested={hasInvested}
+                    isOwner={isOwner}
                   />
                 )}
 
@@ -390,7 +396,7 @@ function ProjectDetail() {
                         </div>
                       </div>
                       {/* Comment list */}
-                      <PreviewComment comments={threads} />
+                      <PreviewComment comments={threads} canInteract={hasInvested || isOwner} isOwner={isOwner} />
                     </div>
                   )
                 )}
