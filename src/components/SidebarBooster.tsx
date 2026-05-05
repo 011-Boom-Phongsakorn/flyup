@@ -27,7 +27,7 @@ const SidebarBooster = () => {
         navigate('/');
     }
 
-    const profileUrl = authUser?.profile_url || "https://ui-avatars.com/api/?name=" + (authUser?.email || "B");
+    const profileUrl = authUser?.picture || "https://ui-avatars.com/api/?name=" + (authUser?.email || "B");
 
     return (
         <aside className="bg-sidebar w-[230px] min-w-[230px] h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent">
