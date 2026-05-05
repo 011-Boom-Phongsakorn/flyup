@@ -76,6 +76,7 @@ const Step1Basics = () => {
   }, []);
 
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const coverImageRef = useRef<HTMLInputElement>(null);
   const additionalImagesRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
@@ -127,6 +128,50 @@ const Step1Basics = () => {
       console.error('upload media failed:', error);
       return null;
     }
+  };
+
+  const handleCoverImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('อนุญาตเฉพาะไฟล์ PNG และ JPEG เท่านั้น');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('รูปภาพต้องมีขนาดไม่เกิน 5MB');
+      return;
+    }
+    const blobUrl = URL.createObjectURL(file);
+    updateProjectInfo({ coverImage: blobUrl });
+    toast.loading('กำลังอัปโหลดรูปปก...', { id: 'upload-cover' });
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
+      });
+      const { url } = uploadRes.data?.data ?? {};
+      if (!url) throw new Error('no url');
+      URL.revokeObjectURL(blobUrl);
+      updateProjectInfo({ coverImage: url });
+      if (projectId) await updateProject(Number(projectId), { coverImage: url });
+      toast.success('อัปโหลดรูปปกสำเร็จ', { id: 'upload-cover', duration: 2000 });
+      triggerSaved();
+    } catch {
+      URL.revokeObjectURL(blobUrl);
+      updateProjectInfo({ coverImage: null });
+      toast.error('อัปโหลดรูปปกไม่สำเร็จ กรุณาลองใหม่', { id: 'upload-cover' });
+    } finally {
+      if (coverImageRef.current) coverImageRef.current.value = '';
+    }
+  };
+
+  const removeCoverImage = async () => {
+    updateProjectInfo({ coverImage: null });
+    if (projectId) await updateProject(Number(projectId), { coverImage: '' });
+    triggerSaved();
   };
 
   const handleMultipleFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -472,9 +517,43 @@ const Step1Basics = () => {
       <div className="flex flex-col bg-white-foreground rounded-[12px] p-[30px] gap-[13px]">
         <div className="grid grid-cols-1 gap-8">
           <h1 className="text-[24px] text-foreground font-semibold">สื่อประกอบ</h1>
-          {/* ไฟล์ประกอบ */}
+          {/* รูปภาพปก */}
           <div className="space-y-3">
-            <label className="text-foreground text-[14px] flex items-center gap-[10px]"><FileImage size={16} />รูปภาพปก <span className="text-error">*</span></label>
+            <label className="text-foreground text-[14px] flex items-center gap-[10px]"><ImageIcon size={16} />รูปภาพปก <span className="text-muted-foreground text-[12px]">(แสดงที่หน้า home)</span> <span className="text-error">*</span></label>
+            {currentProject.coverImage ? (
+              <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border">
+                <img src={currentProject.coverImage} alt="cover" className="w-full h-full object-cover" />
+                <button
+                  onClick={removeCoverImage}
+                  className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => coverImageRef.current?.click()}
+                className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer"
+              >
+                <input
+                  type="file"
+                  hidden
+                  ref={coverImageRef}
+                  onChange={handleCoverImageChange}
+                  accept="image/png, image/jpeg, image/jpg"
+                />
+                <div className="flex flex-col items-center gap-[14px] justify-center mb-3 text-primary text-[12px]">
+                  <Upload size={24} />
+                  <p>อัปโหลดรูปปกโปรเจกต์</p>
+                  <p>JPG, PNG, JPEG (สูงสุด 5MB)</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* รูปภาพประกอบ */}
+          <div className="space-y-3">
+            <label className="text-foreground text-[14px] flex items-center gap-[10px]"><FileImage size={16} />รูปภาพประกอบ <span className="text-error">*</span></label>
             <div
               onClick={() => additionalImagesRef.current?.click()}
               className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer group"

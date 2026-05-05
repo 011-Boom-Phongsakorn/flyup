@@ -211,7 +211,13 @@ const Home = () => {
                     <img src={item.thumbnail_url || PLACEHOLDER_IMG} alt={item.title} className="w-24 h-24 rounded-xl object-cover" />
                     <div className="flex-1 py-1">
                       <h4 className="font-bold mb-1">{item.title}</h4>
-                      <p className="text-xs text-gray-500 mb-3">{item.description || 'ยังไม่มีรายละเอียด'}</p>
+                      <p className="text-xs text-gray-500 mb-2">{item.description || 'ยังไม่มีรายละเอียด'}</p>
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full mb-2 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all"
+                          style={{ width: `${getProgress(item)}%` }}
+                        />
+                      </div>
                       <div className="flex justify-between items-center text-xs font-medium">
                         <span>฿{item.current_funding.toLocaleString()}</span>
                         <span className="text-gray-500">{getProgress(item)}%</span>

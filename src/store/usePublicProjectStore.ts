@@ -66,6 +66,7 @@ export interface PublicProject {
   platform_fee: number;
   owner_profile: OwnerProfile | null;
   // These may come from detailed GET /projects/{id}
+  cover_image?: string | null;
   media?: { id: number; type: string; url: string; sort_order: number }[];
   milestones?: PublicMilestone[];
   stories?: { id: number; title: string; body: string; sort_order: number }[];
@@ -113,20 +114,10 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
     try {
       const res = await api.get('/projects');
       const projectsRaw: PublicProject[] = res.data?.data ?? [];
-      const projects = await Promise.all(
-          projectsRaw.map(async (p) => {
-              try {
-                  const detailRes = await api.get(`/projects/${p.id}`);
-                  const media: { type: string | string[]; url: string; sort_order: number }[] = detailRes.data?.data?.media ?? [];
-                  const firstImage = media
-                      .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
-                      .sort((a, b) => a.sort_order - b.sort_order)[0];
-                  return { ...p, thumbnail_url: firstImage?.url };
-              } catch {
-                  return p;
-              }
-          })
-      );
+      const projects = projectsRaw.map((p) => ({
+        ...p,
+        thumbnail_url: p.cover_image ?? undefined,
+      }));
       set({ publicProjects: projects });
     } catch (error) {
       console.error('fetchPublicProjects:', error);
@@ -144,26 +135,12 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
         api.get('/projects/ending')
       ]);
 
-      const processProjects = async (projectsRaw: PublicProject[]) => {
-        return Promise.all(
-          projectsRaw.map(async (p) => {
-            try {
-              const detailRes = await api.get(`/projects/${p.id}`);
-              const media: { type: string | string[]; url: string; sort_order: number }[] = detailRes.data?.data?.media ?? [];
-              const firstImage = media
-                .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
-                .sort((a, b) => a.sort_order - b.sort_order)[0];
-              return { ...p, thumbnail_url: firstImage?.url };
-            } catch {
-              return p;
-            }
-          })
-        );
-      };
+      const processProjects = (projectsRaw: PublicProject[]) =>
+        projectsRaw.map((p) => ({ ...p, thumbnail_url: p.cover_image ?? undefined }));
 
-      const recommended = await processProjects(recRes.data?.data ?? []);
-      const newP = await processProjects(newRes.data?.data ?? []);
-      const ending = await processProjects(endRes.data?.data ?? []);
+      const recommended = processProjects(recRes.data?.data ?? []);
+      const newP = processProjects(newRes.data?.data ?? []);
+      const ending = processProjects(endRes.data?.data ?? []);
 
       set({
         recommendedProjects: recommended,
@@ -195,20 +172,7 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
     try {
       const res = await api.get(`/projects/category/${categoryId}`);
       const projectsRaw: PublicProject[] = res.data?.data ?? [];
-      const projects = await Promise.all(
-          projectsRaw.map(async (p) => {
-              try {
-                  const detailRes = await api.get(`/projects/${p.id}`);
-                  const media: { type: string | string[]; url: string; sort_order: number }[] = detailRes.data?.data?.media ?? [];
-                  const firstImage = media
-                      .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
-                      .sort((a, b) => a.sort_order - b.sort_order)[0];
-                  return { ...p, thumbnail_url: firstImage?.url };
-              } catch {
-                  return p;
-              }
-          })
-      );
+      const projects = projectsRaw.map((p) => ({ ...p, thumbnail_url: p.cover_image ?? undefined }));
       set({ publicProjects: projects });
     } catch (error) {
       console.error('fetchProjectsByCategory:', error);
