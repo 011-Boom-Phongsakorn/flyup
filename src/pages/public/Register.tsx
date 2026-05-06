@@ -64,7 +64,6 @@ const Register = () => {
 
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { checked } = e.target;
-        console.log(checked)
         setFormData(prev => ({ ...prev, accept_terms: checked }))
     }
 

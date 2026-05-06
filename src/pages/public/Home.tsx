@@ -136,9 +136,9 @@ const Home = () => {
               </p>
 
               <div className="flex flex-wrap gap-4 items-center">
-                <button className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
+                <Link to="/login" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
                   สร้างโปรเจกต์ <ChevronRight size={18} />
-                </button>
+                </Link>
 
                 <Link to="/projects" className="bg-background hover:bg-muted text-foreground px-8 py-3 rounded-full font-medium transition-colors border border-border shadow-sm inline-block">
                   ค้นหาโครงการ
