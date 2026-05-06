@@ -33,7 +33,6 @@ const InvestmentDetail = () => {
 
   const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [projectFetchDone, setProjectFetchDone] = useState(false);
 
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundReason, setRefundReason] = useState('');
