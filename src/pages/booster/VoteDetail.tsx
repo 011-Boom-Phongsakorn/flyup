@@ -126,7 +126,7 @@ const VoteDetail = () => {
   if (!milestone) {
     return (
       <div className="max-w-5xl">
-        <button onClick={() => navigate('/booster/votes')} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6">
+        <button onClick={() => navigate('/booster/votes')} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6 cursor-pointer">
           <ArrowLeft size={16} /> กลับไปหน้าโหวต
         </button>
         <div className="text-center py-20 text-muted-foreground">
@@ -162,7 +162,7 @@ const VoteDetail = () => {
       {/* Back Button */}
       <button
         onClick={() => navigate('/booster/votes')}
-        className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6"
+        className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6 cursor-pointer"
       >
         <ArrowLeft size={16} /> กลับไปหน้าโหวต
       </button>
@@ -328,7 +328,7 @@ const VoteDetail = () => {
               <button
                 onClick={handleVoteSubmit}
                 disabled={!voteValue || isSubmitting}
-                className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               >
                 {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                 ยืนยันการโหวต
@@ -353,13 +353,13 @@ const VoteDetail = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-semibold hover:bg-muted transition-colors text-sm"
+                className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-semibold hover:bg-muted transition-colors text-sm cursor-pointer"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={confirmVote}
-                className="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition-opacity text-sm"
+                className="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition-opacity text-sm cursor-pointer"
               >
                 ยืนยัน
               </button>

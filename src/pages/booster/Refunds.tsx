@@ -53,7 +53,7 @@ const Refunds = () => {
                   {item.status === 'completed' ? 'คืนแล้ว' : 'กำลังดำเนินการ'}
                 </div>
               </div>
-              <button className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors group">
+              <button className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors group cursor-pointer">
                 รายละเอียด <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>

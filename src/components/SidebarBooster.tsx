@@ -49,7 +49,7 @@ const SidebarBooster = () => {
                             to={item.path}
                             end={item.path === '/booster/dashboard'}
                             className={({ isActive }) =>
-                                `flex p-[10px] gap-[10px] text-[14px] items-center transition-all duration-200 ${isActive
+                                `flex p-[10px] gap-[10px] text-[14px] items-center transition-all duration-200 cursor-pointer ${isActive
                                     ? "text-sidebar-primary bg-sidebar-accent rounded-[12px]"
                                     : "hover:text-sidebar-primary hover:bg-sidebar-accent hover:rounded-[12px]"
                                 }`

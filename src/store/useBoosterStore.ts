@@ -100,13 +100,19 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
 
       try {
         const myProjectsRes = await api.get('/investments/my-projects');
-        const myProjects = myProjectsRes.data?.data ?? [];
-        const projectMap = new Map<number, PublicProject>();
-        myProjects.forEach((p: PublicProject) => projectMap.set(p.id, p));
+        const myProjects: Array<{ project_id: number; title: string; cover_image?: string | null; profit_share_pct?: number }> = myProjectsRes.data?.data ?? [];
+        const projectMap = new Map<number, { title: string; cover_image?: string | null; profit_share_pct?: number }>();
+        myProjects.forEach((p) => projectMap.set(p.project_id, p));
 
         investmentsArray = investmentsArray.map(inv => {
-          if (!inv.project && inv.project_id) {
-            inv.project = projectMap.get(inv.project_id) ?? null;
+          const meta = projectMap.get(inv.project_id);
+          if (meta) {
+            inv.project = {
+              ...(inv.project ?? {}),
+              title: meta.title,
+              cover_image: meta.cover_image ?? null,
+              profit_share_pct: meta.profit_share_pct ?? inv.project?.profit_share_pct ?? 0,
+            } as PublicProject;
           }
           return inv;
         });
@@ -127,7 +133,7 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
     set({ isDetailLoading: true, currentInvestment: null });
     try {
       const res = await api.get(`/investments/${id}`);
-      let data = res.data?.data ?? res.data?.investment ?? res.data;
+      let data = res.data?.data?.investment ?? res.data?.data ?? res.data?.investment ?? res.data;
       if (data) {
         data = {
           ...data,
@@ -145,7 +151,7 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
 
   requestRefund: async (investmentId: number, reason: string) => {
     try {
-      await api.post(`/investments/${investmentId}/refund`, { reason });
+      await api.post(`/investments/${investmentId}/refund`, { note: reason });
       return true;
     } catch (error) {
       console.error('requestRefund:', error);
