@@ -93,9 +93,11 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
       const res = await api.get('/investments');
       const data = res.data?.data ?? res.data?.investments ?? [];
       
-      let investmentsArray = Array.isArray(data) ? data.map(inv => ({
+      let investmentsArray = Array.isArray(data) ? data.map((inv: any) => ({
         ...inv,
         amount: inv.amount ?? inv.total_amount ?? 0,
+        created_at: inv.created_at ?? inv.CreatedAt ?? '',
+        vat: inv.vat ?? inv.vat_amount ?? 0,
       })) : [];
 
       try {
@@ -138,6 +140,8 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
         data = {
           ...data,
           amount: data.amount ?? data.total_amount ?? 0,
+          created_at: data.created_at ?? data.CreatedAt ?? '',
+          vat: data.vat ?? data.vat_amount ?? 0,
         };
       }
       set({ currentInvestment: data });

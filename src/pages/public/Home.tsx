@@ -15,6 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -85,11 +86,15 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 // ─── Home Page ──────────────────────────────────────────────────────────────
 
 const Home = () => {
+  const { authUser } = useAuthStore();
+  const isBooster = authUser?.role === 'booster';
+
   const {
     publicProjects, // Keep for stats
     recommendedProjects,
     newProjects,
     endingProjects,
+    executingProjects,
     isLoading,
     fetchHomeProjects,
     fetchPublicProjects
@@ -136,12 +141,14 @@ const Home = () => {
               </p>
 
               <div className="flex flex-wrap gap-4 items-center">
-                <Link to="/login" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
-                  สร้างโปรเจกต์ <ChevronRight size={18} />
-                </Link>
+                {!isBooster && (
+                  <Link to="/login" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
+                    สร้างโปรเจกต์ <ChevronRight size={18} />
+                  </Link>
+                )}
 
                 <Link to="/projects" className="bg-background hover:bg-muted text-foreground px-8 py-3 rounded-full font-medium transition-colors border border-border shadow-sm inline-block">
-                  ค้นหาโครงการ
+                  สำรวจโปรเจกต์
                 </Link>
               </div>
             </div>
@@ -237,21 +244,24 @@ const Home = () => {
       </section>
 
       {/* ── Hot Projects ── */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 md:px-8 max-w-7xl">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">ใกล้สำเร็จแล้ว! <Flame className="text-orange-500" /></h2>
-            <p className="text-sm text-gray-500">โปรเจกต์เหล่านี้เกือบถึงเป้าหมายระดมทุนแล้ว อย่าพลาด!</p>
-          </div>
-          {hotProjects.length > 0 ? (
+      {hotProjects.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4 md:px-8 max-w-7xl">
+            <div className="flex justify-between items-end mb-8">
+              <div>
+                <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">ใกล้สำเร็จแล้ว! <Flame className="text-orange-500" /></h2>
+                <p className="text-sm text-gray-500">โปรเจกต์เหล่านี้เกือบถึงเป้าหมายระดมทุนแล้ว อย่าพลาด!</p>
+              </div>
+              <Link to="/projects" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
+                ดูทั้งหมด <ChevronRight size={16} />
+              </Link>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {hotProjects.map(project => <ProjectCard key={project.id} project={project} />)}
             </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-8">ยังไม่มีโปรเจกต์ที่ใกล้สำเร็จ</p>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* ── New Projects ── */}
       <section className="py-16 bg-white">
@@ -271,6 +281,26 @@ const Home = () => {
           )}
         </div>
       </section>
+
+      {/* ── Executing / Completed Projects ── */}
+      {executingProjects.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4 md:px-8 max-w-7xl">
+            <div className="flex justify-between items-end mb-8">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">โปรเจกต์กำลังดำเนินการ</h2>
+                <p className="text-sm text-muted-foreground">โปรเจกต์ที่ระดมทุนสำเร็จและอยู่ในระหว่างพัฒนา</p>
+              </div>
+              <Link to="/projects" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
+                ดูทั้งหมด <ChevronRight size={16} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {executingProjects.map(project => <ProjectCard key={project.id} project={project} />)}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Stats ── */}
       <section className="py-20 bg-card">

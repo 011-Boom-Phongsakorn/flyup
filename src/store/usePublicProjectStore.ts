@@ -85,6 +85,7 @@ interface PublicProjectState {
   recommendedProjects: PublicProject[];
   newProjects: PublicProject[];
   endingProjects: PublicProject[];
+  executingProjects: PublicProject[];
   currentPublicProject: PublicProject | null;
   categories: Category[];
   isLoading: boolean;
@@ -104,6 +105,7 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
   recommendedProjects: [],
   newProjects: [],
   endingProjects: [],
+  executingProjects: [],
   currentPublicProject: null,
   categories: [],
   isLoading: false,
@@ -129,10 +131,11 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
   fetchHomeProjects: async () => {
     set({ isLoading: true });
     try {
-      const [recRes, newRes, endRes] = await Promise.all([
+      const [recRes, newRes, endRes, execRes] = await Promise.all([
         api.get('/projects/recommend'),
         api.get('/projects/new'),
-        api.get('/projects/ending')
+        api.get('/projects/ending'),
+        api.get('/projects/executing'),
       ]);
 
       const processProjects = (projectsRaw: PublicProject[]) =>
@@ -141,11 +144,13 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
       const recommended = processProjects(recRes.data?.data ?? []);
       const newP = processProjects(newRes.data?.data ?? []);
       const ending = processProjects(endRes.data?.data ?? []);
+      const executing = processProjects(execRes.data?.data ?? []);
 
       set({
         recommendedProjects: recommended,
         newProjects: newP,
-        endingProjects: ending
+        endingProjects: ending,
+        executingProjects: executing,
       });
     } catch (error) {
       console.error('fetchHomeProjects:', error);
