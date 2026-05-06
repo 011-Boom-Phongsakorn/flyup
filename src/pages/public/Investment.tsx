@@ -8,6 +8,7 @@ import {
   QrCode,
   ShieldCheck,
   CheckCircle2,
+  Download,
   X,
   Loader2,
 } from "lucide-react";
@@ -567,10 +568,20 @@ const Investment = () => {
 
               <button
                 onClick={() => navigate(`/projects/${id}`)}
-                className="w-full py-4 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/30 uppercase tracking-widest text-sm"
+                className="w-full py-4 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/30 uppercase tracking-widest text-sm cursor-pointer"
               >
                 กลับสู่หน้าโปรเจกต์
               </button>
+
+              {investmentData?.investment_id && (
+                <a
+                  href={`${import.meta.env.VITE_API_URL}/investments/${investmentData.investment_id}/contract`}
+                  download
+                  className="w-full mt-3 py-3.5 bg-background hover:bg-muted border border-border text-foreground rounded-xl font-semibold flex items-center justify-center gap-2 text-sm transition-colors cursor-pointer"
+                >
+                  <Download size={16} /> ดาวน์โหลดสัญญา
+                </a>
+              )}
             </div>
           </div>
         )}

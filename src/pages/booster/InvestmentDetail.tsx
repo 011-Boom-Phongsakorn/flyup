@@ -253,9 +253,13 @@ const InvestmentDetail = () => {
                 </div>
              </div>
 
-             <button className="w-full mt-6 bg-background hover:bg-muted border border-border text-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px] cursor-pointer">
-                 <Download size={16} /> <span>ดาวน์โหลดสัญญา</span>
-             </button>
+             <a
+               href={`${import.meta.env.VITE_BASE_URL}/investments/${inv.id}/contract`}
+               download
+               className="w-full mt-6 bg-background hover:bg-muted border border-border text-foreground h-11 rounded-[10px] flex justify-center items-center gap-2 font-medium transition-colors text-[14px] cursor-pointer"
+             >
+               <Download size={16} /> <span>ดาวน์โหลดสัญญา</span>
+             </a>
 
              {inv.status !== 'refunded' && inv.status !== 'cancelled' && (
                <button
