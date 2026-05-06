@@ -27,7 +27,10 @@ function StatusBadge({ status }: { status: string }) {
 
 function InvestmentRow({ inv }: { inv: BoosterInvestment }) {
   const project = inv.project;
-  const title = project?.title || `โปรเจกต์ #${inv.project_id}`;
+  const title = project?.title || '—';
+  const coverImage = project?.cover_image
+    ?? project?.media?.sort((a, b) => a.sort_order - b.sort_order)[0]?.url
+    ?? null;
   const progress = project && project.funding_goal > 0
     ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
     : 0;
@@ -37,10 +40,21 @@ function InvestmentRow({ inv }: { inv: BoosterInvestment }) {
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+      {/* Project Image */}
+      <div className="w-full sm:w-[100px] h-[70px] sm:h-[70px] flex-shrink-0 rounded-xl overflow-hidden bg-muted border border-border">
+        {coverImage ? (
+          <img src={coverImage} alt={title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+            ไม่มีรูป
+          </div>
+        )}
+      </div>
+
       {/* Left info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-2 flex-wrap">
-          <h3 className="font-bold text-foreground text-base">{title}</h3>
+        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+          <h3 className="font-bold text-foreground text-base leading-tight">{title}</h3>
           <StatusBadge status={inv.status} />
         </div>
         <p className="text-sm text-muted-foreground mb-2">
@@ -60,7 +74,7 @@ function InvestmentRow({ inv }: { inv: BoosterInvestment }) {
       {/* Right buttons */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {inv.status === 'refunded' && (
-          <button className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity">
+          <button className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer">
             ขอคืนเงิน
           </button>
         )}

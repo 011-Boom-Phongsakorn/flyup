@@ -69,7 +69,7 @@ const ComplaintNew = () => {
           </div>
 
           {/* Submit Button */}
-          <button className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary/90 text-white font-bold text-sm py-3.5 rounded-xl transition-all shadow-sm">
+          <button className="flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary/90 text-white font-bold text-sm py-3.5 rounded-xl transition-all shadow-sm cursor-pointer">
             <Send size={18} /> ส่งคำร้องเรียน
           </button>
 
