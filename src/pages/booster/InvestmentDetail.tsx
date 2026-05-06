@@ -81,7 +81,7 @@ const InvestmentDetail = () => {
   const rawCategory = project?.category;
   const category = typeof rawCategory === 'string'
     ? rawCategory
-    : (rawCategory as any)?.name || 'ไม่ระบุ';
+    : (rawCategory as { name?: string } | null)?.name || 'ไม่ระบุ';
   const description = project?.description || '';
   const milestones = [...(project?.milestones ?? [])].sort((a, b) => a.phase_no - b.phase_no);
   const profitShare = inv.profit_share_pct || project?.profit_share_pct || 0;
