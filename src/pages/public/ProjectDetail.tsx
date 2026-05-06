@@ -471,19 +471,37 @@ function ProjectDetail() {
                 </div>
               </div>
 
-              <div className="w-full flex justify-center text-primary font-bold text-[14px] mb-[12px]">
-                กำลังระดมทุน
-              </div>
+              {(() => {
+                const stateLabel: Record<string, { text: string; color: string }> = {
+                  funding:        { text: 'กำลังระดมทุน',       color: 'text-primary' },
+                  executing:      { text: 'กำลังดำเนินการ',      color: 'text-purple-600' },
+                  closed:         { text: 'ปิดโครงการแล้ว',       color: 'text-green-600' },
+                  cancelled:      { text: 'ยกเลิกแล้ว',           color: 'text-red-500' },
+                  pending_cancel: { text: 'รอยืนยันการยกเลิก',   color: 'text-orange-500' },
+                  suspended:      { text: 'ถูกระงับ',              color: 'text-gray-500' },
+                };
+                const s = stateLabel[project?.state ?? ''] ?? { text: project?.state ?? '', color: 'text-muted-foreground' };
+                return (
+                  <div className={`w-full flex justify-center font-bold text-[14px] mb-[12px] ${s.color}`}>
+                    {s.text}
+                  </div>
+                );
+              })()}
 
               <div className="flex gap-[12px]">
                 <button
                   onClick={handleInvest}
-                  disabled={isAdmin || isOwner}
+                  disabled={isAdmin || isOwner || project?.state !== 'funding'}
                   title={cannotInvestReason || undefined}
                   className="flex-1 bg-primary hover:bg-primary/90 text-white-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors cursor-pointer duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <TrendingUp size={18} />
-                  <span>{isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้' : isOwner ? 'โปรเจกต์ของคุณ' : 'ลงทุนโปรเจกต์นี้'}</span>
+                  <span>
+                    {isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้'
+                      : isOwner ? 'โปรเจกต์ของคุณ'
+                      : project?.state !== 'funding' ? 'ปิดรับการลงทุนแล้ว'
+                      : 'ลงทุนโปรเจกต์นี้'}
+                  </span>
                 </button>
                 <button
                   onClick={() => {

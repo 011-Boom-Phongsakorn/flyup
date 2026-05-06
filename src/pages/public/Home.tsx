@@ -75,7 +75,7 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
         </div>
 
         <div className="flex justify-between items-center pt-1">
-          <span className="text-sm font-bold">{project.current_funding.toLocaleString()} ฿</span>
+          <span className="text-sm font-bold">{(project.current_funding ?? 0).toLocaleString()} ฿</span>
           <span className="text-xs text-gray-500">{daysLeft} วัน</span>
         </div>
       </div>
@@ -87,7 +87,7 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 
 const Home = () => {
   const { authUser } = useAuthStore();
-  const isBooster = authUser?.role === 'booster';
+  const hideCreateBtn = authUser?.role === 'booster' || authUser?.role === 'admin';
 
   const {
     publicProjects, // Keep for stats
@@ -141,7 +141,7 @@ const Home = () => {
               </p>
 
               <div className="flex flex-wrap gap-4 items-center">
-                {!isBooster && (
+                {!hideCreateBtn && (
                   <Link to="/login" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
                     สร้างโปรเจกต์ <ChevronRight size={18} />
                   </Link>
@@ -200,7 +200,7 @@ const Home = () => {
                 </div>
 
                 <div className="flex gap-6 items-center text-sm">
-                  <span className="font-bold text-lg">฿{recommendedMain.current_funding.toLocaleString()}</span>
+                  <span className="font-bold text-lg">฿{(recommendedMain.current_funding ?? 0).toLocaleString()}</span>
                   <span className="text-gray-500">ระดมทุนแล้ว {getProgress(recommendedMain)}%</span>
                   <span className="text-gray-500 flex items-center gap-1.5">
                     <Clock size={16} className="text-gray-400" /> {getDaysLeft(recommendedMain)} วัน
@@ -226,7 +226,7 @@ const Home = () => {
                         />
                       </div>
                       <div className="flex justify-between items-center text-xs font-medium">
-                        <span>฿{item.current_funding.toLocaleString()}</span>
+                        <span>฿{(item.current_funding ?? 0).toLocaleString()}</span>
                         <span className="text-gray-500">{getProgress(item)}%</span>
                         <span className="text-gray-500 flex items-center gap-1">
                           <Clock size={14} className="text-gray-400" /> {getDaysLeft(item)} วัน
