@@ -25,7 +25,7 @@ const Profits = () => {
   const totalProfit = profitHistory.reduce((sum, item) => sum + item.amount, 0);
 
   return (
-    <div className="max-w-5xl">
+    <div className="w-full">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">ประวัติกำไร</h1>

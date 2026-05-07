@@ -24,17 +24,34 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
   const isApproved = milestone.status === 'approved'
 
   const now = new Date()
+
+  const getMeetingDatetime = (m: { date: string; time: string }) => {
+    try {
+      const d = new Date(m.date)
+      const t = new Date(m.time)
+      // time ถูกเก็บเป็น UTC แต่แทนค่า local time จริงๆ ใช้ local date เพื่อให้ compare กับ now() ถูกต้อง
+      return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), t.getUTCHours(), t.getUTCMinutes())
+    } catch { return null }
+  }
+
   const activeMeetings = (milestone.meetings ?? []).filter(m => m.status !== 'cancelled')
   const hasMeeting = activeMeetings.length > 0
-  const meetingPassed = activeMeetings.some(m => new Date(m.date) <= now)
+  const meetingPassed = activeMeetings.some(m => {
+    const dt = getMeetingDatetime(m)
+    return dt !== null && dt <= now
+  })
   const canOpenVoting = hasMeeting && meetingPassed
   const nextMeeting = !meetingPassed && hasMeeting
-    ? activeMeetings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+    ? [...activeMeetings].sort((a, b) => {
+        const da = getMeetingDatetime(a)?.getTime() ?? 0
+        const db = getMeetingDatetime(b)?.getTime() ?? 0
+        return da - db
+      })[0]
     : null
   const voteDisabledReason = !hasMeeting
     ? 'กรุณานัดประชุมก่อนเปิด Vote'
     : nextMeeting
-    ? `ต้องรอถึงวันประชุม ${new Date(nextMeeting.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    ? `ต้องรอถึงเวลาประชุม ${getMeetingDatetime(nextMeeting)?.toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) ?? ''}`
     : ''
 
   const handleEvidenceSubmit = async (
