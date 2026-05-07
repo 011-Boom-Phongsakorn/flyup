@@ -1,5 +1,6 @@
-import { CheckCircle2, Calendar, Undo2, Vote, Loader2 } from 'lucide-react'
+import { CheckCircle2, Calendar, Undo2, Vote, Loader2, ChevronUp } from 'lucide-react'
 import { useNavigate } from 'react-router'
+import Swal from 'sweetalert2'
 import { STATUS_CONFIG, fmtDateRange, fmtBaht } from './types'
 import type { MilestoneData, EvidenceLink } from './types'
 import EvidenceForm from './EvidenceForm'
@@ -110,7 +111,21 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
             <>
               <span className="text-[12px] text-muted-foreground">รอ Admin ตรวจสอบ...</span>
               <button
-                onClick={() => milestone.id && onRecall(milestone.id)}
+                onClick={async () => {
+                  if (!milestone.id) return
+                  const result = await Swal.fire({
+                    title: 'ยืนยันการยกเลิกการส่ง?',
+                    text: 'หลักฐานที่ส่งไปจะถูกยกเลิก และ Milestone จะกลับสู่สถานะกำลังดำเนินการ',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'ยืนยัน ยกเลิกการส่ง',
+                    cancelButtonText: 'ไม่ยกเลิก',
+                    confirmButtonColor: '#DC2626',
+                    cancelButtonColor: '#6B7280',
+                    reverseButtons: true,
+                  })
+                  if (result.isConfirmed) onRecall(milestone.id)
+                }}
                 className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border border-red-200 text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
               >
                 <Undo2 size={14} />
@@ -123,7 +138,7 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
               onClick={onToggle}
               className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] bg-primary text-white text-[13px] font-medium hover:bg-primary/90 transition-colors cursor-pointer"
             >
-              {isActive ? 'ยุบ' : 'จัดการ'}
+              {isActive ? <ChevronUp size={16} /> : 'จัดการ'}
             </button>
           )}
           {milestone.status === 'pending' && (

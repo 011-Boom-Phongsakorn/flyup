@@ -8,8 +8,8 @@ import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-    pending:  { label: 'รอดำเนินการ', className: 'bg-amber-50 text-amber-600 border border-amber-200', icon: <Clock size={12} /> },
-    approved: { label: 'อนุมัติแล้ว', className: 'bg-green-50 text-green-600 border border-green-200', icon: <CheckCircle size={12} /> },
+    refund_pending: { label: 'รอดำเนินการ', className: 'bg-amber-50 text-amber-600 border border-amber-200', icon: <Clock size={12} /> },
+    refunded:       { label: 'อนุมัติแล้ว', className: 'bg-green-50 text-green-600 border border-green-200', icon: <CheckCircle size={12} /> },
 }
 
 const fmtDate = (d: string) =>
@@ -38,11 +38,10 @@ const AdminRefunds = () => {
 
     const filtered = refunds.filter((r) => {
         const q = search.toLowerCase()
-        const fullname = r.booster ? `${r.booster.first_name} ${r.booster.last_name}` : ''
         return (
-            (r.project?.title ?? '').toLowerCase().includes(q) ||
-            fullname.toLowerCase().includes(q) ||
-            (r.booster?.email ?? '').toLowerCase().includes(q)
+            (r.project_title ?? '').toLowerCase().includes(q) ||
+            (r.booster_name ?? '').toLowerCase().includes(q) ||
+            (r.booster_email ?? '').toLowerCase().includes(q)
         )
     })
 
@@ -81,33 +80,30 @@ const AdminRefunds = () => {
                     </div>
                 ) : (
                     filtered.map((r, idx) => {
-                        const fullname = r.booster
-                            ? `${r.booster.first_name} ${r.booster.last_name}`.trim()
-                            : '-'
-                        const status = STATUS_CONFIG[r.status] ?? STATUS_CONFIG['pending']
-                        const isPending = r.status === 'pending'
-                        const isApproving = approvingId === r.id
+                        const status = STATUS_CONFIG[r.status] ?? STATUS_CONFIG['refund_pending']
+                        const isPending = r.status === 'refund_pending'
+                        const isApproving = approvingId === r.investment_id
 
                         return (
                             <div
-                                key={r.id}
+                                key={r.investment_id}
                                 className="grid grid-cols-7 border-b border-border last:border-0 hover:bg-gray-50 transition-colors"
                             >
                                 <div className="h-14 flex justify-center items-center text-muted-foreground text-[13px]">
                                     {idx + 1}
                                 </div>
                                 <div className="col-span-2 h-14 flex flex-col justify-center px-2">
-                                    <span className="font-medium text-[13px] truncate">{r.project?.title ?? '-'}</span>
+                                    <span className="font-medium text-[13px] truncate">{r.project_title || '-'}</span>
                                     <span className="text-[11px] text-muted-foreground">
                                         ขอคืน {fmtDate(r.requested_at)}
                                     </span>
                                 </div>
                                 <div className="h-14 flex flex-col justify-center items-center gap-[2px]">
-                                    <span className="text-[13px]">{fullname}</span>
-                                    <span className="text-[11px] text-muted-foreground truncate max-w-[110px]">{r.booster?.email ?? ''}</span>
+                                    <span className="text-[13px]">{r.booster_name || '-'}</span>
+                                    <span className="text-[11px] text-muted-foreground truncate max-w-[110px]">{r.booster_email}</span>
                                 </div>
                                 <div className="h-14 flex justify-center items-center font-semibold text-primary text-[14px]">
-                                    ฿{r.amount.toLocaleString('th-TH')}
+                                    ฿{(r.refund_amount ?? 0).toLocaleString('th-TH')}
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
                                     <StatusBadge label={status.label} className={status.className} icon={status.icon} />
@@ -115,7 +111,7 @@ const AdminRefunds = () => {
                                 <div className="h-14 flex justify-center items-center">
                                     {isPending ? (
                                         <button
-                                            onClick={() => handleApprove(r.id)}
+                                            onClick={() => handleApprove(r.investment_id)}
                                             disabled={isApproving}
                                             className="flex items-center gap-[5px] px-[12px] py-[6px] rounded-[8px] bg-green-600 hover:bg-green-700 text-white text-[12px] font-medium transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                                         >
@@ -127,9 +123,7 @@ const AdminRefunds = () => {
                                             อนุมัติ
                                         </button>
                                     ) : (
-                                        <span className="text-[12px] text-muted-foreground">
-                                            {r.approved_at ? fmtDate(r.approved_at) : '-'}
-                                        </span>
+                                        <span className="text-[12px] text-muted-foreground">-</span>
                                     )}
                                 </div>
                             </div>

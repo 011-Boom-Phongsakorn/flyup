@@ -73,8 +73,11 @@ const useNotificationSSE = () => {
     useEffect(() => {
         if (!authUser) return
 
-        const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream`
-        const es = new EventSource(url, { withCredentials: true })
+        const token = localStorage.getItem('auth_token')
+        if (!token) return
+
+        const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`
+        const es = new EventSource(url)
 
         es.onmessage = (e: MessageEvent) => {
             try {
