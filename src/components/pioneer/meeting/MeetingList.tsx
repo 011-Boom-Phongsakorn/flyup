@@ -18,6 +18,23 @@ const FILTER_TABS: { value: FilterMode; label: string }[] = [
   { value: 'past', label: 'ผ่านมาแล้ว' },
 ];
 
+function getMeetingDatetime(m: Meeting): Date | null {
+  try {
+    const d = new Date(m.date)
+    const t = new Date(m.time)
+    return new Date(Date.UTC(
+      d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(),
+      t.getUTCHours(), t.getUTCMinutes()
+    ))
+  } catch { return null }
+}
+
+function isUpcomingMeeting(m: Meeting): boolean {
+  if (m.status === 'cancelled' || m.status === 'closed') return false
+  const dt = getMeetingDatetime(m)
+  return !dt || dt > new Date()
+}
+
 export default function MeetingList({ meetings, loading, filter, onFilterChange, milestones, onEdit, onCancel }: MeetingListProps) {
   const findMilestone = (mid: number) => milestones.find(x => x.id === mid);
 
@@ -30,6 +47,12 @@ export default function MeetingList({ meetings, loading, filter, onFilterChange,
   const projectTitleByMilestone = (mid: number): string => {
     return findMilestone(mid)?.project_title ?? '';
   };
+
+  const filtered = meetings.filter(m => {
+    if (filter === 'upcoming') return isUpcomingMeeting(m)
+    if (filter === 'past') return !isUpcomingMeeting(m)
+    return true
+  })
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,11 +80,11 @@ export default function MeetingList({ meetings, loading, filter, onFilterChange,
         <div className="flex items-center justify-center py-10">
           <Loader2 size={24} className="animate-spin text-primary" />
         </div>
-      ) : meetings.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-10">ยังไม่มีการประชุม</p>
       ) : (
         <div className="flex flex-col gap-3">
-          {meetings.map(m => (
+          {filtered.map(m => (
             <MeetingCard
               key={m.id}
               meeting={m}

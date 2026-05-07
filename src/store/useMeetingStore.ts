@@ -43,7 +43,7 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
   milestonesLoading: false,
   isSubmitting: false,
 
-  fetchMyMeetings: async (projects, filter) => {
+  fetchMyMeetings: async (projects, _filter) => {
     if (projects.length === 0) {
       set({ meetings: [] });
       return;
@@ -53,7 +53,7 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
       const results = await Promise.all(
         projects.map(p =>
           api
-            .get(`/me/projects/${p.id}/meetings`, { params: { filter } })
+            .get(`/me/projects/${p.id}/meetings`, { params: { filter: 'all' } })
             .then(r => (r.data?.data ?? []) as Meeting[])
             .catch(() => [] as Meeting[])
         )

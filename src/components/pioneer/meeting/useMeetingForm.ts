@@ -38,7 +38,7 @@ function fromMeeting(m: Meeting): MeetingFormValues {
     meetingType: m.meeting_type,
     meetingUrl: m.link ?? '',
     location: m.place ?? '',
-    agenda: m.about ?? '',
+    agenda: m.description ?? m.about ?? '',
   };
 }
 
