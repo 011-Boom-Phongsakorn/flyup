@@ -48,10 +48,6 @@ export default function DateTimePicker({ date, time, onDateChange, onTimeChange 
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  useEffect(() => {
-    if (time) { setLocalH(time.slice(0,2)); setLocalM(time.slice(3,5)) }
-  }, [time])
-
   const daysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate()
   const firstDay    = (y: number, m: number) => new Date(y, m, 1).getDay()
 
@@ -133,7 +129,10 @@ export default function DateTimePicker({ date, time, onDateChange, onTimeChange 
       {/* Trigger */}
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => {
+          if (!open && time) { setLocalH(time.slice(0,2)); setLocalM(time.slice(3,5)) }
+          setOpen(o => !o)
+        }}
         className={`w-full flex items-center gap-2 border rounded-[8px] px-3 py-2.5 text-[14px] text-left transition-colors cursor-pointer ${open ? 'border-primary' : 'border-border hover:border-primary/50'} ${!date ? 'text-muted-foreground' : 'text-foreground'}`}
       >
         <Calendar size={15} className="text-muted-foreground shrink-0" />
