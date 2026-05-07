@@ -11,6 +11,7 @@ export interface Meeting {
   link?: string | null;
   place?: string | null;
   about: string;
+  description?: string | null;
   status: MeetingStatus;
 }
 
