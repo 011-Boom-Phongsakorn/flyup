@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 import { useAdminStore } from '../../store/useAdminStore'
 import InfoCard from '../../components/admin/InfoCard'
 
-const fmt = (d: string) =>
+const fmt = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'
 
 const fmtBaht = (v: number) => `฿${v.toLocaleString('th-TH')}`
