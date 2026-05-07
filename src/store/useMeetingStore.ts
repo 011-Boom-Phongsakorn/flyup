@@ -4,7 +4,6 @@ import api from '../services/api';
 import {
   MEETING_ELIGIBLE_MILESTONE_STATUS,
   type CreateMeetingPayload,
-  type FilterMode,
   type Meeting,
   type MilestoneOption,
 } from '../components/pioneer/meeting/types';
@@ -21,7 +20,7 @@ interface MeetingStoreState {
   milestonesLoading: boolean;
   isSubmitting: boolean;
 
-  fetchMyMeetings: (projects: ProjectRef[], filter: FilterMode) => Promise<void>;
+  fetchMyMeetings: (projects: ProjectRef[]) => Promise<void>;
   fetchEligibleMilestones: (projects: ProjectRef[]) => Promise<void>;
   createMeeting: (payload: CreateMeetingPayload) => Promise<boolean>;
   editMeeting: (id: number, payload: CreateMeetingPayload) => Promise<boolean>;
@@ -43,7 +42,7 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
   milestonesLoading: false,
   isSubmitting: false,
 
-  fetchMyMeetings: async (projects, _filter) => {
+  fetchMyMeetings: async (projects) => {
     if (projects.length === 0) {
       set({ meetings: [] });
       return;
