@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router'
 import {
   AreaChart, Area, PieChart, Pie, Cell,
@@ -37,44 +37,38 @@ const BoosterDashboard = () => {
   const projectCount  = new Set(active.map(inv => inv.project_id)).size
 
   // monthly investment data (last 6 months)
-  const monthlyData = useMemo(() => {
-    const now = new Date()
-    const map: Record<string, number> = {}
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      map[`${d.getFullYear()}-${d.getMonth()}`] = 0
-    }
-    active.forEach(inv => {
-      if (!inv.created_at) return
-      const d = new Date(inv.created_at)
-      const key = `${d.getFullYear()}-${d.getMonth()}`
-      if (key in map) map[key] += inv.amount ?? 0
-    })
-    return Object.entries(map).map(([key, amount]) => {
-      const [, m] = key.split('-').map(Number)
-      return { month: MONTHS_TH[m], amount }
-    })
-  }, [active])
+  const now = new Date()
+  const monthMap: Record<string, number> = {}
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    monthMap[`${d.getFullYear()}-${d.getMonth()}`] = 0
+  }
+  active.forEach(inv => {
+    if (!inv.created_at) return
+    const d = new Date(inv.created_at)
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+    if (key in monthMap) monthMap[key] += inv.amount ?? 0
+  })
+  const monthlyData = Object.entries(monthMap).map(([key, amount]) => {
+    const [, m] = key.split('-').map(Number)
+    return { month: MONTHS_TH[m], amount }
+  })
 
   // portfolio by project
-  const portfolioData = useMemo(() => {
-    const map: Record<string, number> = {}
-    active.forEach(inv => {
-      const title = inv.project?.title ?? `Project ${inv.project_id}`
-      map[title] = (map[title] ?? 0) + (inv.amount ?? 0)
-    })
-    return Object.entries(map)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([name, value]) => ({ name, value }))
-  }, [active])
+  const portMap: Record<string, number> = {}
+  active.forEach(inv => {
+    const title = inv.project?.title ?? `Project ${inv.project_id}`
+    portMap[title] = (portMap[title] ?? 0) + (inv.amount ?? 0)
+  })
+  const portfolioData = Object.entries(portMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, value]) => ({ name, value }))
 
   // recent 5 investments
-  const recent = useMemo(() =>
-    [...investments]
-      .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
-      .slice(0, 5)
-  , [investments])
+  const recent = [...investments]
+    .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
+    .slice(0, 5)
 
   if (isLoading) {
     return (
