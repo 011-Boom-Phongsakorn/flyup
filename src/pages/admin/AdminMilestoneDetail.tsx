@@ -94,7 +94,7 @@ const AdminMilestoneDetail = () => {
     }
 
     return (
-        <div className="flex flex-col gap-[24px] pb-[40px] max-w-[860px]">
+        <div className="flex flex-col gap-[24px] pb-[40px] max-w-[860px] mx-auto">
             {/* Back */}
             <button
                 onClick={() => navigate(-1)}

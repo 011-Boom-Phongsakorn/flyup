@@ -184,7 +184,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
 
   recallEvidence: async (milestoneId) => {
     try {
-      await api.patch(`/pioneer/projects/milestones/${milestoneId}/recall`)
+      await api.patch(`/pioneer/projects/milestones/${milestoneId}/cancel`)
       toast.success('ยกเลิกการส่งหลักฐานเรียบร้อยแล้ว')
       set(state => ({
         milestones: state.milestones.map(m =>

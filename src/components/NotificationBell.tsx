@@ -32,12 +32,13 @@ function timeAgo(dateStr: string): string {
 }
 
 const NOTIF_CONFIG: Record<string, { icon: React.ReactNode; bg: string }> = {
-    new_investment: { icon: <TrendingUp size={16} />, bg: 'bg-emerald-500' },
-    milestone:      { icon: <CheckSquare size={16} />, bg: 'bg-violet-500' },
-    vote:           { icon: <ThumbsUp size={16} />, bg: 'bg-blue-500' },
-    project_status: { icon: <FileText size={16} />, bg: 'bg-orange-500' },
-    profit:         { icon: <Banknote size={16} />, bg: 'bg-teal-500' },
-    meeting:        { icon: <CalendarDays size={16} />, bg: 'bg-sky-500' },
+    new_investment:      { icon: <TrendingUp size={16} />, bg: 'bg-emerald-500' },
+    milestone:           { icon: <CheckSquare size={16} />, bg: 'bg-violet-500' },
+    milestone_rejected:  { icon: <CheckSquare size={16} />, bg: 'bg-red-500' },
+    vote:                { icon: <ThumbsUp size={16} />, bg: 'bg-blue-500' },
+    project_status:      { icon: <FileText size={16} />, bg: 'bg-orange-500' },
+    profit:              { icon: <Banknote size={16} />, bg: 'bg-teal-500' },
+    meeting:             { icon: <CalendarDays size={16} />, bg: 'bg-sky-500' },
 }
 
 function NotifIcon({ type }: { type: string }) {
