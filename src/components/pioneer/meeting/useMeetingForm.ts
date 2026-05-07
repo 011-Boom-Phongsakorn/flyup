@@ -74,7 +74,7 @@ export function useMeetingForm(initial?: Meeting) {
       meeting_type: values.meetingType,
       link: values.meetingType === 'online' || values.meetingType === 'hybrid' ? values.meetingUrl.trim() : undefined,
       place: values.meetingType === 'onsite' || values.meetingType === 'hybrid' ? values.location.trim() : undefined,
-      about: values.agenda.trim(),
+      description: values.agenda.trim(),
     };
   };
 

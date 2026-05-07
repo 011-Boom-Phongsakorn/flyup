@@ -71,6 +71,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
         progress_pct?: number
         admin_note?: string
         voting_open?: boolean
+        meetings?: { id: number; date: string; time: string; status: string }[]
       }[] = msRes.data?.data ?? []
 
       const milestones: MilestoneData[] = Array.from({ length: 4 }, (_, i) => {
@@ -103,6 +104,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
           progress_pct: mapBackendStatus(bm.status) === 'completed' ? 100 : (bm.progress_pct ?? 0),
           admin_note: bm.admin_note,
           voting_open: bm.voting_open ?? false,
+          meetings: bm.meetings ?? [],
         }
       })
 

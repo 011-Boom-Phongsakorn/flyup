@@ -23,6 +23,20 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
   const isCompleted = milestone.status === 'completed'
   const isApproved = milestone.status === 'approved'
 
+  const now = new Date()
+  const activeMeetings = (milestone.meetings ?? []).filter(m => m.status !== 'cancelled')
+  const hasMeeting = activeMeetings.length > 0
+  const meetingPassed = activeMeetings.some(m => new Date(m.date) <= now)
+  const canOpenVoting = hasMeeting && meetingPassed
+  const nextMeeting = !meetingPassed && hasMeeting
+    ? activeMeetings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+    : null
+  const voteDisabledReason = !hasMeeting
+    ? 'กรุณานัดประชุมก่อนเปิด Vote'
+    : nextMeeting
+    ? `ต้องรอถึงวันประชุม ${new Date(nextMeeting.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    : ''
+
   const handleEvidenceSubmit = async (
     files: File[],
     links: EvidenceLink[],
@@ -96,14 +110,21 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
                   กำลัง Vote อยู่...
                 </span>
               ) : (
-                <button
-                  onClick={() => milestone.id && onOpenVoting(milestone.id)}
-                  disabled={isOpeningVoting}
-                  className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] bg-primary text-white text-[13px] font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isOpeningVoting ? <Loader2 size={14} className="animate-spin" /> : <Vote size={14} />}
-                  เปิด Vote
-                </button>
+                <div className="relative group">
+                  <button
+                    onClick={() => canOpenVoting && milestone.id && onOpenVoting(milestone.id)}
+                    disabled={isOpeningVoting || !canOpenVoting}
+                    className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] bg-primary text-white text-[13px] font-medium hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isOpeningVoting ? <Loader2 size={14} className="animate-spin" /> : <Vote size={14} />}
+                    เปิด Vote
+                  </button>
+                  {!canOpenVoting && voteDisabledReason && (
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 whitespace-nowrap bg-gray-800 text-white text-[11px] px-2 py-1 rounded-[6px] pointer-events-none">
+                      {voteDisabledReason}
+                    </div>
+                  )}
+                </div>
               )}
             </>
           )}
