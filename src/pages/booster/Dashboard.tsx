@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router'
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  AreaChart, Area, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import {
   TrendingUp, Wallet, FolderOpen, ChevronRight, Loader2, ArrowRight,
@@ -51,7 +51,7 @@ const BoosterDashboard = () => {
       if (key in map) map[key] += inv.amount ?? 0
     })
     return Object.entries(map).map(([key, amount]) => {
-      const [y, m] = key.split('-').map(Number)
+      const [, m] = key.split('-').map(Number)
       return { month: MONTHS_TH[m], amount }
     })
   }, [active])
@@ -166,7 +166,7 @@ const BoosterDashboard = () => {
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `฿${(v/1000).toFixed(0)}k`} />
                   <Tooltip
-                    formatter={(v: number) => [fmtBaht(v), 'ลงทุน']}
+                    formatter={(v) => [fmtBaht(Number(v ?? 0)), 'ลงทุน']}
                     contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                   />
                   <Area type="monotone" dataKey="amount" stroke="#7c3aed" strokeWidth={2} fill="url(#boosterGrad)" />
@@ -197,7 +197,7 @@ const BoosterDashboard = () => {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(v: number) => [fmtBaht(v)]}
+                      formatter={(v) => [fmtBaht(Number(v ?? 0))]}
                       contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                     />
                   </PieChart>
