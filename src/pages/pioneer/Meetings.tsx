@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useMeetingStore } from '../../store/useMeetingStore';
 import CreateMeetingForm from '../../components/pioneer/meeting/CreateMeetingForm';
@@ -12,7 +12,7 @@ import {
 } from '../../components/pioneer/meeting/types';
 
 const PioneerMeetings = () => {
-  const { projects, fetchMyProjects } = useProjectStore();
+  const { projects, isLoading: projectsLoading, fetchMyProjects } = useProjectStore();
   const {
     meetings, milestones,
     meetingsLoading, milestonesLoading,
@@ -21,9 +21,11 @@ const PioneerMeetings = () => {
 
   const [filter, setFilter] = useState<FilterMode>('all');
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
+  const projectsFetchedRef = useRef(false);
 
   useEffect(() => {
     fetchMyProjects();
+    projectsFetchedRef.current = false;
   }, [fetchMyProjects]);
 
   const eligibleProjects = useMemo(
@@ -31,13 +33,23 @@ const PioneerMeetings = () => {
     [projects],
   );
 
+  // รอ projects โหลดเสร็จก่อน แล้วค่อย fetch milestones ครั้งเดียว
   useEffect(() => {
+    if (projectsLoading) return;
+    if (projectsFetchedRef.current) return;
+    projectsFetchedRef.current = true;
     fetchEligibleMilestones(eligibleProjects);
-  }, [eligibleProjects, fetchEligibleMilestones]);
-
-  useEffect(() => {
     fetchMyMeetings(eligibleProjects, filter);
-  }, [eligibleProjects, filter, fetchMyMeetings]);
+  }, [projectsLoading, eligibleProjects, filter, fetchEligibleMilestones, fetchMyMeetings]);
+
+  // re-fetch meetings เมื่อ filter เปลี่ยน (หลัง initial load แล้ว)
+  const filterRef = useRef(filter);
+  useEffect(() => {
+    if (!projectsFetchedRef.current) return;
+    if (filter === filterRef.current) return;
+    filterRef.current = filter;
+    fetchMyMeetings(eligibleProjects, filter);
+  }, [filter, eligibleProjects, fetchMyMeetings]);
 
   const handleCreated = () => {
     fetchMyMeetings(eligibleProjects, filter);

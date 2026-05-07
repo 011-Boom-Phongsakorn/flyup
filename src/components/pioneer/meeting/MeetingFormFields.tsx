@@ -1,6 +1,7 @@
-import { Video, MapPin, Clock, Calendar } from 'lucide-react';
+import { Video, MapPin } from 'lucide-react';
 import type { MeetingFormValues } from './useMeetingForm';
 import type { MeetingType, MilestoneOption } from './types';
+import DateTimePicker from './DateTimePicker';
 
 interface MeetingFormFieldsProps {
   values: MeetingFormValues;
@@ -43,29 +44,16 @@ export default function MeetingFormFields({
       </div>
 
       {/* Date + Time */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[13px] font-medium text-foreground flex items-center gap-1.5">
-            <Calendar size={14} className="text-muted-foreground" /> วันที่ <span className="text-error">*</span>
-          </label>
-          <input
-            type="date"
-            value={date}
-            onChange={e => setField('date', e.target.value)}
-            className="border border-border rounded-[8px] px-3 py-2.5 text-[14px] outline-none focus:border-primary transition-colors"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[13px] font-medium text-foreground flex items-center gap-1.5">
-            <Clock size={14} className="text-muted-foreground" /> เวลา <span className="text-error">*</span>
-          </label>
-          <input
-            type="time"
-            value={time}
-            onChange={e => setField('time', e.target.value)}
-            className="border border-border rounded-[8px] px-3 py-2.5 text-[14px] outline-none focus:border-primary transition-colors"
-          />
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[13px] font-medium text-foreground">
+          วันที่และเวลา <span className="text-error">*</span>
+        </label>
+        <DateTimePicker
+          date={date}
+          time={time}
+          onDateChange={v => setField('date', v)}
+          onTimeChange={v => setField('time', v)}
+        />
       </div>
 
       {/* Meeting Type */}

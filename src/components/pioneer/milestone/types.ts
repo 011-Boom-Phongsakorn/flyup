@@ -20,6 +20,7 @@ export interface MilestoneData {
   progress_pct: number
   admin_note?: string
   voting_open?: boolean
+  meetings?: { id: number; date: string; time: string; status: string }[]
 }
 
 export interface EvidenceLink {

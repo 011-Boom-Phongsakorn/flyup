@@ -5,7 +5,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import {
-  TrendingUp, TrendingDown, Download, Calendar,
+  TrendingUp, TrendingDown,
   FolderOpen, Milestone, MessageSquareWarning,
   RotateCcw, ShieldCheck, UserRoundCheck, ArrowRight,
   CheckCircle2, Clock, XCircle, Loader2, ChevronDown, ChevronUp,
@@ -124,21 +124,9 @@ const AdminDashboard = () => {
     <div className="flex flex-col gap-6 pb-10">
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-[26px] font-bold text-foreground">แดชบอร์ด</h1>
-          <p className="text-[13px] text-muted-foreground mt-0.5">ภาพรวมระบบและรายการรอดำเนินการ</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 px-3 py-2 text-[13px] rounded-lg border border-border text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer">
-            <Calendar size={14} />
-            เลือกช่วงเวลา
-          </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 text-[13px] rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors font-medium cursor-pointer">
-            <Download size={14} />
-            ดาวน์โหลด
-          </button>
-        </div>
+      <div>
+        <h1 className="text-[26px] font-bold text-foreground">แดชบอร์ด</h1>
+        <p className="text-[13px] text-muted-foreground mt-0.5">ภาพรวมระบบและรายการรอดำเนินการ</p>
       </div>
 
       {/* Tabs */}
