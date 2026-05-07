@@ -24,7 +24,7 @@ const complaintsList = [
 
 const Complaints = () => {
   return (
-    <div className="max-w-5xl relative">
+    <div className="relative">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
