@@ -1,7 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router'
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
 import { useEffect } from 'react';
+
+function ScrollToTop() {
+    const { pathname } = useLocation()
+    useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+    return null
+}
 import GoogleRoleModal from '../components/GoogleRoleModal';
 
 // Layouts
@@ -140,6 +146,7 @@ const Router = () => {
     return (
         <>
             <BrowserRouter>
+                <ScrollToTop />
                 <Routes>
                     <Route element={<MainLayout />}>
                         <Route path='/' element={<Home />} />
