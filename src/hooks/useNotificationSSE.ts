@@ -4,6 +4,8 @@ import { useNotificationStore, type Notification } from '../store/useNotificatio
 import { useBoosterStore } from '../store/useBoosterStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePublicProjectStore } from '../store/usePublicProjectStore'
+import { useAdminStore } from '../store/useAdminStore'
+import { useMilestoneStore } from '../store/useMilestoneStore'
 
 const useNotificationSSE = () => {
     const { authUser, checkAuth } = useAuthStore()
@@ -44,7 +46,13 @@ const useNotificationSSE = () => {
                 break
             }
 
-            case 'milestone': {
+            case 'milestone_submitted': {
+                useAdminStore.getState().fetchPendingMilestones()
+                break
+            }
+
+            case 'milestone':
+            case 'milestone_rejected': {
                 const pid = notif.related_id
                 if (!pid) break
                 const pubState = usePublicProjectStore.getState()
@@ -55,6 +63,16 @@ const useNotificationSSE = () => {
                 if ((pioneerState.currentProject.id ?? 0) === pid) {
                     pioneerState.loadCurrentProject(pid)
                 }
+                const milestoneState = useMilestoneStore.getState()
+                if (milestoneState.milestones.length > 0) {
+                    useMilestoneStore.getState().fetchMilestones(String(pid))
+                }
+                break
+            }
+
+            case 'profit': {
+                useBoosterStore.getState().fetchMyInvestments()
+                useProjectStore.getState().fetchMyProjects()
                 break
             }
 
@@ -65,6 +83,7 @@ const useNotificationSSE = () => {
                 if (pubState.currentPublicProject?.id === pid) {
                     pubState.fetchPublicProjectById(pid)
                 }
+                useBoosterStore.getState().fetchMyInvestments()
                 break
             }
         }
