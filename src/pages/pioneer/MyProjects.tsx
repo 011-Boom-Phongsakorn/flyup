@@ -5,14 +5,17 @@ import { useProjectStore } from "../../store/useProjectStore";
 import useCreateProjectGuard from "../../hooks/useCreateProjectGuard";
 import Swal from "sweetalert2";
 
-type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled" | "executing";
+type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled" | "executing" | "pending_cancel" | "suspended";
 
 const stateLabels: { type: StateType | "all"; label: string }[] = [
   { type: "funding", label: "กำลังระดมทุน" },
+  { type: "executing", label: "กำลังดำเนินการ" },
   { type: "pending_review", label: "รอการตรวจสอบ" },
   { type: "draft", label: "แบบร่าง" },
-  { type: "closed", label: "เสร็จสิ้น" },
+  { type: "pending_cancel", label: "รอยืนยันยกเลิก" },
   { type: "cancelled", label: "ถูกยกเลิก" },
+  { type: "suspended", label: "ถูกระงับ" },
+  { type: "closed", label: "เสร็จสิ้น" },
 ];
 
 const stateTextMap: Record<StateType, string> = {
@@ -22,6 +25,8 @@ const stateTextMap: Record<StateType, string> = {
   closed: "เสร็จสิ้น",
   cancelled: "ถูกยกเลิก",
   executing: "กำลังดำเนินการ",
+  pending_cancel: "รอยืนยันการยกเลิก",
+  suspended: "ถูกระงับ",
 };
 
 const stateBadgeClass: Record<StateType, string> = {
@@ -31,6 +36,8 @@ const stateBadgeClass: Record<StateType, string> = {
   draft: "bg-white border border-border text-[#495057]",
   cancelled: "bg-[#EF4444] text-white",
   executing: "bg-[#3B82F6] text-white",
+  pending_cancel: "bg-[#F59E0B] text-white",
+  suspended: "bg-[#6B7280] text-white",
 };
 
 const MyProjects = () => {
@@ -49,7 +56,7 @@ const MyProjects = () => {
 
   const stateCounts = useMemo(() => {
     const counts: Record<StateType, number> = {
-      funding: 0, pending_review: 0, draft: 0, closed: 0, cancelled: 0, executing: 0
+      funding: 0, pending_review: 0, draft: 0, closed: 0, cancelled: 0, executing: 0, pending_cancel: 0, suspended: 0
     };
     projects.forEach(p => {
       if (p.state in counts) counts[p.state]++;
@@ -216,6 +223,7 @@ const MyProjects = () => {
             const hasDelete = project.state === 'draft';
             const hasCancel = project.state === 'pending_review';
             const hasCancelRequest = project.state === 'funding' || project.state === 'closed' || project.state === 'executing';
+            const isPendingCancel = project.state === 'pending_cancel';
             const progress = project.funding_goal > 0
               ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
               : 0;
@@ -267,6 +275,14 @@ const MyProjects = () => {
                           <div className="h-[6px] w-full bg-[#E9D5FF] rounded-full overflow-hidden">
                             <div className="h-full bg-[#8B5CF6] rounded-full" style={{ width: `${progress}%` }} />
                           </div>
+                        </div>
+                      )}
+
+                      {/* Pending cancel info */}
+                      {project.state === 'pending_cancel' && (
+                        <div className="flex items-center gap-[6px] mt-[4px]">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          <span className="text-[12px] text-[#F59E0B] font-medium">อยู่ระหว่างรอ Admin ยืนยันการยกเลิก</span>
                         </div>
                       )}
 
