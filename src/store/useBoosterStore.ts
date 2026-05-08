@@ -6,9 +6,7 @@ import type { PublicProject } from './usePublicProjectStore';
 
 export interface BoosterMeeting {
   id: number;
-  project_id: number;
-  milestone_id: number | null;
-  topic: string;
+  milestone_id: number;
   about?: string;
   meeting_type?: string;
   place?: string;
@@ -17,11 +15,16 @@ export interface BoosterMeeting {
   link: string | null;
   status: string;
   created_at: string;
-  project?: PublicProject;
+  project?: {
+    id: number;
+    title: string;
+    cover_image?: string | null;
+  };
   milestone?: {
     id: number;
     title: string;
     phase_no: number;
+    project_id: number;
   };
 }
 
@@ -68,7 +71,8 @@ interface BoosterStoreState {
   fetchBoosterMeetings: () => Promise<void>;
   fetchInvestmentById: (id: number) => Promise<void>;
   requestRefund: (investmentId: number, reason: string) => Promise<boolean>;
-  voteOnMilestone: (milestoneId: number, payload: { choice: 'approve' | 'reject', comment?: string }) => Promise<boolean>;
+  voteOnMilestone: (milestoneId: number, payload: { choice: 'approve' | 'reject', comment?: string }) => Promise<boolean | 'already_voted'>;
+  getMyVote: (milestoneId: number) => Promise<{ choice: string; comment?: string } | null>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -82,7 +86,7 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
 
   fetchBoosterMeetings: async () => {
     try {
-      const res = await api.get('/me/meetings');
+      const res = await api.get('/me/investor-meetings');
       set({ boosterMeetings: res.data?.data ?? [] });
     } catch (error) {
       console.error('fetchBoosterMeetings:', error);
@@ -171,9 +175,20 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
     try {
       await api.post(`/investments/milestones/${milestoneId}/vote`, payload);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? '';
+      if (msg === 'you have already voted') return 'already_voted' as const;
       console.error('voteOnMilestone:', error);
       return false;
+    }
+  },
+
+  getMyVote: async (milestoneId: number) => {
+    try {
+      const res = await api.get(`/investments/milestones/${milestoneId}/my-vote`);
+      return res.data?.data ?? null;
+    } catch {
+      return null;
     }
   },
 }));

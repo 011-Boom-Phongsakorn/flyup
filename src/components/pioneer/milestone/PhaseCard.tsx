@@ -1,9 +1,20 @@
-import { CheckCircle2, Calendar, Undo2, Vote, Loader2, ChevronUp } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { CheckCircle2, Calendar, Undo2, Vote, Loader2, ChevronUp, ChevronDown, Users } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import Swal from 'sweetalert2'
 import { STATUS_CONFIG, fmtDateRange, fmtBaht } from './types'
 import type { MilestoneData, EvidenceLink } from './types'
 import EvidenceForm from './EvidenceForm'
+import api from '../../../services/api'
+
+interface VoterItem {
+  user_id: number
+  first_name: string
+  last_name: string
+  picture?: string | null
+  voted: boolean
+  choice: string
+}
 
 interface PhaseCardProps {
   milestone: MilestoneData
@@ -22,6 +33,19 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
   const canSubmit = milestone.status === 'in_progress' || milestone.status === 'rejected'
   const isCompleted = milestone.status === 'completed'
   const isApproved = milestone.status === 'approved'
+
+  const [votersOpen, setVotersOpen] = useState(false)
+  const [voters, setVoters] = useState<VoterItem[]>([])
+  const [votersLoading, setVotersLoading] = useState(false)
+
+  useEffect(() => {
+    if (!milestone.voting_open || !milestone.id) return
+    setVotersLoading(true)
+    api.get(`/pioneer/investments/milestones/${milestone.id}/voters`)
+      .then(res => setVoters(res.data?.data ?? []))
+      .catch(() => setVoters([]))
+      .finally(() => setVotersLoading(false))
+  }, [milestone.voting_open, milestone.id])
 
   const now = new Date()
 
@@ -122,10 +146,17 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
                 นัดประชุม
               </button>
               {milestone.voting_open ? (
-                <span className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] bg-amber-50 border border-amber-200 text-[13px] font-medium text-amber-700">
+                <button
+                  onClick={() => setVotersOpen(v => !v)}
+                  className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] bg-amber-50 border border-amber-200 text-[13px] font-medium text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
+                >
                   <Vote size={14} />
                   กำลัง Vote อยู่...
-                </span>
+                  {votersLoading
+                    ? <Loader2 size={12} className="animate-spin ml-1" />
+                    : <ChevronDown size={12} className={`ml-1 transition-transform ${votersOpen ? 'rotate-180' : ''}`} />
+                  }
+                </button>
               ) : (
                 <div className="relative group">
                   <button
@@ -184,6 +215,58 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
           )}
         </div>
       </div>
+
+      {/* ── Voter list panel ── */}
+      {milestone.voting_open && votersOpen && (
+        <div className="mx-[20px] mb-[12px] border border-amber-200 rounded-[12px] overflow-hidden">
+          {/* header */}
+          <div className="flex items-center justify-between px-4 py-2.5 bg-amber-50">
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-amber-800">
+              <Users size={14} />
+              รายชื่อผู้โหวต
+            </div>
+            <span className="text-[12px] font-medium text-amber-700">
+              {voters.filter(v => v.voted).length}/{voters.length} โหวตแล้ว
+            </span>
+          </div>
+          {/* list */}
+          {voters.length === 0 ? (
+            <p className="text-[12px] text-muted-foreground text-center py-4">ไม่มีผู้ลงทุน</p>
+          ) : (
+            <ul className="divide-y divide-amber-100 bg-white">
+              {voters.map(v => (
+                <li key={v.user_id} className="flex items-center justify-between px-4 py-2.5 gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {v.picture ? (
+                      <img src={v.picture} className="w-7 h-7 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center shrink-0">
+                        {v.first_name?.[0]}{v.last_name?.[0]}
+                      </div>
+                    )}
+                    <span className="text-[13px] text-foreground truncate">
+                      {v.first_name} {v.last_name}
+                    </span>
+                  </div>
+                  {v.voted ? (
+                    <span className={`shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+                      v.choice === 'approve'
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-red-50 text-red-600 border border-red-200'
+                    }`}>
+                      {v.choice === 'approve' ? '✓ ยอมรับ' : '✕ ไม่ยอมรับ'}
+                    </span>
+                  ) : (
+                    <span className="shrink-0 text-[11px] font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                      ยังไม่โหวต
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* ── Admin rejection note ── */}
       {milestone.status === 'rejected' && milestone.admin_note && (
