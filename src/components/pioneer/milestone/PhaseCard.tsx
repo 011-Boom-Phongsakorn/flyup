@@ -224,15 +224,15 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
               รายชื่อผู้โหวต
             </div>
             <span className="text-[12px] font-medium text-amber-700">
-              {voters.filter(v => v.voted).length}/{voters.length} โหวตแล้ว
+              {(voters ?? []).filter(v => v.voted).length}/{(voters ?? []).length} โหวตแล้ว
             </span>
           </div>
           {/* list */}
-          {voters.length === 0 ? (
+          {(voters ?? []).length === 0 ? (
             <p className="text-[12px] text-muted-foreground text-center py-4">ไม่มีผู้ลงทุน</p>
           ) : (
             <ul className="divide-y divide-amber-100 bg-white">
-              {voters.map(v => (
+              {(voters ?? []).map(v => (
                 <li key={v.user_id} className="flex items-center justify-between px-4 py-2.5 gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
                     {v.picture ? (
