@@ -223,7 +223,6 @@ const MyProjects = () => {
             const hasDelete = project.state === 'draft';
             const hasCancel = project.state === 'pending_review';
             const hasCancelRequest = project.state === 'funding' || project.state === 'closed' || project.state === 'executing';
-            const isPendingCancel = project.state === 'pending_cancel';
             const progress = project.funding_goal > 0
               ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
               : 0;
