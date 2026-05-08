@@ -504,7 +504,11 @@ const VerifyTab = () => {
             <label className="text-[13px] font-medium text-foreground">{label} <span className="text-error">*</span></label>
             <input
               value={bankForm[key as keyof typeof bankForm]}
-              onChange={(e) => setBankForm((prev) => ({ ...prev, [key]: e.target.value }))}
+              onChange={(e) => {
+                const val = key === 'account_number' ? e.target.value.replace(/\D/g, '') : e.target.value
+                setBankForm((prev) => ({ ...prev, [key]: val }))
+              }}
+              inputMode={key === 'account_number' ? 'numeric' : undefined}
               disabled={!isBankEditing}
               className={isBankEditing
                 ? "border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"

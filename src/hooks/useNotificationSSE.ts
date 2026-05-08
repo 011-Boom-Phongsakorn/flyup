@@ -6,6 +6,7 @@ import { useProjectStore } from '../store/useProjectStore'
 import { usePublicProjectStore } from '../store/usePublicProjectStore'
 import { useAdminStore } from '../store/useAdminStore'
 import { useMilestoneStore } from '../store/useMilestoneStore'
+import { useAdminBadgeStore } from '../store/useAdminBadgeStore'
 
 const useNotificationSSE = () => {
     const { authUser, checkAuth } = useAuthStore()
@@ -104,6 +105,7 @@ const useNotificationSSE = () => {
                 if (!notif?.id) return
                 addNotification(notif)
                 handleRefresh(notif)
+                useAdminBadgeStore.getState().fetchBadges()
             } catch {
                 // ignore ping / non-JSON events
             }

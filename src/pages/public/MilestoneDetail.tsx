@@ -443,7 +443,7 @@ export default function MilestoneDetail() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center mt-[100px] gap-4">
         <p className="text-gray-500">ไม่พบข้อมูลโปรเจกต์</p>
-        <button onClick={() => navigate("/projects")} className="text-primary hover:underline flex items-center gap-2 text-sm">
+        <button onClick={() => navigate("/projects")} className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors">
           <ArrowLeft size={16} /> กลับไปหน้าโปรเจกต์
         </button>
       </div>
@@ -457,7 +457,7 @@ export default function MilestoneDetail() {
         {/* Back + Breadcrumb */}
         <Link
           to={`/projects/${id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium mb-6 group transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-medium mb-6 group transition-colors"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
           กลับไปหน้าโปรเจกต์
@@ -526,7 +526,7 @@ export default function MilestoneDetail() {
                 fundingGoal={project.funding_goal}
                 campaignDuration={project.duration_days}
                 fundingAt={project.funding_at}
-                defaultOpen={isActive(m.status) || idx === 0}
+                defaultOpen={false}
               />
             ))
           ) : (
