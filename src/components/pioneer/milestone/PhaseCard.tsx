@@ -35,16 +35,14 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
   const isApproved = milestone.status === 'approved'
 
   const [votersOpen, setVotersOpen] = useState(false)
-  const [voters, setVoters] = useState<VoterItem[]>([])
-  const [votersLoading, setVotersLoading] = useState(false)
+  const [voters, setVoters] = useState<VoterItem[] | null>(null)
 
   useEffect(() => {
     if (!milestone.voting_open || !milestone.id) return
-    setVotersLoading(true)
-    api.get(`/pioneer/investments/milestones/${milestone.id}/voters`)
+    const id = milestone.id
+    api.get(`/pioneer/investments/milestones/${id}/voters`)
       .then(res => setVoters(res.data?.data ?? []))
       .catch(() => setVoters([]))
-      .finally(() => setVotersLoading(false))
   }, [milestone.voting_open, milestone.id])
 
   const now = new Date()
@@ -152,7 +150,7 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
                 >
                   <Vote size={14} />
                   กำลัง Vote อยู่...
-                  {votersLoading
+                  {voters === null
                     ? <Loader2 size={12} className="animate-spin ml-1" />
                     : <ChevronDown size={12} className={`ml-1 transition-transform ${votersOpen ? 'rotate-180' : ''}`} />
                   }
@@ -226,15 +224,15 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
               รายชื่อผู้โหวต
             </div>
             <span className="text-[12px] font-medium text-amber-700">
-              {voters.filter(v => v.voted).length}/{voters.length} โหวตแล้ว
+              {(voters ?? []).filter(v => v.voted).length}/{(voters ?? []).length} โหวตแล้ว
             </span>
           </div>
           {/* list */}
-          {voters.length === 0 ? (
+          {(voters ?? []).length === 0 ? (
             <p className="text-[12px] text-muted-foreground text-center py-4">ไม่มีผู้ลงทุน</p>
           ) : (
             <ul className="divide-y divide-amber-100 bg-white">
-              {voters.map(v => (
+              {(voters ?? []).map(v => (
                 <li key={v.user_id} className="flex items-center justify-between px-4 py-2.5 gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
                     {v.picture ? (
