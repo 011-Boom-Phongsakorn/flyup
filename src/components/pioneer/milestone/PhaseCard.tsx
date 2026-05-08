@@ -35,16 +35,14 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
   const isApproved = milestone.status === 'approved'
 
   const [votersOpen, setVotersOpen] = useState(false)
-  const [voters, setVoters] = useState<VoterItem[]>([])
-  const [votersLoading, setVotersLoading] = useState(false)
+  const [voters, setVoters] = useState<VoterItem[] | null>(null)
 
   useEffect(() => {
     if (!milestone.voting_open || !milestone.id) return
-    setVotersLoading(true)
-    api.get(`/pioneer/investments/milestones/${milestone.id}/voters`)
+    const id = milestone.id
+    api.get(`/pioneer/investments/milestones/${id}/voters`)
       .then(res => setVoters(res.data?.data ?? []))
       .catch(() => setVoters([]))
-      .finally(() => setVotersLoading(false))
   }, [milestone.voting_open, milestone.id])
 
   const now = new Date()
@@ -152,7 +150,7 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
                 >
                   <Vote size={14} />
                   กำลัง Vote อยู่...
-                  {votersLoading
+                  {voters === null
                     ? <Loader2 size={12} className="animate-spin ml-1" />
                     : <ChevronDown size={12} className={`ml-1 transition-transform ${votersOpen ? 'rotate-180' : ''}`} />
                   }
