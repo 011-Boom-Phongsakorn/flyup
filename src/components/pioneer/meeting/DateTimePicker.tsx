@@ -6,6 +6,7 @@ interface DateTimePickerProps {
   time: string   // HH:MM
   onDateChange: (v: string) => void
   onTimeChange: (v: string) => void
+  maxDate?: string  // YYYY-MM-DD — ห้ามเกิน milestone due_date
 }
 
 const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -24,7 +25,7 @@ function fmtDisplay(date: string, time: string) {
   return `${day} ${month} ${year}  ${t}`
 }
 
-export default function DateTimePicker({ date, time, onDateChange, onTimeChange }: DateTimePickerProps) {
+export default function DateTimePicker({ date, time, onDateChange, onTimeChange, maxDate }: DateTimePickerProps) {
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`
 
@@ -51,10 +52,14 @@ export default function DateTimePicker({ date, time, onDateChange, onTimeChange 
   const daysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate()
   const firstDay    = (y: number, m: number) => new Date(y, m, 1).getDay()
 
-  // วันที่ผ่านมาแล้ว (ก่อนวันนี้)
   const isPastDay = (d: number) => {
     const dayStr = `${viewYear}-${pad(viewMonth+1)}-${pad(d)}`
     return dayStr < todayStr
+  }
+  const isBeyondMax = (d: number) => {
+    if (!maxDate) return false
+    const dayStr = `${viewYear}-${pad(viewMonth+1)}-${pad(d)}`
+    return dayStr > maxDate
   }
 
   const prevMonth = () => {
@@ -67,7 +72,7 @@ export default function DateTimePicker({ date, time, onDateChange, onTimeChange 
   }
 
   const selectDay = (d: number) => {
-    if (isPastDay(d)) return
+    if (isPastDay(d) || isBeyondMax(d)) return
     const newDate = `${viewYear}-${pad(viewMonth+1)}-${pad(d)}`
     onDateChange(newDate)
     // ถ้าเป็นวันนี้และ time ปัจจุบันผ่านไปแล้ว ให้ reset time
@@ -192,15 +197,18 @@ export default function DateTimePicker({ date, time, onDateChange, onTimeChange 
             {Array.from({ length: cells }).map((_, i) => <div key={`e${i}`} />)}
             {Array.from({ length: total }, (_, i) => i + 1).map(d => {
               const past = isPastDay(d)
+              const beyond = isBeyondMax(d)
+              const disabled = past || beyond
               return (
                 <button
                   key={d}
                   type="button"
                   onClick={() => selectDay(d)}
-                  disabled={past}
+                  disabled={disabled}
+                  title={beyond && maxDate ? `ไม่สามารถเกิน ${maxDate}` : undefined}
                   className={`
                     aspect-square w-full flex items-center justify-center rounded-full text-[13px] transition-colors
-                    ${past
+                    ${disabled
                       ? 'text-muted-foreground/30 cursor-not-allowed'
                       : isSelected(d)
                       ? 'bg-gray-900 text-white font-semibold cursor-pointer'

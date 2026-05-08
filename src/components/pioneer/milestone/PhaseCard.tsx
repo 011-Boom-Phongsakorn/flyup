@@ -76,6 +76,11 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
     ? `ต้องรอถึงเวลาประชุม ${getMeetingDatetime(nextMeeting)?.toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) ?? ''}`
     : ''
 
+  const votedCount = (voters ?? []).filter(v => v.voted).length
+  const totalVoters = (voters ?? []).length
+  const votePct = totalVoters > 0 ? Math.round((votedCount / totalVoters) * 100) : 0
+  const displayPct = milestone.voting_open && totalVoters > 0 ? votePct : milestone.progress_pct
+
   const handleEvidenceSubmit = async (
     files: File[],
     links: EvidenceLink[],
@@ -115,16 +120,19 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
       <div className="px-[20px]">
         <div className="h-[6px] rounded-full bg-[#F1F3F5] overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${cfg.barCls}`}
-            style={{ width: `${milestone.progress_pct}%` }}
+            className={`h-full rounded-full transition-all ${milestone.voting_open ? 'bg-amber-400' : cfg.barCls}`}
+            style={{ width: `${displayPct}%` }}
           />
         </div>
       </div>
 
       {/* ── Footer ── */}
       <div className="px-[20px] py-[12px] flex items-center justify-between">
-        <span className={`text-[13px] font-medium ${isCompleted ? 'text-[#2BA88E]' : 'text-muted-foreground'}`}>
-          {milestone.progress_pct}%{isCompleted ? ' สำเร็จ' : milestone.progress_pct > 0 ? ' กำลังดำเนินการ' : ''}
+        <span className={`text-[13px] font-medium ${isCompleted ? 'text-[#2BA88E]' : milestone.voting_open ? 'text-amber-600' : 'text-muted-foreground'}`}>
+          {milestone.voting_open && totalVoters > 0
+            ? `${votedCount}/${totalVoters} โหวตแล้ว (${votePct}%)`
+            : `${milestone.progress_pct}%${isCompleted ? ' สำเร็จ' : milestone.progress_pct > 0 ? ' กำลังดำเนินการ' : ''}`
+          }
         </span>
 
         <div className="flex items-center gap-[8px]">

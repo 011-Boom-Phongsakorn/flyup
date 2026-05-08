@@ -22,6 +22,7 @@ export interface MilestoneOption {
   status: string;
   project_id: number;
   project_title: string;
+  due_date?: string | null; // YYYY-MM-DD
 }
 
 export interface CreateMeetingPayload {
