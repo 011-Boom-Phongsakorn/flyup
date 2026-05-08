@@ -33,7 +33,7 @@ interface MilestoneDetail {
 const VoteDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { voteOnMilestone, investments, fetchMyInvestments } = useBoosterStore();
+  const { voteOnMilestone, getMyVote, investments, fetchMyInvestments } = useBoosterStore();
 
   const [milestone, setMilestone] = useState<MilestoneDetail | null>(null);
   const [projectTitle, setProjectTitle] = useState('');
@@ -49,29 +49,38 @@ const VoteDetail = () => {
     if (investments.length === 0) fetchMyInvestments();
   }, [investments.length, fetchMyInvestments]);
 
-  // 2. Fetch milestone detail
+  // 2. Fetch milestone detail + check if already voted
   useEffect(() => {
     if (!id) return;
 
     const fetchMilestone = async () => {
       setLoading(true);
       try {
-        // Try to find the project that owns this milestone
         const projectIds = [...new Set(investments.map(inv => inv.project_id).filter(Boolean))];
 
+        let found: MilestoneDetail | null = null;
         for (const pid of projectIds) {
           try {
             const res = await api.get(`/projects/${pid}/milestones`);
             const milestones: MilestoneDetail[] = res.data?.data ?? [];
-            const found = milestones.find(m => m.id === Number(id));
-            if (found) {
-              setMilestone({ ...found, project_id: pid });
+            const m = milestones.find(m => m.id === Number(id));
+            if (m) {
+              found = { ...m, project_id: pid };
+              setMilestone(found);
               const proj = investments.find(inv => inv.project_id === pid);
               setProjectTitle(proj?.project?.title || `โปรเจกต์ #${pid}`);
               break;
             }
           } catch {
             // continue to next project
+          }
+        }
+
+        if (found?.voting_open) {
+          const existingVote = await getMyVote(Number(id));
+          if (existingVote) {
+            setVoteValue(existingVote.choice as 'approve' | 'reject');
+            setIsVoted(true);
           }
         }
       } finally {
@@ -82,7 +91,7 @@ const VoteDetail = () => {
     if (investments.length > 0) {
       fetchMilestone();
     }
-  }, [id, investments]);
+  }, [id, investments, getMyVote]);
 
   const handleVoteSubmit = async () => {
     if (!voteValue || !milestone) return;
@@ -105,14 +114,18 @@ const VoteDetail = () => {
     if (!result.isConfirmed) return
 
     setIsSubmitting(true)
-    const success = await voteOnMilestone(milestone.id, {
+    const voteResult = await voteOnMilestone(milestone.id, {
       choice: voteValue,
       comment: comment.trim() || undefined,
     })
     setIsSubmitting(false)
 
-    if (success) {
+    if (voteResult === true) {
       toast.success('บันทึกการลงคะแนนสำเร็จ')
+      setIsVoted(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (voteResult === 'already_voted') {
+      toast('คุณได้ลงคะแนนแล้ว', { icon: 'ℹ️' })
       setIsVoted(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
