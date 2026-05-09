@@ -193,7 +193,7 @@ export const useAdminStore = create<AdminStore>((set) => ({
         set({ isProjectDetailLoading: true, projectDetail: null })
         try {
             const [projRes, updatesRes, threadsRes] = await Promise.all([
-                api.get(`/admin/projects/${id}/detail/pending-review`),
+                api.get(`/admin/projects/${id}/detail`),
                 api.get(`/projects/${id}/updates`).catch(() => ({ data: { data: [] } })),
                 api.get(`/projects/${id}/threads`).catch(() => ({ data: { data: [] } })),
             ])

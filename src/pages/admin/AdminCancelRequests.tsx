@@ -7,6 +7,7 @@ import api from '../../services/api'
 import SearchBar from '../../components/admin/SearchBar'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
+import { useAdminBadgeStore } from '../../store/useAdminBadgeStore'
 
 type CancelProject = {
     id: number
@@ -15,6 +16,7 @@ type CancelProject = {
     cancel_description: string
     state: string
     owner_user_id: number
+    owner?: { first_name: string; last_name: string }
     UpdatedAt: string
 }
 
@@ -91,7 +93,7 @@ const DetailModal = ({
                         </div>
                         <p className="text-[12px] text-muted-foreground">ส่งเมื่อ {fmtDate(project.UpdatedAt)}</p>
                     </div>
-                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground cursor-pointer">
                         <X size={18} />
                     </button>
                 </div>
@@ -99,12 +101,14 @@ const DetailModal = ({
                 {/* Project Info */}
                 <div className="bg-gray-50 rounded-xl p-4 mb-4 flex justify-between text-[13px]">
                     <div>
-                        <span className="text-muted-foreground">Owner ID</span>
-                        <span className="font-medium ml-2">#{project.owner_user_id}</span>
+                        <span className="text-muted-foreground">เจ้าของโปรเจกต์</span>
+                        <span className="font-medium ml-2">
+                            {project.owner ? `${project.owner.first_name} ${project.owner.last_name}`.trim() : `#${project.owner_user_id}`}
+                        </span>
                     </div>
                     <button
                         onClick={() => navigate(`/admin/projects/${project.id}`)}
-                        className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                        className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
                     >
                         ดูโปรเจกต์ <ExternalLink size={10} />
                     </button>
@@ -213,13 +217,13 @@ const DetailModal = ({
                     <div className="flex gap-2 justify-end pt-2 border-t border-border">
                         <button
                             onClick={onReject}
-                            className="px-4 py-2 text-[13px] rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2"
+                            className="px-4 py-2 text-[13px] rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 cursor-pointer"
                         >
                             <XCircle size={14} /> ปฏิเสธ
                         </button>
                         <button
                             onClick={onApprove}
-                            className="px-4 py-2 text-[13px] rounded-lg bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                            className="px-4 py-2 text-[13px] rounded-lg bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 cursor-pointer"
                         >
                             <CheckCircle size={14} /> อนุมัติ & คืนเงินนักลงทุน
                         </button>
@@ -256,7 +260,7 @@ const ConfirmModal = ({
                     <h2 className="text-lg font-bold text-foreground">
                         {isApprove ? 'ยืนยันอนุมัติการยกเลิก' : 'ปฏิเสธคำขอยกเลิก'}
                     </h2>
-                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground cursor-pointer">
                         <X size={18} />
                     </button>
                 </div>
@@ -281,13 +285,13 @@ const ConfirmModal = ({
                     />
                 </div>
                 <div className="flex gap-2 justify-end">
-                    <button onClick={onClose} className="px-4 py-2 text-[13px] rounded-lg border border-border hover:bg-gray-50">
+                    <button onClick={onClose} className="px-4 py-2 text-[13px] rounded-lg border border-border hover:bg-gray-50 cursor-pointer">
                         ยกเลิก
                     </button>
                     <button
                         onClick={() => onConfirm(note)}
-                        disabled={!note.trim() || isSubmitting}
-                        className={`px-4 py-2 text-[13px] rounded-lg text-white disabled:opacity-50 flex items-center gap-2 ${
+                        disabled={isSubmitting}
+                        className={`px-4 py-2 text-[13px] rounded-lg text-white disabled:opacity-50 flex items-center gap-2 cursor-pointer ${
                             isApprove ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
                         }`}
                     >
@@ -309,6 +313,8 @@ const AdminCancelRequests = () => {
     const [preview, setPreview] = useState<CancelPreview | null>(null)
     const [isLoadingPreview, setIsLoadingPreview] = useState(false)
     const [modalMode, setModalMode] = useState<'approve' | 'reject' | null>(null)
+
+    const fetchBadges = useAdminBadgeStore((s) => s.fetchBadges)
 
     const fetchRequests = useCallback(async () => {
         setIsLoading(true)
@@ -351,6 +357,7 @@ const AdminCancelRequests = () => {
             setSelected(null)
             setPreview(null)
             fetchRequests()
+            fetchBadges()
         } catch (err) {
             const msg = err instanceof AxiosError ? err.response?.data?.message : null
             toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่')
@@ -384,7 +391,7 @@ const AdminCancelRequests = () => {
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
                 <div className="grid grid-cols-[2fr_1fr_2fr_120px_100px] bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">
                     <div>โปรเจกต์</div>
-                    <div className="text-center">Owner ID</div>
+                    <div className="text-center">เจ้าของโปรเจกต์</div>
                     <div>เหตุผล</div>
                     <div className="text-center">สถานะ</div>
                     <div className="text-center">จัดการ</div>
@@ -415,7 +422,9 @@ const AdminCancelRequests = () => {
                                     <span className="text-[11px] text-muted-foreground">{fmtDate(r.UpdatedAt)}</span>
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
-                                    <span className="text-[13px] text-muted-foreground">#{r.owner_user_id}</span>
+                                    <span className="text-[13px] text-muted-foreground">
+                                        {r.owner ? `${r.owner.first_name} ${r.owner.last_name}`.trim() : `#${r.owner_user_id}`}
+                                    </span>
                                 </div>
                                 <div className="h-14 flex items-center px-2">
                                     <span className="text-[13px] truncate">{r.cancel_reason || '-'}</span>
@@ -426,7 +435,7 @@ const AdminCancelRequests = () => {
                                 <div className="h-14 flex justify-center items-center">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); openDetail(r) }}
-                                        className="px-3 py-1.5 rounded-lg bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[12px] font-medium text-foreground"
+                                        className="px-3 py-1.5 rounded-lg bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[12px] font-medium text-foreground cursor-pointer"
                                     >
                                         ดูรายละเอียด
                                     </button>

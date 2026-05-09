@@ -26,7 +26,7 @@ const ContractModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
       <div className="bg-card w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[80vh]">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h3 className="font-bold text-foreground">สัญญาการลงทุน</h3>
-          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg transition-colors cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -40,7 +40,7 @@ const ContractModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
           <p>7. การลงทุนมีความเสี่ยง ผู้สนับสนุนควรพิจารณาอย่างรอบคอบก่อนตัดสินใจ</p>
         </div>
         <div className="p-4 border-t border-border">
-          <button onClick={onClose} className="w-full py-2.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity">
+          <button onClick={onClose} className="w-full py-2.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity cursor-pointer">
             รับทราบ
           </button>
         </div>
@@ -55,7 +55,8 @@ const Investment = () => {
 
   const [step, setStep] = useState<Step>(1);
   const [agreed, setAgreed] = useState(false);
-  const [amount, setAmount] = useState<string>("5,000");
+  const [amount, setAmount] = useState<string>("");
+  const [completedInvestmentId, setCompletedInvestmentId] = useState<number | null>(null);
   const [showContract, setShowContract] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15 * 60);
@@ -112,6 +113,7 @@ const Investment = () => {
           const response = await getInvestmentById(investmentData.investment_id);
           if (response?.data?.investment?.status === 'verified' || response?.data?.status === 'verified') {
             if (pollingRef.current) clearInterval(pollingRef.current);
+            setCompletedInvestmentId(investmentData.investment_id);
             setStep(4);
             clearInvestmentData();
           }
@@ -248,14 +250,14 @@ const Investment = () => {
             <div className="p-4 border-t border-border bg-background/50 flex gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 py-3 rounded-xl border border-border bg-card text-foreground font-semibold hover:bg-muted transition-colors"
+                className="flex-1 py-3 rounded-xl border border-border bg-card text-foreground font-semibold hover:bg-muted transition-colors cursor-pointer"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={handleConfirmInvestment}
                 disabled={isSubmitting}
-                className="flex-1 py-3 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : null}
                 ยืนยันการลงทุน
@@ -272,7 +274,7 @@ const Investment = () => {
             <div className="mb-8">
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors mb-6"
+                className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors mb-6 cursor-pointer"
               >
                 <ArrowLeft size={18} /> กลับ
               </button>
@@ -365,7 +367,7 @@ const Investment = () => {
                         <p>เงินลงทุนจะถูกปล่อยตาม Milestone ที่ผ่านการตรวจสอบตามเงื่อนไขของโปรเจคต์เท่านั้น</p>
                         <button
                           onClick={() => setShowContract(true)}
-                          className="mt-2 text-primary hover:underline font-medium flex items-center gap-1"
+                          className="mt-2 text-primary hover:underline font-medium flex items-center gap-1 cursor-pointer"
                         >
                           <FileText size={14} /> อ่านสัญญาเพิ่มเติม &gt;
                         </button>
@@ -396,7 +398,7 @@ const Investment = () => {
 
                   <button
                     onClick={handleNextStep1}
-                    className="w-full py-3.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
+                    className="w-full py-3.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 cursor-pointer"
                   >
                     ยอมรับและดำเนินการต่อ
                   </button>
@@ -431,14 +433,14 @@ const Investment = () => {
                         <button
                           key={val}
                           onClick={() => setAmount(val.toLocaleString())}
-                          className="px-6 py-3 border border-border rounded-[14px] font-bold text-foreground bg-white hover:border-primary hover:text-primary transition-all shadow-sm hover:shadow-md active:scale-95"
+                          className="px-6 py-3 border border-border rounded-[14px] font-bold text-foreground bg-white hover:border-primary hover:text-primary transition-all shadow-sm hover:shadow-md active:scale-95 cursor-pointer"
                         >
                           ฿{val.toLocaleString()}
                         </button>
                       ))}
                       <button
                         onClick={() => setAmount(maxAmount.toLocaleString())}
-                        className="px-6 py-3 border border-primary/30 rounded-[14px] font-bold text-primary bg-primary/5 hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
+                        className="px-6 py-3 border border-primary/30 rounded-[14px] font-bold text-primary bg-primary/5 hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         สูงสุด
                       </button>
@@ -474,7 +476,7 @@ const Investment = () => {
 
                     <button
                       onClick={handleNextStep2}
-                      className="w-full py-3.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 mt-4"
+                      className="w-full py-3.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 mt-4 cursor-pointer"
                     >
                       ดำเนินการชำระเงิน
                     </button>
@@ -573,9 +575,9 @@ const Investment = () => {
                 กลับสู่หน้าโปรเจกต์
               </button>
 
-              {investmentData?.investment_id && (
+              {completedInvestmentId && (
                 <a
-                  href={`${import.meta.env.VITE_API_URL}/investments/${investmentData.investment_id}/contract`}
+                  href={`${import.meta.env.VITE_API_URL}/investments/${completedInvestmentId}/contract`}
                   download
                   className="w-full mt-3 py-3.5 bg-background hover:bg-muted border border-border text-foreground rounded-xl font-semibold flex items-center justify-center gap-2 text-sm transition-colors cursor-pointer"
                 >

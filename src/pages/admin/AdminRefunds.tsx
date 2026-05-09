@@ -3,6 +3,7 @@ import { Loader2, RotateCcw, CheckCircle, Clock } from 'lucide-react'
 import { AxiosError } from 'axios'
 import toast from 'react-hot-toast'
 import { useRefundStore } from '../../store/useRefundStore'
+import { useAdminBadgeStore } from '../../store/useAdminBadgeStore'
 import SearchBar from '../../components/admin/SearchBar'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
@@ -17,6 +18,7 @@ const fmtDate = (d: string) =>
 
 const AdminRefunds = () => {
     const { refunds, isLoading, fetchRefunds, approveRefund } = useRefundStore()
+    const fetchBadges = useAdminBadgeStore((s) => s.fetchBadges)
     const [search, setSearch] = useState('')
     const [approvingId, setApprovingId] = useState<number | null>(null)
 
@@ -28,6 +30,7 @@ const AdminRefunds = () => {
         setApprovingId(id)
         try {
             await approveRefund(id)
+            fetchBadges()
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
             toast.error(msg || 'เกิดข้อผิดพลาด')

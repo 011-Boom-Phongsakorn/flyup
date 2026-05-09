@@ -7,6 +7,7 @@ import {
 import { AxiosError } from 'axios'
 import toast from 'react-hot-toast'
 import { useAdminStore } from '../../store/useAdminStore'
+import { useAdminBadgeStore } from '../../store/useAdminBadgeStore'
 import InfoCard from '../../components/admin/InfoCard'
 
 const fmt = (d: string | null | undefined) =>
@@ -26,6 +27,8 @@ const AdminMilestoneDetail = () => {
         rejectAdminMilestone,
     } = useAdminStore()
 
+    const fetchBadges = useAdminBadgeStore((s) => s.fetchBadges)
+
     const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | null>(null)
     const [rejectNote, setRejectNote] = useState('')
     const [showRejectForm, setShowRejectForm] = useState(false)
@@ -41,6 +44,7 @@ const AdminMilestoneDetail = () => {
         try {
             await approveAdminMilestone(milestoneId)
             toast.success('อนุมัติ Milestone สำเร็จ')
+            fetchBadges()
             navigate('/admin/milestones')
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
@@ -60,6 +64,7 @@ const AdminMilestoneDetail = () => {
         try {
             await rejectAdminMilestone(milestoneId, rejectNote)
             toast.success('ปฏิเสธ Milestone แล้ว')
+            fetchBadges()
             navigate('/admin/milestones')
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
