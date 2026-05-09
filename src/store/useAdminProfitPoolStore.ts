@@ -34,6 +34,7 @@ export interface ProfitPoolDetail {
   transfer_ref: string
   status: 'pending' | 'completed'
   admin_note: string
+  quarter_no: number
   created_at: string
   payouts: InvestorPayoutDetail[]
 }
@@ -47,6 +48,7 @@ export interface ProfitPoolListItem {
   status: 'pending' | 'completed'
   investor_count: number
   confirmed_count: number
+  quarter_no: number
   created_at: string
 }
 
@@ -58,7 +60,7 @@ interface AdminProfitPoolStore {
   isConfirming: boolean
   fetchPools: () => Promise<void>
   fetchDetail: (id: number) => Promise<void>
-  createPool: (projectId: number, totalAmount: number, transferRef: string, adminNote: string) => Promise<boolean>
+  createPool: (projectId: number, totalAmount: number, transferRef: string, adminNote: string, quarterNo?: number) => Promise<boolean>
   confirmPayout: (poolId: number, payoutId: number, transferRef: string, note: string) => Promise<boolean>
 }
 
@@ -93,7 +95,7 @@ export const useAdminProfitPoolStore = create<AdminProfitPoolStore>((set) => ({
     }
   },
 
-  createPool: async (projectId, totalAmount, transferRef, adminNote) => {
+  createPool: async (projectId, totalAmount, transferRef, adminNote, quarterNo = 0) => {
     set({ isCreating: true })
     try {
       await api.post('/admin/profit-pools', {
@@ -101,6 +103,7 @@ export const useAdminProfitPoolStore = create<AdminProfitPoolStore>((set) => ({
         total_amount: totalAmount,
         transfer_ref: transferRef,
         admin_note: adminNote,
+        quarter_no: quarterNo,
       })
       toast.success('สร้างรายการกำไรสำเร็จ')
       return true
