@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Loader2, TrendingUp, CheckCircle2, Clock, X, Plus, Building2, SendHorizonal } from 'lucide-react'
 import { usePioneerProfitStore, type PioneerProfitItem } from '../../store/usePioneerProfitStore'
-import { usePublicProjectStore } from '../../store/usePublicProjectStore'
 import api from '../../services/api'
 
 const fmtBaht = (v: number) =>
