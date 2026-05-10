@@ -25,8 +25,8 @@ instance.interceptors.response.use(
     const original = error.config;
     const status = error.response?.status;
 
-    // ข้ามถ้า: ไม่ใช่ 401, เป็น refresh endpoint เอง, หรือ retry แล้ว
-    if (status !== 401 || original._retry || original.url?.includes("/auth/refresh")) {
+    // ข้ามถ้า: ไม่ใช่ 401, เป็น refresh/signout endpoint เอง, หรือ retry แล้ว
+    if (status !== 401 || original._retry || original.url?.includes("/auth/refresh") || original.url?.includes("/user/signout")) {
       return Promise.reject(error);
     }
 
