@@ -78,7 +78,7 @@ interface AuthStore {
     isSelectingRole: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
-    loginWithGoogleToken: (token: string) => void;
+    loginWithGoogleToken: () => void;
     logout: () => Promise<void>;
     selectRole: (role: 'pioneer' | 'booster') => Promise<boolean>;
     isSendingReset: boolean;
@@ -128,7 +128,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
             set({ isRegistering: false })
         }
     },
-    loginWithGoogleToken: (_token) => {
+    loginWithGoogleToken: () => {
         // cookie already set by backend during OAuth flow — just fetch user info
         api.get('/user/me').then(res => set({ authUser: res.data?.data })).catch(() => {})
     },
