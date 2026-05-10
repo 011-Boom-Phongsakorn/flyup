@@ -19,6 +19,11 @@ export default function EditMeetingModal({
   const { editMeeting, isSubmitting } = useMeetingStore();
   const form = useMeetingForm(meeting);
 
+  const selectedMilestone = milestones.find(m => String(m.id) === form.values.milestoneId);
+  const maxDate = selectedMilestone?.due_date
+    ? new Date(selectedMilestone.due_date).toISOString().split('T')[0]
+    : undefined;
+
   useEffect(() => {
     form.setFromMeeting(meeting);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,6 +70,7 @@ export default function EditMeetingModal({
           milestones={milestones}
           milestonesLoading={milestonesLoading}
           milestoneDisabled
+          maxDate={maxDate}
         />
 
         <div className="flex gap-3">

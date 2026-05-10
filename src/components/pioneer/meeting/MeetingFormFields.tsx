@@ -8,10 +8,11 @@ interface MeetingFormFieldsProps {
   milestones: MilestoneOption[];
   milestonesLoading: boolean;
   milestoneDisabled?: boolean;
+  maxDate?: string;
 }
 
 export default function MeetingFormFields({
-  values, setField, milestones, milestonesLoading, milestoneDisabled,
+  values, setField, milestones, milestonesLoading, milestoneDisabled, maxDate,
 }: MeetingFormFieldsProps) {
   const { milestoneId, date, time, meetingType, meetingUrl, location, agenda } = values;
 
@@ -52,6 +53,7 @@ export default function MeetingFormFields({
             type="date"
             value={date}
             onChange={e => setField('date', e.target.value)}
+            max={maxDate}
             className="border border-border rounded-[8px] px-3 py-2.5 text-[14px] outline-none focus:border-primary transition-colors"
           />
         </div>
