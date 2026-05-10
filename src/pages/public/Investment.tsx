@@ -51,7 +51,7 @@ const ContractModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 
 const Investment = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { slug } = useParams();
 
   const [step, setStep] = useState<Step>(1);
   const [agreed, setAgreed] = useState(false);
@@ -64,16 +64,14 @@ const Investment = () => {
   const pollingRef = useRef<number | null>(null);
 
   const { authUser } = useAuthStore();
-  const { currentPublicProject, fetchPublicProjectById } = usePublicProjectStore();
+  const { currentPublicProject, fetchPublicProjectBySlug } = usePublicProjectStore();
   const { createInvestment, getInvestmentById, isSubmitting, investmentData, clearInvestmentData } = useInvestmentStore();
 
   const project = currentPublicProject;
 
   useEffect(() => {
-    if (id) {
-      fetchPublicProjectById(Number(id));
-    }
-  }, [id, fetchPublicProjectById]);
+    if (slug) fetchPublicProjectBySlug(slug);
+  }, [slug, fetchPublicProjectBySlug]);
 
   // Guard: ต้องยืนยันตัวตน / ไม่ใช่เจ้าของ / ไม่ใช่ admin
   useEffect(() => {
@@ -84,15 +82,15 @@ const Investment = () => {
 
     if (isAdmin) {
       toast.error('ผู้ดูแลระบบไม่สามารถลงทุนได้');
-      navigate(`/projects/${id}`, { replace: true });
+      navigate(`/projects/${slug}`, { replace: true });
     } else if (isOwner) {
       toast.error('เจ้าของโปรเจกต์ไม่สามารถลงทุนในโปรเจกต์ของตัวเองได้');
-      navigate(`/projects/${id}`, { replace: true });
+      navigate(`/projects/${slug}`, { replace: true });
     } else if (!kycApproved) {
       toast.error('กรุณายืนยันตัวตนด้วยบัตรประชาชนก่อนลงทุน', { duration: 4000 });
       navigate('/booster/profile?tab=verify', { replace: true });
     }
-  }, [project, authUser, id, navigate]);
+  }, [project, authUser, slug, navigate]);
 
   // Timer countdown
   useEffect(() => {
@@ -569,7 +567,7 @@ const Investment = () => {
               </div>
 
               <button
-                onClick={() => navigate(`/projects/${id}`)}
+                onClick={() => navigate(`/projects/${slug}`)}
                 className="w-full py-4 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/30 uppercase tracking-widest text-sm cursor-pointer"
               >
                 กลับสู่หน้าโปรเจกต์

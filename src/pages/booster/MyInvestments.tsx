@@ -89,7 +89,7 @@ function InvestmentRow({ inv }: { inv: BoosterInvestment }) {
 
       <div className="flex items-center gap-2 shrink-0">
         <Link
-          to={`/projects/${inv.project_id}`}
+          to={`/projects/${inv.project?.slug || inv.project_id}`}
           className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
           <Eye size={14} /> ดูโปรเจกต์

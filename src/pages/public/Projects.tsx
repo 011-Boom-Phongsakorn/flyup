@@ -192,7 +192,7 @@ const Projects = () => {
               return (
                 <Link
                   key={project.id}
-                  to={`/projects/${project.id}`}
+                  to={`/projects/${project.slug || project.id}`}
                   className="bg-card rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer group flex flex-col"
                 >
                   <div className="relative h-48 w-full overflow-hidden bg-muted">

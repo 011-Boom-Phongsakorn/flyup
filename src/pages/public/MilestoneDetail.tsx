@@ -414,16 +414,16 @@ function MilestoneCard({
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function MilestoneDetail() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
-  const { currentPublicProject, isDetailLoading, fetchPublicProjectById } = usePublicProjectStore();
+  const { currentPublicProject, isDetailLoading, fetchPublicProjectBySlug } = usePublicProjectStore();
 
   useEffect(() => {
-    if (id) {
-      fetchPublicProjectById(Number(id));
+    if (slug) {
+      fetchPublicProjectBySlug(slug);
       window.scrollTo(0, 0);
     }
-  }, [id, fetchPublicProjectById]);
+  }, [slug, fetchPublicProjectBySlug]);
 
   const project = currentPublicProject;
   const milestones = (project?.milestones ?? []).slice().sort((a, b) => a.phase_no - b.phase_no);
@@ -456,7 +456,7 @@ export default function MilestoneDetail() {
 
         {/* Back + Breadcrumb */}
         <Link
-          to={`/projects/${id}`}
+          to={`/projects/${slug}`}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-medium mb-6 group transition-colors"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
@@ -540,7 +540,7 @@ export default function MilestoneDetail() {
         {/* CTA at bottom */}
         <div className="mt-8 flex justify-start">
           <Link
-            to={`/projects/${id}`}
+            to={`/projects/${slug}`}
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors shadow-md shadow-primary/10"
           >
             <ArrowLeft size={16} />

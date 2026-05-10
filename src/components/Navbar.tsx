@@ -115,8 +115,8 @@ const Navbar = () => {
         closeMenu();
     };
 
-    const handleSuggestionClick = (projectId: number) => {
-        navigate(`/projects/${projectId}`);
+    const handleSuggestionClick = (slug: string, id: number) => {
+        navigate(`/projects/${slug || id}`);
         setSearchQuery('');
         closeMenu();
     };
@@ -154,7 +154,7 @@ const Navbar = () => {
                                             suggestions.map((item) => (
                                                 <button
                                                     key={item.id}
-                                                    onClick={() => handleSuggestionClick(item.id)}
+                                                    onClick={() => handleSuggestionClick(item.slug, item.id)}
                                                     className="w-full flex items-center gap-4 px-4 py-3 hover:bg-muted transition-all text-left group"
                                                 >
                                                     <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border border-border">

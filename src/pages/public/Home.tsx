@@ -40,7 +40,7 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 
   return (
     <Link
-      to={`/projects/${project.id}`}
+      to={`/projects/${project.slug || project.id}`}
       className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group flex flex-col"
     >
       <div className="relative h-48 w-full overflow-hidden bg-gray-100">

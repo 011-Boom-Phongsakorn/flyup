@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import DOMPurify from 'dompurify';
 
 interface PreviewStoryProps {
   story?: string;
@@ -60,7 +61,7 @@ const PreviewStory = ({ story, risks }: PreviewStoryProps) => {
       <div className="flex-1 flex flex-col gap-[20px] min-w-0">
         <div
           className="prose prose-slate max-w-[800px] text-foreground text-[15px] leading-relaxed [&_h1]:text-[24px] [&_h1]:font-bold [&_h2]:text-[20px] [&_h2]:font-bold [&_h3]:text-[18px] [&_h3]:font-bold [&_h1]:mb-[12px] [&_h2]:mb-[12px] [&_h3]:mb-[12px] [&_p]:mb-[12px] [&_ul]:mb-[12px] [&_li]:mb-[4px] [&_img]:rounded-[12px] [&_img]:my-[20px]"
-          dangerouslySetInnerHTML={{ __html: html }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
           onClick={(e) => {
             const target = e.target as HTMLElement;
             const span = target.closest('[data-href]') as HTMLElement | null;
@@ -77,7 +78,7 @@ const PreviewStory = ({ story, risks }: PreviewStoryProps) => {
               </div>
               <div className="flex flex-col gap-[4px]">
                   <h3 className="text-[14px] font-bold text-foreground">ความเสี่ยงและความท้าทาย</h3>
-                  <div className="text-[13px] text-muted-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: risks }} />
+                  <div className="text-[13px] text-muted-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(risks) }} />
               </div>
           </div>
         )}

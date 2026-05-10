@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Download, Loader2, Calendar, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -192,7 +193,7 @@ const InvestmentDetail = () => {
              {activeTab === 'story' && (
                 <div className="prose prose-sm sm:prose-base max-w-none text-muted-foreground">
                   {project?.stories && project.stories.length > 0
-                      ? <div dangerouslySetInnerHTML={{ __html: [...project.stories].sort((a, b) => a.sort_order - b.sort_order).map(s => s.body).join('') }} />
+                      ? <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize([...project.stories].sort((a, b) => a.sort_order - b.sort_order).map(s => s.body).join('')) }} />
                       : "โปรเจกต์นี้ยังไม่ได้เขียนบรรยาย Story"}
                   {project?.risk && (
                       <div className="mt-8 p-4 bg-orange-50/50 border border-orange-200 rounded-xl">
