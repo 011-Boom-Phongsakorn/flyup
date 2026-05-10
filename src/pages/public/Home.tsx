@@ -188,7 +188,7 @@ const Home = () => {
             </div>
           ) : recommendedMain ? (
             <div className={`grid gap-8 ${recommendedList.length > 0 ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 max-w-2xl'}`}>
-              <Link to={`/projects/${recommendedMain.id}`} className="lg:col-span-2 cursor-pointer group">
+              <Link to={`/projects/${recommendedMain.slug || recommendedMain.id}`} className="lg:col-span-2 cursor-pointer group">
                 <div className="bg-gray-100 rounded-3xl overflow-hidden relative h-[300px] md:h-[400px] mb-4">
                   <img src={recommendedMain.thumbnail_url || PLACEHOLDER_IMG} alt={recommendedMain.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 </div>
@@ -212,7 +212,7 @@ const Home = () => {
                 {recommendedList.map(item => (
                   <Link
                     key={item.id}
-                    to={`/projects/${item.id}`}
+                    to={`/projects/${item.slug || item.id}`}
                     className="flex gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-100"
                   >
                     <img src={item.thumbnail_url || PLACEHOLDER_IMG} alt={item.title} className="w-24 h-24 rounded-xl object-cover" />
