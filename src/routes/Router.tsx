@@ -1,7 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router'
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
 import { useEffect } from 'react';
+
+function ScrollToTop() {
+    const { pathname } = useLocation()
+    useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+    return null
+}
 import GoogleRoleModal from '../components/GoogleRoleModal';
 
 // Layouts
@@ -38,6 +44,7 @@ import MilestonePage from '../pages/pioneer/MilestonePage'
 import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
 import PioneerMeetings from '../pages/pioneer/Meetings';
 import PioneerPayouts from '../pages/pioneer/Payouts';
+import PioneerProfitPage from '../pages/pioneer/PioneerProfitPage';
 import CancelProjectRequest from '../pages/pioneer/CancelProjectRequest';
 import PreviewMilestoneDetail from '../pages/pioneer/PreviewMilestoneDetail';
 
@@ -140,6 +147,7 @@ const Router = () => {
     return (
         <>
             <BrowserRouter>
+                <ScrollToTop />
                 <Routes>
                     <Route element={<MainLayout />}>
                         <Route path='/' element={<Home />} />
@@ -161,6 +169,7 @@ const Router = () => {
                             <Route path='/pioneer/dashboard/milestones' element={<MilestoneListPage />} />
                             <Route path='/pioneer/dashboard/meetings' element={<PioneerMeetings />} />
                             <Route path='/pioneer/dashboard/payouts' element={<PioneerPayouts />} />
+                            <Route path='/pioneer/dashboard/profit' element={<PioneerProfitPage />} />
                             <Route path='/pioneer/dashboard/projects/:projectId/cancel-request' element={<CancelProjectRequest />} />
                             <Route path='/pioneer/dashboard/projects/:projectId/milestones' element={<MilestonePage />} />
                             <Route path='/pioneer/profile' element={<Profile />} />

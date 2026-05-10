@@ -1,57 +1,61 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import type { PublicProject } from './usePublicProjectStore';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface BoosterMeeting {
   id: number;
-  date: string;
-  time?: string;
-  status: string;
+  milestone_id: number;
   about?: string;
   meeting_type?: string;
   place?: string;
-  link?: string;
+  date: string;
+  time: string;
+  link: string | null;
+  status: string;
+  created_at: string;
   project?: {
+    id: number;
     title: string;
+    cover_image?: string | null;
   };
   milestone?: {
-    phase_no?: number | string;
-    title?: string;
+    id: number;
+    title: string;
+    phase_no: number;
+    project_id: number;
   };
 }
 
 export interface BoosterInvestment {
   id: number;
   project_id: number;
-  user_id: number;
+  booster_user_id: number;
   amount: number;
-  platform_fee: number;
-  vat: number;
-  net_amount: number;
-  profit_share_pct: number;
-  status: string; // pending, verified, funding, completed, refunded, cancelled
-  reference_number: string;
+  total_amount?: number;
+  fee_amount?: number;
+  platform_fee?: number;
+  vat?: number;
+  net_amount?: number;
+  status: string;
+  profit_share_pct?: number;
+  slip_image: string | null;
+  payment_status: string;
+  paid_at: string | null;
+  refund_amount?: number;
+  refund_note?: string;
+  refunded_at?: string | null;
   created_at: string;
   updated_at: string;
-  // Joined project data
-  project?: {
+  project?: PublicProject | null;
+  milestones?: {
     id: number;
     title: string;
-    state: string;
-    current_funding: number;
-    funding_goal: number;
-    end_date: string | null;
-    profit_share_pct: number;
-    milestones?: {
-      id: number;
-      phase_no: number;
-      title: string;
-      description: string;
-      percent_release: number;
-      status: string;
-    }[];
-  };
+    description: string;
+    percent_release: number;
+    status: string;
+  }[];
 }
 
 // ─── Store Interface ─────────────────────────────────────────────────────────
@@ -67,7 +71,8 @@ interface BoosterStoreState {
   fetchBoosterMeetings: () => Promise<void>;
   fetchInvestmentById: (id: number) => Promise<void>;
   requestRefund: (investmentId: number, reason: string) => Promise<boolean>;
-  voteOnMilestone: (milestoneId: number, payload: { vote: 'approve' | 'reject', comment?: string }) => Promise<boolean>;
+  voteOnMilestone: (milestoneId: number, payload: { choice: 'approve' | 'reject', comment?: string }) => Promise<boolean | 'already_voted'>;
+  getMyVote: (milestoneId: number) => Promise<{ choice: string; comment?: string } | null>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -81,7 +86,7 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
 
   fetchBoosterMeetings: async () => {
     try {
-      const res = await api.get('/me/meetings');
+      const res = await api.get('/me/investor-meetings');
       set({ boosterMeetings: res.data?.data ?? [] });
     } catch (error) {
       console.error('fetchBoosterMeetings:', error);
@@ -95,26 +100,35 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
       const res = await api.get('/investments');
       const data = res.data?.data ?? res.data?.investments ?? [];
       
-      // Map and ensure amount field is populated (fallback to total_amount)
-      let investmentsArray = Array.isArray(data) ? data.map(inv => ({
+      type RawInvestment = BoosterInvestment & { total_amount?: number; CreatedAt?: string; vat_amount?: number };
+      let investmentsArray = Array.isArray(data) ? data.map((inv: RawInvestment) => ({
         ...inv,
         amount: inv.amount ?? inv.total_amount ?? 0,
+        created_at: inv.created_at ?? inv.CreatedAt ?? '',
+        vat: inv.vat ?? inv.vat_amount ?? 0,
       })) : [];
 
-      // Fetch project details for each investment if not provided by backend
-      investmentsArray = await Promise.all(
-        investmentsArray.map(async (inv) => {
-          if (!inv.project && inv.project_id) {
-            try {
-              const projRes = await api.get(`/projects/${inv.project_id}`);
-              inv.project = projRes.data?.data ?? null;
-            } catch {
-              console.error(`Failed to fetch project for investment ${inv.id}`);
-            }
+      try {
+        const myProjectsRes = await api.get('/investments/my-projects');
+        const myProjects: Array<{ project_id: number; title: string; cover_image?: string | null; profit_share_pct?: number }> = myProjectsRes.data?.data ?? [];
+        const projectMap = new Map<number, { title: string; cover_image?: string | null; profit_share_pct?: number }>();
+        myProjects.forEach((p) => projectMap.set(p.project_id, p));
+
+        investmentsArray = investmentsArray.map(inv => {
+          const meta = projectMap.get(inv.project_id);
+          if (meta) {
+            inv.project = {
+              ...(inv.project ?? {}),
+              title: meta.title,
+              cover_image: meta.cover_image ?? null,
+              profit_share_pct: meta.profit_share_pct ?? inv.project?.profit_share_pct ?? 0,
+            } as PublicProject;
           }
           return inv;
-        })
-      );
+        });
+      } catch (err) {
+        console.error('Failed to fetch my projects for investments mapping', err);
+      }
 
       set({ investments: investmentsArray });
     } catch (error) {
@@ -129,16 +143,19 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
     set({ isDetailLoading: true, currentInvestment: null });
     try {
       const res = await api.get(`/investments/${id}`);
-      let data = res.data?.data ?? res.data?.investment ?? res.data;
+      let data = res.data?.data?.investment ?? res.data?.data ?? res.data?.investment ?? res.data;
       if (data) {
         data = {
           ...data,
           amount: data.amount ?? data.total_amount ?? 0,
+          created_at: data.created_at ?? data.CreatedAt ?? '',
+          vat: data.vat ?? data.vat_amount ?? 0,
         };
       }
       set({ currentInvestment: data });
     } catch (error) {
       console.error('fetchInvestmentById:', error);
+      set({ currentInvestment: null });
     } finally {
       set({ isDetailLoading: false });
     }
@@ -146,7 +163,7 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
 
   requestRefund: async (investmentId: number, reason: string) => {
     try {
-      await api.post(`/investments/${investmentId}/refund`, { reason });
+      await api.post(`/investments/${investmentId}/refund`, { note: reason });
       return true;
     } catch (error) {
       console.error('requestRefund:', error);
@@ -154,13 +171,24 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
     }
   },
 
-  voteOnMilestone: async (milestoneId: number, payload: { vote: 'approve' | 'reject', comment?: string }) => {
+  voteOnMilestone: async (milestoneId: number, payload: { choice: 'approve' | 'reject', comment?: string }) => {
     try {
       await api.post(`/investments/milestones/${milestoneId}/vote`, payload);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? '';
+      if (msg === 'you have already voted') return 'already_voted' as const;
       console.error('voteOnMilestone:', error);
       return false;
+    }
+  },
+
+  getMyVote: async (milestoneId: number) => {
+    try {
+      const res = await api.get(`/investments/milestones/${milestoneId}/my-vote`);
+      return res.data?.data ?? null;
+    } catch {
+      return null;
     }
   },
 }));

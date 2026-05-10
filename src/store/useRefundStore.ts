@@ -3,13 +3,17 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 
 export interface RefundRequest {
-    id: number
-    amount: number
+    investment_id: number
+    reference_number: string
+    booster_user_id: number
+    booster_name: string
+    booster_email: string
+    project_title: string
+    refund_amount: number
+    total_paid: number
     status: string
     requested_at: string
-    approved_at?: string
-    project?: { id: number; title: string }
-    booster?: { first_name: string; last_name: string; email: string }
+    bank_account?: { bank_name: string; account_name: string; account_number: string }
 }
 
 interface RefundStore {
@@ -40,7 +44,7 @@ export const useRefundStore = create<RefundStore>((set) => ({
         toast.success('อนุมัติการคืนเงินสำเร็จ')
         set((state) => ({
             refunds: state.refunds.map((r) =>
-                r.id === id ? { ...r, status: 'approved', approved_at: new Date().toISOString() } : r
+                r.investment_id === id ? { ...r, status: 'refunded' } : r
             ),
         }))
     },

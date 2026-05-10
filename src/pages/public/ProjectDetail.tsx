@@ -48,9 +48,12 @@ function ProjectDetail() {
 
   const isLoggedIn = !!authUser;
   const project = currentPublicProject;
-  const isOwner = !!authUser?.id && !!project?.owner_user_id && authUser.id === project.owner_user_id;
+  // authUser.id มาจาก /user/me, authUser.user_id มาจาก JWT decode (Google OAuth)
+  const authUserId = (authUser?.id ?? authUser?.user_id) as number | undefined;
+  const isOwner = !!authUserId && !!project?.owner_user_id && authUserId === project.owner_user_id;
+  // ตรง backend HasVerifiedInvestment ต้องการ status = 'verified' เท่านั้น
   const hasInvested = isLoggedIn && investments.some(
-    inv => inv.project_id === Number(id) && inv.status !== 'cancelled' && inv.status !== 'refunded'
+    inv => inv.project_id === Number(id) && inv.status === 'verified'
   );
 
   useEffect(() => {
@@ -232,7 +235,7 @@ function ProjectDetail() {
             </div>
 
             {/* Thumbnails */}
-            {displayMedia.length > 1 ? (
+            {displayMedia.length > 1 && (
               <div className="flex gap-[10px] overflow-x-auto pb-2 scrollbar-hide">
                 {displayMedia.map((img, i) => (
                   <button
@@ -246,12 +249,6 @@ function ProjectDetail() {
                       <img src={img.url} alt="thumbnail" className="w-full h-full object-cover" />
                     )}
                   </button>
-                ))}
-              </div>
-            ) : (
-              <div className="flex gap-[10px]">
-                {[1, 2, 3, 4, 5].map((_, i) => (
-                  <div key={i} className="w-[80px] h-[60px] bg-white border border-border rounded-[8px]" />
                 ))}
               </div>
             )}
@@ -285,7 +282,7 @@ function ProjectDetail() {
                 {/* ── Milestone Content ── */}
                 {activeTab === "milestone" && (
                   hasMilestones ? (
-                    <div className="flex flex-col gap-[24px] mt-[20px] relative w-full overflow-hidden">
+                    <div className="flex flex-col gap-[24px] mt-[20px] relative w-full">
                       <div className="absolute left-[24px] top-[24px] bottom-[24px] w-[1px] bg-border z-0 hidden md:block" />
                       {milestones.map((m, index) => {
                         const phaseNumber = m.phase_no || (index + 1);
@@ -297,7 +294,7 @@ function ProjectDetail() {
                             </div>
                             <div className="flex-1 bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[20px]">
                               <div className="flex flex-col xl:flex-row justify-between xl:items-start gap-[20px]">
-                                <div className="flex flex-col gap-[8px] flex-1">
+                                <div className="flex flex-col gap-[8px] flex-1 min-w-0">
                                   <h3 className="text-[16px] font-bold text-foreground">Phase {phaseNumber}: {m.title}</h3>
                                   {m.description && <p className="text-[14px] text-muted-foreground">{m.description}</p>}
                                   {m.duration && m.duration > 0 && (
@@ -353,6 +350,9 @@ function ProjectDetail() {
                     updates={updates}
                     creatorName={project?.owner_profile ? `${project.owner_profile.first_name} ${project.owner_profile.last_name}`.trim() : undefined}
                     creatorAvatar={project?.owner_profile?.picture || undefined}
+                    projectId={Number(id)}
+                    hasInvested={hasInvested}
+                    isOwner={isOwner}
                   />
                 )}
 
@@ -396,7 +396,7 @@ function ProjectDetail() {
                         </div>
                       </div>
                       {/* Comment list */}
-                      <PreviewComment comments={threads} />
+                      <PreviewComment comments={threads} canInteract={hasInvested || isOwner} isOwner={isOwner} />
                     </div>
                   )
                 )}
@@ -471,19 +471,37 @@ function ProjectDetail() {
                 </div>
               </div>
 
-              <div className="w-full flex justify-center text-primary font-bold text-[14px] mb-[12px]">
-                กำลังระดมทุน
-              </div>
+              {(() => {
+                const stateLabel: Record<string, { text: string; color: string }> = {
+                  funding:        { text: 'กำลังระดมทุน',       color: 'text-primary' },
+                  executing:      { text: 'กำลังดำเนินการ',      color: 'text-purple-600' },
+                  closed:         { text: 'ปิดโครงการแล้ว',       color: 'text-green-600' },
+                  cancelled:      { text: 'ยกเลิกแล้ว',           color: 'text-red-500' },
+                  pending_cancel: { text: 'รอยืนยันการยกเลิก',   color: 'text-orange-500' },
+                  suspended:      { text: 'ถูกระงับ',              color: 'text-gray-500' },
+                };
+                const s = stateLabel[project?.state ?? ''] ?? { text: project?.state ?? '', color: 'text-muted-foreground' };
+                return (
+                  <div className={`w-full flex justify-center font-bold text-[14px] mb-[12px] ${s.color}`}>
+                    {s.text}
+                  </div>
+                );
+              })()}
 
               <div className="flex gap-[12px]">
                 <button
                   onClick={handleInvest}
-                  disabled={isAdmin || isOwner}
+                  disabled={isAdmin || isOwner || project?.state !== 'funding'}
                   title={cannotInvestReason || undefined}
                   className="flex-1 bg-primary hover:bg-primary/90 text-white-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors cursor-pointer duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <TrendingUp size={18} />
-                  <span>{isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้' : isOwner ? 'โปรเจกต์ของคุณ' : 'ลงทุนโปรเจกต์นี้'}</span>
+                  <span>
+                    {isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้'
+                      : isOwner ? 'โปรเจกต์ของคุณ'
+                      : project?.state !== 'funding' ? 'ปิดรับการลงทุนแล้ว'
+                      : 'ลงทุนโปรเจกต์นี้'}
+                  </span>
                 </button>
                 <button
                   onClick={() => {

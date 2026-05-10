@@ -11,6 +11,7 @@ export interface Meeting {
   link?: string | null;
   place?: string | null;
   about: string;
+  description?: string | null;
   status: MeetingStatus;
 }
 
@@ -31,7 +32,7 @@ export interface CreateMeetingPayload {
   meeting_type: MeetingType;
   link?: string;
   place?: string;
-  about: string;
+  description: string;
 }
 
 export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {

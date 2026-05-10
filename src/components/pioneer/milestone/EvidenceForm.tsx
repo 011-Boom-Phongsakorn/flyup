@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { Upload, X, Plus, CheckCircle2, Circle, ExternalLink, Loader2, Send } from 'lucide-react'
+import Swal from 'sweetalert2'
 import type { EvidenceLink, MilestoneData } from './types'
 
 interface EvidenceFormProps {
@@ -15,25 +16,54 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
   const [checkedCriteria, setCheckedCriteria] = useState<boolean[]>(criteria.map(() => false))
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [criteriaError, setCriteriaError] = useState(false)
+  const [filesError, setFilesError] = useState(false)
+  const [linksError, setLinksError] = useState(false)
+
+  const toggleCriteria = (i: number) => {
+    setCheckedCriteria(prev => prev.map((v, idx) => idx === i ? !v : v))
+    setCriteriaError(false)
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
     setFiles(prev => [...prev, ...Array.from(e.target.files!)])
+    setFilesError(false)
   }
   const removeFile = (i: number) => setFiles(prev => prev.filter((_, idx) => idx !== i))
 
   const addLink = () => setLinks(prev => [...prev, { name: '', url: '' }])
   const removeLink = (i: number) => setLinks(prev => prev.filter((_, idx) => idx !== i))
-  const updateLink = (i: number, field: 'name' | 'url', val: string) =>
+  const updateLink = (i: number, field: 'name' | 'url', val: string) => {
     setLinks(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: val } : l))
+    if (field === 'url') setLinksError(false)
+  }
 
-  const toggleCriteria = (i: number) =>
-    setCheckedCriteria(prev => prev.map((v, idx) => idx === i ? !v : v))
+  const allCriteriaChecked = criteria.length === 0 || checkedCriteria.every(v => v)
 
   const handleSubmit = async () => {
-    if (criteria.length > 0 && checkedCriteria.some(v => !v)) {
-      return
-    }
     const validLinks = links.filter(l => l.url.trim())
+    let hasError = false
+
+    if (!allCriteriaChecked) { setCriteriaError(true); hasError = true }
+    if (files.length === 0) { setFilesError(true); hasError = true }
+    if (validLinks.length === 0) { setLinksError(true); hasError = true }
+    if (hasError) return
+
+    const result = await Swal.fire({
+      title: 'ยืนยันการส่งหลักฐาน?',
+      text: 'เมื่อส่งแล้วจะไม่สามารถแก้ไขหลักฐานได้ กรุณาตรวจสอบให้ครบถ้วนก่อนยืนยัน',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'ยืนยัน ส่งหลักฐาน',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#7C3AED',
+      cancelButtonColor: '#6B7280',
+      reverseButtons: true,
+    })
+
+    if (!result.isConfirmed) return
+
     const checkedTexts = criteria.filter((_, i) => checkedCriteria[i])
     await onSubmit(files, validLinks, checkedTexts)
   }
@@ -63,6 +93,9 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
               </button>
             ))}
           </div>
+          {criteriaError && (
+            <p className="text-[12px] text-[#EF4444] mt-[4px]">กรุณาติ๊กเกณฑ์การยอมรับให้ครบทุกข้อก่อนส่งหลักฐาน</p>
+          )}
         </div>
       )}
 
@@ -75,12 +108,15 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="w-full flex items-center justify-center gap-[8px] p-[20px] border-2 border-dashed border-border rounded-[12px] cursor-pointer hover:border-primary/50 hover:bg-[#F8F9FA] transition-colors"
+          className={`w-full flex items-center justify-center gap-[8px] p-[20px] border-2 border-dashed rounded-[12px] cursor-pointer hover:bg-[#F8F9FA] transition-colors ${filesError ? 'border-[#EF4444]' : 'border-border hover:border-primary/50'}`}
         >
           <Upload size={16} className="text-muted-foreground" />
           <span className="text-[13px] text-muted-foreground">อัปโหลดไฟล์</span>
         </button>
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileChange} accept="image/*,.pdf" />
+        {filesError && (
+          <p className="text-[12px] text-[#EF4444] mt-[4px]">กรุณาอัปโหลดไฟล์อย่างน้อย 1 ไฟล์</p>
+        )}
         {files.length > 0 && (
           <div className="flex flex-col gap-[6px] mt-[10px]">
             {files.map((f, i) => (
@@ -111,7 +147,7 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
                 onChange={e => updateLink(i, 'name', e.target.value)}
                 className="w-[140px] shrink-0 px-[10px] py-[8px] rounded-[8px] border border-border text-[13px] outline-none focus:border-primary"
               />
-              <div className="flex-1 flex items-center gap-[6px] px-[10px] py-[8px] rounded-[8px] border border-border focus-within:border-primary">
+              <div className={`flex-1 flex items-center gap-[6px] px-[10px] py-[8px] rounded-[8px] border focus-within:border-primary ${linksError && !link.url.trim() ? 'border-[#EF4444]' : 'border-border'}`}>
                 <ExternalLink size={14} className="text-muted-foreground shrink-0" />
                 <input
                   type="url"
@@ -128,6 +164,9 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
               )}
             </div>
           ))}
+          {linksError && (
+            <p className="text-[12px] text-[#EF4444]">กรุณาใส่ลิงก์อย่างน้อย 1 ลิงก์</p>
+          )}
           <button
             onClick={addLink}
             className="flex items-center gap-[6px] text-[13px] text-primary hover:underline w-fit mt-[2px] cursor-pointer"

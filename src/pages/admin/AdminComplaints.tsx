@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Loader2, MessageSquareWarning, CheckCircle, XCircle, Clock, X, ExternalLink, TriangleAlert } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useComplaintStore, type Complaint, type ComplaintStatus, COMPLAINT_THRESHOLD } from '../../store/useComplaintStore'
+import { useAdminBadgeStore } from '../../store/useAdminBadgeStore'
 import SearchBar from '../../components/admin/SearchBar'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
@@ -205,6 +206,7 @@ const DetailModal = ({
 
 const AdminComplaints = () => {
     const { complaints, isLoading, isSubmitting, fetchAdminList, resolveComplaint, rejectComplaint } = useComplaintStore()
+    const fetchBadges = useAdminBadgeStore((s) => s.fetchBadges)
     const [tab, setTab] = useState<ComplaintStatus | 'all'>('open')
     const [search, setSearch] = useState('')
     const [selected, setSelected] = useState<Complaint | null>(null)
@@ -222,6 +224,7 @@ const AdminComplaints = () => {
         if (ok) {
             setModalMode(null)
             setSelected(null)
+            fetchBadges()
         }
     }
 

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Download, Loader2, Calendar, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useBoosterStore } from '../../store/useBoosterStore';
-import { usePublicProjectStore } from '../../store/usePublicProjectStore';
 import { useProjectDetailStore } from '../../store/useProjectDetailStore';
 import PreviewMilestone from '../../components/preview/PreviewMilestone';
 import { PreviewUpdate, PreviewQuestion, PreviewComment } from '../../components/preview/PreviewMisc';
@@ -23,22 +22,21 @@ const phaseColors = ['bg-primary', 'bg-red-500', 'bg-gray-300', 'bg-gray-300'];
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+type MediaItem = { type: 'video' | 'image'; url: string; name: string };
+
 const InvestmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { currentInvestment, isDetailLoading: isInvLoading, fetchInvestmentById } = useBoosterStore();
-  const { currentPublicProject: project, isDetailLoading: isProjLoading, fetchPublicProjectById } = usePublicProjectStore();
+  const { currentInvestment, isDetailLoading: isInvLoading, fetchInvestmentById, requestRefund } = useBoosterStore();
   const { updates, threads, faqs, fetchAll } = useProjectDetailStore();
 
   const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Refund State
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundReason, setRefundReason] = useState('');
   const [isRefunding, setIsRefunding] = useState(false);
-  const { requestRefund } = useBoosterStore();
 
   const handleRequestRefund = async () => {
     if (!refundReason.trim()) {
@@ -51,27 +49,22 @@ const InvestmentDetail = () => {
     if (success) {
       toast.success('ส่งคำร้องขอคืนเงินเรียบร้อยแล้ว');
       setShowRefundModal(false);
-      fetchInvestmentById(Number(id)); // Refresh data
+      fetchInvestmentById(Number(id));
     } else {
       toast.error('เกิดข้อผิดพลาดในการส่งคำร้อง');
     }
   };
 
-  // 1. Fetch Investment first
   useEffect(() => {
     if (id) fetchInvestmentById(Number(id));
   }, [id, fetchInvestmentById]);
 
-  // 2. Fetch Project details based on investment's project_id
   useEffect(() => {
     const projectId = currentInvestment?.project_id;
-    if (projectId) {
-      fetchPublicProjectById(projectId);
-      fetchAll(projectId);
-    }
-  }, [currentInvestment?.project_id, fetchPublicProjectById, fetchAll]);
+    if (projectId) fetchAll(projectId);
+  }, [currentInvestment?.project_id, fetchAll]);
 
-  if (isInvLoading || isProjLoading || !currentInvestment) {
+  if (isInvLoading || !currentInvestment) {
     return (
       <div className="flex items-center justify-center py-32">
         <Loader2 size={32} className="animate-spin text-primary" />
@@ -80,23 +73,23 @@ const InvestmentDetail = () => {
   }
 
   const inv = currentInvestment;
+  const project = inv.project ?? null;
   const statusCfg = statusConfig[inv.status] || { label: inv.status, color: 'bg-gray-100 text-gray-600' };
   const dateStr = new Date(inv.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-  
-  const title = project?.title || `โปรเจกต์ #${inv.project_id}`;
-  const category = project?.category || 'ไม่ระบุ';
-  const description = project?.description || '';
-  const milestones = project?.milestones?.sort((a, b) => a.phase_no - b.phase_no) || [];
-  
 
+  const title = project?.title || '—';
+  const rawCategory = project?.category;
+  const category = typeof rawCategory === 'string'
+    ? rawCategory
+    : (rawCategory as { name?: string } | null)?.name || 'ไม่ระบุ';
+  const description = project?.description || '';
+  const milestones = [...(project?.milestones ?? [])].sort((a, b) => a.phase_no - b.phase_no);
   const profitShare = inv.profit_share_pct || project?.profit_share_pct || 0;
 
-  // Media
-  type MediaItem = { type: 'video' | 'image'; url: string; name: string };
-  const getMediaType = (t: string | string[]) => Array.isArray(t) ? t[0] : t;
-  const mediaList: MediaItem[] = (project?.media || [])
+  const getMediaType = (t: string | string[]): string => Array.isArray(t) ? t[0] : t;
+  const mediaList: MediaItem[] = [...(project?.media ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map(m => ({ type: getMediaType(m.type) as 'video'|'image', url: m.url, name: 'media' }));
+    .map(m => ({ type: getMediaType(m.type) as 'video' | 'image', url: m.url, name: 'media' }));
   const selectedMedia = mediaList[selectedIndex] ?? null;
 
   return (
@@ -105,7 +98,7 @@ const InvestmentDetail = () => {
       <div className="flex flex-col gap-[10px] mb-[30px]">
         <button
           onClick={() => navigate('/booster/investments')}
-          className="w-fit flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-2"
+          className="w-fit flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-2 cursor-pointer"
         >
           <ArrowLeft size={16} /> กลับ
         </button>
@@ -164,31 +157,31 @@ const InvestmentDetail = () => {
           <div className="flex bg-[#f1f1f4] p-[4px] rounded-[10px] my-[10px] overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setActiveTab('story')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'story' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'story' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               เรื่องราว
             </button>
             <button
               onClick={() => setActiveTab('milestone')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'milestone' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'milestone' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Milestone ({milestones.length})
             </button>
             <button
               onClick={() => setActiveTab('update')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'update' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'update' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               อัปเดต ({updates.length})
             </button>
             <button
               onClick={() => setActiveTab('comment')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'comment' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'comment' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               ความคิดเห็น ({threads.length})
             </button>
             <button
               onClick={() => setActiveTab('question')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'question' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'question' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               คำถาม ({faqs.length})
             </button>
@@ -198,8 +191,8 @@ const InvestmentDetail = () => {
           <div className="w-full bg-white border border-border p-6 rounded-[16px] shadow-sm min-h-[300px]">
              {activeTab === 'story' && (
                 <div className="prose prose-sm sm:prose-base max-w-none text-muted-foreground">
-                  {project?.stories && project.stories.length > 0 
-                      ? <div dangerouslySetInnerHTML={{ __html: project.stories.sort((a,b)=>a.sort_order-b.sort_order).map(s=>s.body).join('') }} />
+                  {project?.stories && project.stories.length > 0
+                      ? <div dangerouslySetInnerHTML={{ __html: [...project.stories].sort((a, b) => a.sort_order - b.sort_order).map(s => s.body).join('') }} />
                       : "โปรเจกต์นี้ยังไม่ได้เขียนบรรยาย Story"}
                   {project?.risk && (
                       <div className="mt-8 p-4 bg-orange-50/50 border border-orange-200 rounded-xl">
@@ -260,14 +253,18 @@ const InvestmentDetail = () => {
                 </div>
              </div>
 
-             <button className="w-full mt-6 bg-background hover:bg-muted border border-border text-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px]">
-                 <Download size={16} /> <span>ดาวน์โหลดสัญญา</span>
-             </button>
+             <a
+               href={`${import.meta.env.VITE_BASE_URL}/investments/${inv.id}/contract`}
+               download
+               className="w-full mt-6 bg-background hover:bg-muted border border-border text-foreground h-11 rounded-[10px] flex justify-center items-center gap-2 font-medium transition-colors text-[14px] cursor-pointer"
+             >
+               <Download size={16} /> <span>ดาวน์โหลดสัญญา</span>
+             </a>
 
              {inv.status !== 'refunded' && inv.status !== 'cancelled' && (
-               <button 
+               <button
                  onClick={() => setShowRefundModal(true)}
-                 className="w-full mt-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px]"
+                 className="w-full mt-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px] cursor-pointer"
                >
                    <AlertTriangle size={16} /> <span>แจ้งขอคืนเงิน (Refund)</span>
                </button>
@@ -328,7 +325,7 @@ const InvestmentDetail = () => {
             <div className="p-4 border-t border-border bg-background/50 flex gap-3">
               <button
                 onClick={() => setShowRefundModal(false)}
-                className="flex-1 py-2.5 rounded-xl border border-border bg-card text-foreground font-semibold hover:bg-muted transition-colors text-sm"
+                className="flex-1 py-2.5 rounded-xl border border-border bg-card text-foreground font-semibold hover:bg-muted transition-colors text-sm cursor-pointer"
                 disabled={isRefunding}
               >
                 ยกเลิก
@@ -336,7 +333,7 @@ const InvestmentDetail = () => {
               <button
                 onClick={handleRequestRefund}
                 disabled={isRefunding || !refundReason.trim()}
-                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
                 {isRefunding ? <Loader2 size={16} className="animate-spin" /> : null}
                 ยืนยันการขอคืนเงิน

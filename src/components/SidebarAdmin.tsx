@@ -44,24 +44,23 @@ const SidebarAdmin = () => {
         return () => clearInterval(interval)
     }, [fetchBadges])
 
-    const handleLogout = () => {
-        logout()
-        navigate('/')
-    }
+    const handleLogout = () => { logout(); navigate('/') }
 
-    const initials = `${(authUser?.first_name as string)?.[0] ?? ""}${(authUser?.last_name as string)?.[0] ?? ""}`.toUpperCase() || "?"
+    const initials = `${(authUser?.first_name as string)?.[0] ?? ''}${(authUser?.last_name as string)?.[0] ?? ''}`.toUpperCase() || '?'
 
     return (
-        <aside className='bg-sidebar w-[230px] flex-none h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent'>
-            <div className='w-full flex flex-col items-center gap-[10px] pb-4'>
+        <aside className="bg-sidebar w-57.5 flex-none h-full text-primary-light flex flex-col pt-2.5 border-r border-sidebar-accent">
+
+            {/* Profile */}
+            <div className="w-full flex flex-col items-center gap-2 pb-4 px-3">
                 {authUser?.picture ? (
-                    <img src={authUser.picture as string} alt="profile" className='h-[48px] w-[48px] rounded-full object-cover' />
+                    <img src={authUser.picture as string} alt="profile" className="h-11 w-11 rounded-full object-cover" />
                 ) : (
-                    <div className='h-[48px] w-[48px] rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-[16px]'>
+                    <div className="h-11 w-11 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-[15px]">
                         {initials}
                     </div>
                 )}
-                <span className='text-error text-[14px] px-[8px] py-[2px] rounded-[20px] bg-error/20 font-medium'>Admin</span>
+                <span className="text-error text-[12px] px-2 py-0.5 rounded-full bg-error/15 font-semibold">Admin</span>
             </div>
             <ul className='w-full flex flex-col gap-[4px] p-[10px] flex-1 overflow-y-auto'>
                 {menu.map((m, idx) => {
@@ -85,9 +84,14 @@ const SidebarAdmin = () => {
                     )
                 })}
             </ul>
-            <div className='w-full p-[10px] border-t border-sidebar-accent'>
-                <button onClick={handleLogout} className='flex w-full p-[10px] gap-[12px] text-[14px] items-center hover:text-error hover:bg-sidebar-accent hover:rounded-[12px] transition-all duration-200 cursor-pointer'>
-                    <LogOut size={20} /> ออกจากระบบ
+
+            {/* Logout */}
+            <div className="w-full p-2.5 border-t border-sidebar-accent">
+                <button
+                    onClick={handleLogout}
+                    className="flex w-full p-2.5 gap-3 text-[13.5px] items-center hover:text-error hover:bg-sidebar-accent hover:rounded-xl transition-all duration-200 cursor-pointer"
+                >
+                    <LogOut size={17} /> ออกจากระบบ
                 </button>
             </div>
         </aside>

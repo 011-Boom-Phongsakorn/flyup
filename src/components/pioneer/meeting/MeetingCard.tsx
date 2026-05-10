@@ -15,7 +15,7 @@ function formatTime(iso: string) {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
 
 
@@ -32,11 +32,25 @@ export default function MeetingCard({
 }: MeetingCardProps) {
   const [expanded, setExpanded] = useState(false);
   const typeLabel = MEETING_TYPE_LABEL[meeting.meeting_type] ?? meeting.meeting_type;
-  const hasDetail = !!meeting.about || !!meeting.link || !!meeting.place;
+  const hasDetail = !!meeting.about || !!meeting.description || !!meeting.link || !!meeting.place;
   const isCanceled = meeting.status === 'cancelled';
   const isClosed = meeting.status === 'closed';
   const isOpen = meeting.status === 'open';
-  const canModify = isOpen && !isCanceled;
+
+  // เช็ค datetime จริงว่าผ่านไปแล้วหรือยัง
+  const meetingDatetime = (() => {
+    try {
+      const dateD = new Date(meeting.date)
+      const timeD = new Date(meeting.time)
+      const combined = new Date(
+        Date.UTC(dateD.getUTCFullYear(), dateD.getUTCMonth(), dateD.getUTCDate(),
+                 timeD.getUTCHours(), timeD.getUTCMinutes())
+      )
+      return combined
+    } catch { return null }
+  })()
+  const isUpcoming = isOpen && (!meetingDatetime || meetingDatetime > new Date())
+  const canModify = isUpcoming;
 
   return (
     <div className={`bg-white border rounded-2xl overflow-hidden transition-all ${expanded ? 'border-primary/40 shadow-sm' : 'border-border'} ${isCanceled ? 'opacity-60' : ''}`}>
@@ -62,7 +76,7 @@ export default function MeetingCard({
             <span className="text-xs font-medium text-error border border-error/30 bg-error/5 px-3 py-1.5 rounded-full">
               ยกเลิก
             </span>
-          ) : isClosed ? (
+          ) : isClosed || (isOpen && !isUpcoming) ? (
             <span className="text-xs font-medium text-muted-foreground border border-border px-3 py-1.5 rounded-full">
               เสร็จสิ้น
             </span>

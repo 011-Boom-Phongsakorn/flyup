@@ -1,6 +1,7 @@
-import { Video, MapPin, Clock, Calendar } from 'lucide-react';
+import { Video, MapPin } from 'lucide-react';
 import type { MeetingFormValues } from './useMeetingForm';
 import type { MeetingType, MilestoneOption } from './types';
+import DateTimePicker from './DateTimePicker';
 
 interface MeetingFormFieldsProps {
   values: MeetingFormValues;
@@ -15,6 +16,10 @@ export default function MeetingFormFields({
   values, setField, milestones, milestonesLoading, milestoneDisabled, maxDate,
 }: MeetingFormFieldsProps) {
   const { milestoneId, date, time, meetingType, meetingUrl, location, agenda } = values;
+  const selectedMilestone = milestones.find(m => String(m.id) === String(milestoneId));
+  const maxDate = selectedMilestone?.due_date
+    ? selectedMilestone.due_date.slice(0, 10)
+    : undefined;
 
   return (
     <>

@@ -45,7 +45,13 @@ const useNotificationSSE = () => {
                 break
             }
 
-            case 'milestone': {
+            case 'milestone_submitted': {
+                useAdminStore.getState().fetchPendingMilestones()
+                break
+            }
+
+            case 'milestone':
+            case 'milestone_rejected': {
                 const pid = notif.related_id
                 if (!pid) break
                 const pubState = usePublicProjectStore.getState()
@@ -56,6 +62,16 @@ const useNotificationSSE = () => {
                 if ((pioneerState.currentProject.id ?? 0) === pid) {
                     pioneerState.loadCurrentProject(pid)
                 }
+                const milestoneState = useMilestoneStore.getState()
+                if (milestoneState.milestones.length > 0) {
+                    useMilestoneStore.getState().fetchMilestones(String(pid))
+                }
+                break
+            }
+
+            case 'profit': {
+                useBoosterStore.getState().fetchMyInvestments()
+                useProjectStore.getState().fetchMyProjects()
                 break
             }
 
@@ -66,6 +82,7 @@ const useNotificationSSE = () => {
                 if (pubState.currentPublicProject?.id === pid) {
                     pubState.fetchPublicProjectById(pid)
                 }
+                useBoosterStore.getState().fetchMyInvestments()
                 break
             }
         }
@@ -74,8 +91,11 @@ const useNotificationSSE = () => {
     useEffect(() => {
         if (!authUser) return
 
-        const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream`
-        const es = new EventSource(url, { withCredentials: true })
+        const token = localStorage.getItem('auth_token')
+        if (!token) return
+
+        const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`
+        const es = new EventSource(url)
 
         es.onmessage = (e: MessageEvent) => {
             try {

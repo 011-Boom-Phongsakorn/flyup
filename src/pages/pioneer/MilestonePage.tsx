@@ -4,6 +4,9 @@ import { ChevronLeft, Loader2 } from 'lucide-react'
 import { useMilestoneStore } from '../../store/useMilestoneStore'
 import PhaseCard from '../../components/pioneer/milestone/PhaseCard'
 import type { EvidenceLink } from '../../components/pioneer/milestone/types'
+import api from '../../services/api'
+
+interface MeetingBrief { id: number; milestone_id: number; date: string; time: string; status: string }
 
 const MilestonePage = () => {
   const { projectId } = useParams<{ projectId: string }>()
@@ -13,12 +16,25 @@ const MilestonePage = () => {
     useMilestoneStore()
 
   const [activePhase, setActivePhase] = useState<number | null>(null)
+  const [meetingsByMilestone, setMeetingsByMilestone] = useState<Record<number, MeetingBrief[]>>({})
 
   useEffect(() => {
     if (!projectId) return
     fetchMilestones(projectId).then(firstActive => {
       if (firstActive !== null) setActivePhase(firstActive)
     })
+    // ดึง meetings ของ project นี้ เพื่อเช็คว่า milestone ไหนนัดแล้ว
+    api.get(`/me/projects/${projectId}/meetings`, { params: { filter: 'all' } })
+      .then(res => {
+        const meetings: MeetingBrief[] = res.data?.data ?? []
+        const byMilestone: Record<number, MeetingBrief[]> = {}
+        meetings.forEach(m => {
+          if (!byMilestone[m.milestone_id]) byMilestone[m.milestone_id] = []
+          byMilestone[m.milestone_id].push(m)
+        })
+        setMeetingsByMilestone(byMilestone)
+      })
+      .catch(() => {})
   }, [projectId, fetchMilestones])
 
   const handleSubmit = async (
@@ -88,7 +104,7 @@ const MilestonePage = () => {
         {milestones.map((m, idx) => (
           <PhaseCard
             key={m.phase_no}
-            milestone={m}
+            milestone={{ ...m, meetings: m.id ? (meetingsByMilestone[m.id] ?? m.meetings ?? []) : (m.meetings ?? []) }}
             isActive={activePhase === idx}
             onToggle={() => setActivePhase(prev => prev === idx ? null : idx)}
             onSubmit={handleSubmit}

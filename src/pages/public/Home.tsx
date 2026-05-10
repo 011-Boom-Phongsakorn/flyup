@@ -15,6 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
         </div>
 
         <div className="flex justify-between items-center pt-1">
-          <span className="text-sm font-bold">{project.current_funding.toLocaleString()} ฿</span>
+          <span className="text-sm font-bold">{(project.current_funding ?? 0).toLocaleString()} ฿</span>
           <span className="text-xs text-gray-500">{daysLeft} วัน</span>
         </div>
       </div>
@@ -85,11 +86,15 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 // ─── Home Page ──────────────────────────────────────────────────────────────
 
 const Home = () => {
+  const { authUser } = useAuthStore();
+  const hideCreateBtn = authUser?.role === 'booster' || authUser?.role === 'admin';
+
   const {
     publicProjects, // Keep for stats
     recommendedProjects,
     newProjects,
     endingProjects,
+    executingProjects,
     isLoading,
     fetchHomeProjects,
     fetchPublicProjects
@@ -136,12 +141,14 @@ const Home = () => {
               </p>
 
               <div className="flex flex-wrap gap-4 items-center">
-                <button className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
-                  สร้างโปรเจกต์ <ChevronRight size={18} />
-                </button>
+                {!hideCreateBtn && (
+                  <Link to="/login" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
+                    สร้างโปรเจกต์ <ChevronRight size={18} />
+                  </Link>
+                )}
 
                 <Link to="/projects" className="bg-background hover:bg-muted text-foreground px-8 py-3 rounded-full font-medium transition-colors border border-border shadow-sm inline-block">
-                  ค้นหาโครงการ
+                  สำรวจโปรเจกต์
                 </Link>
               </div>
             </div>
@@ -193,7 +200,7 @@ const Home = () => {
                 </div>
 
                 <div className="flex gap-6 items-center text-sm">
-                  <span className="font-bold text-lg">฿{recommendedMain.current_funding.toLocaleString()}</span>
+                  <span className="font-bold text-lg">฿{(recommendedMain.current_funding ?? 0).toLocaleString()}</span>
                   <span className="text-gray-500">ระดมทุนแล้ว {getProgress(recommendedMain)}%</span>
                   <span className="text-gray-500 flex items-center gap-1.5">
                     <Clock size={16} className="text-gray-400" /> {getDaysLeft(recommendedMain)} วัน
@@ -211,9 +218,15 @@ const Home = () => {
                     <img src={item.thumbnail_url || PLACEHOLDER_IMG} alt={item.title} className="w-24 h-24 rounded-xl object-cover" />
                     <div className="flex-1 py-1">
                       <h4 className="font-bold mb-1">{item.title}</h4>
-                      <p className="text-xs text-gray-500 mb-3">{item.description || 'ยังไม่มีรายละเอียด'}</p>
+                      <p className="text-xs text-gray-500 mb-2">{item.description || 'ยังไม่มีรายละเอียด'}</p>
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full mb-2 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all"
+                          style={{ width: `${getProgress(item)}%` }}
+                        />
+                      </div>
                       <div className="flex justify-between items-center text-xs font-medium">
-                        <span>฿{item.current_funding.toLocaleString()}</span>
+                        <span>฿{(item.current_funding ?? 0).toLocaleString()}</span>
                         <span className="text-gray-500">{getProgress(item)}%</span>
                         <span className="text-gray-500 flex items-center gap-1">
                           <Clock size={14} className="text-gray-400" /> {getDaysLeft(item)} วัน
@@ -231,21 +244,24 @@ const Home = () => {
       </section>
 
       {/* ── Hot Projects ── */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 md:px-8 max-w-7xl">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">ใกล้สำเร็จแล้ว! <Flame className="text-orange-500" /></h2>
-            <p className="text-sm text-gray-500">โปรเจกต์เหล่านี้เกือบถึงเป้าหมายระดมทุนแล้ว อย่าพลาด!</p>
-          </div>
-          {hotProjects.length > 0 ? (
+      {hotProjects.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4 md:px-8 max-w-7xl">
+            <div className="flex justify-between items-end mb-8">
+              <div>
+                <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">ใกล้สำเร็จแล้ว! <Flame className="text-orange-500" /></h2>
+                <p className="text-sm text-gray-500">โปรเจกต์เหล่านี้เกือบถึงเป้าหมายระดมทุนแล้ว อย่าพลาด!</p>
+              </div>
+              <Link to="/projects" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
+                ดูทั้งหมด <ChevronRight size={16} />
+              </Link>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {hotProjects.map(project => <ProjectCard key={project.id} project={project} />)}
             </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-8">ยังไม่มีโปรเจกต์ที่ใกล้สำเร็จ</p>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* ── New Projects ── */}
       <section className="py-16 bg-white">
@@ -265,6 +281,26 @@ const Home = () => {
           )}
         </div>
       </section>
+
+      {/* ── Executing / Completed Projects ── */}
+      {executingProjects.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4 md:px-8 max-w-7xl">
+            <div className="flex justify-between items-end mb-8">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">โปรเจกต์กำลังดำเนินการ</h2>
+                <p className="text-sm text-muted-foreground">โปรเจกต์ที่ระดมทุนสำเร็จและอยู่ในระหว่างพัฒนา</p>
+              </div>
+              <Link to="/projects" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
+                ดูทั้งหมด <ChevronRight size={16} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {executingProjects.map(project => <ProjectCard key={project.id} project={project} />)}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Stats ── */}
       <section className="py-20 bg-card">

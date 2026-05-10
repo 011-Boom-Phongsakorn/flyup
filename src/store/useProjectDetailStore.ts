@@ -20,6 +20,16 @@ export interface ProjectThread {
   created_at: string;
 }
 
+export interface ProjectThreadMessage {
+  id: number;
+  thread_id: number;
+  body: string;
+  created_by: number;
+  user_name?: string;
+  user_avatar?: string;
+  created_at: string;
+}
+
 export interface ProjectFAQ {
   id: number;
   question: string;
@@ -42,6 +52,8 @@ export interface ProjectInvestorItem {
 interface ProjectDetailState {
   updates: ProjectUpdate[];
   threads: ProjectThread[];
+  updateThreads: Record<number, ProjectThread[]>;
+  threadMessages: Record<number, ProjectThreadMessage[]>;
   faqs: ProjectFAQ[];
   investorCount: number;
   investors: ProjectInvestorItem[];
@@ -52,6 +64,10 @@ interface ProjectDetailState {
   fetchInvestorCount: (id: number) => Promise<void>;
   fetchAll: (id: number) => Promise<void>;
   createThread: (projectId: number, body: string, isOwner?: boolean) => Promise<void>;
+  fetchUpdateThreads: (projectId: number, updateId: number) => Promise<void>;
+  createUpdateThread: (projectId: number, updateId: number, body: string, isOwner: boolean) => Promise<void>;
+  fetchThreadMessages: (threadId: number) => Promise<void>;
+  createThreadMessage: (threadId: number, body: string, isOwner: boolean) => Promise<void>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -59,6 +75,8 @@ interface ProjectDetailState {
 export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
   updates: [],
   threads: [],
+  updateThreads: {},
+  threadMessages: {},
   faqs: [],
   investorCount: 0,
   investors: [],
@@ -108,6 +126,50 @@ export const useProjectDetailStore = create<ProjectDetailState>((set) => ({
     await api.post(endpoint, { body });
     const res = await api.get(`/projects/${projectId}/threads`);
     set({ threads: res.data?.data ?? [] });
+  },
+
+  fetchUpdateThreads: async (projectId: number, updateId: number) => {
+    try {
+      const res = await api.get(`/projects/${projectId}/updates/${updateId}/threads`);
+      set((state) => ({
+        updateThreads: { ...state.updateThreads, [updateId]: res.data?.data ?? [] },
+      }));
+    } catch (error) {
+      console.warn('fetchUpdateThreads:', error);
+    }
+  },
+
+  createUpdateThread: async (projectId: number, updateId: number, body: string, isOwner: boolean) => {
+    const endpoint = isOwner
+      ? `/pioneer/projects/${projectId}/updates/${updateId}/threads`
+      : `/booster/projects/${projectId}/updates/${updateId}/threads`;
+    await api.post(endpoint, { body });
+    const res = await api.get(`/projects/${projectId}/updates/${updateId}/threads`);
+    set((state) => ({
+      updateThreads: { ...state.updateThreads, [updateId]: res.data?.data ?? [] },
+    }));
+  },
+
+  fetchThreadMessages: async (threadId: number) => {
+    try {
+      const res = await api.get(`/projects/threads/${threadId}/messages`);
+      set((state) => ({
+        threadMessages: { ...state.threadMessages, [threadId]: res.data?.data ?? [] },
+      }));
+    } catch (error) {
+      console.warn('fetchThreadMessages:', error);
+    }
+  },
+
+  createThreadMessage: async (threadId: number, body: string, isOwner: boolean) => {
+    const endpoint = isOwner
+      ? `/pioneer/projects/threads/${threadId}/messages`
+      : `/booster/projects/threads/${threadId}/messages`;
+    await api.post(endpoint, { body, thread_id: threadId, type: 'text' });
+    const res = await api.get(`/projects/threads/${threadId}/messages`);
+    set((state) => ({
+      threadMessages: { ...state.threadMessages, [threadId]: res.data?.data ?? [] },
+    }));
   },
 
   fetchAll: async (id: number) => {

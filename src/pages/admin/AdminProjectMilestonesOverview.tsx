@@ -269,7 +269,7 @@ const AdminProjectMilestonesOverview = () => {
                                 totalPhases={totalPhases}
                                 fundingGoal={fundingGoal}
                                 estimatedDates={phaseDates[idx] ?? null}
-                                defaultOpen={idx === 0}
+                                defaultOpen={false}
                             />
                         ))
                     ) : (

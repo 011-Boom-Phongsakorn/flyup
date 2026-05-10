@@ -156,7 +156,7 @@ const Payouts = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-10 max-w-3xl">
+    <div className="flex flex-col gap-6 pb-10">
       <div>
         <h1 className="text-[22px] font-bold text-foreground">การจ่ายเงิน</h1>
         <p className="text-[13px] text-muted-foreground mt-0.5">

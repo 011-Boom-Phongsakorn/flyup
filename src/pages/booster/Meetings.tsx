@@ -72,7 +72,7 @@ function MeetingCard({ meeting }: { meeting: BoosterMeeting }) {
               {(hasAgendas || meeting.link) && (
                 <button
                   onClick={() => setExpanded(!expanded)}
-                  className={`p-2 rounded-lg hover:bg-muted transition-colors ${expanded ? 'text-primary' : 'text-muted-foreground'}`}
+                  className={`p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer ${expanded ? 'text-primary' : 'text-muted-foreground'}`}
                 >
                   <ChevronDown size={16} className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
                 </button>
@@ -163,7 +163,7 @@ const Meetings = () => {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as 'all' | 'upcoming')}
-            className="text-sm bg-background border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
+            className="text-sm bg-background border border-border rounded-lg px-2 py-1 outline-none focus:border-primary cursor-pointer"
           >
             <option value="upcoming">กำลังจะถึง</option>
             <option value="all">ทั้งหมด</option>

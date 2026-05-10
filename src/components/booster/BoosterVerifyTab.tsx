@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Lock, Upload, Clock, CheckCircle, XCircle } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Lock, Upload, Clock, CheckCircle, XCircle, Pencil, X, Save, Loader2 } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
 import api from "../../services/api";
@@ -39,6 +39,8 @@ const BoosterVerifyTab = () => {
     account_name: authUser?.bank_account?.account_name ?? "",
     account_number: authUser?.bank_account?.account_number ?? "",
   });
+  const [bankSnapshot, setBankSnapshot] = useState({ ...bankForm });
+  const [isBankEditing, setIsBankEditing] = useState(!authUser?.bank_account?.id);
   const [acceptTerms, setAcceptTerms] = useState(idCardLocked);
   const [acceptAccuracy, setAcceptAccuracy] = useState(idCardLocked);
   const [isSavingVerify, setIsSavingVerify] = useState(false);
@@ -124,6 +126,16 @@ const BoosterVerifyTab = () => {
     }
   };
 
+  const handleBankEdit = () => {
+    setBankSnapshot({ ...bankForm });
+    setIsBankEditing(true);
+  };
+
+  const handleBankCancel = () => {
+    setBankForm({ ...bankSnapshot });
+    setIsBankEditing(false);
+  };
+
   const handleBankSubmit = async () => {
     if (!baseRequired.first_name || !baseRequired.last_name || !baseRequired.phone) {
       toast.error("กรุณากรอกข้อมูลส่วนตัว (ชื่อ นามสกุล เบอร์โทร) ในแท็บโปรไฟล์ก่อน");
@@ -145,21 +157,29 @@ const BoosterVerifyTab = () => {
         });
       }
       await checkAuth();
+      setIsBankEditing(false);
       toast.success("บันทึกข้อมูลบัญชีสำเร็จ");
-    } catch {
-      toast.error("เกิดข้อผิดพลาด");
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (message === "account number already exists") {
+        toast.error("เลขบัญชีนี้มีในระบบแล้ว กรุณาใช้เลขบัญชีอื่น");
+      } else {
+        toast.error("เกิดข้อผิดพลาด");
+      }
     } finally {
       setIsSavingBank(false);
     }
   };
 
-  const idCardPreview = idCardFile
-    ? URL.createObjectURL(idCardFile)
-    : storedIdCardUrl || null;
+  const idCardPreview = useMemo(
+    () => idCardFile ? URL.createObjectURL(idCardFile) : storedIdCardUrl || null,
+    [idCardFile, storedIdCardUrl]
+  );
 
-  const selfiePreview = selfieFile
-    ? URL.createObjectURL(selfieFile)
-    : storedSelfieUrl || null;
+  const selfiePreview = useMemo(
+    () => selfieFile ? URL.createObjectURL(selfieFile) : storedSelfieUrl || null,
+    [selfieFile, storedSelfieUrl]
+  );
 
   const uploadBorderClass = (approved: boolean, pending: boolean, rejected: boolean, locked: boolean) =>
     `border-2 border-dashed rounded-xl overflow-hidden transition-colors block
@@ -327,20 +347,32 @@ const BoosterVerifyTab = () => {
           {authUser?.bank_account?.id && (
             <span className="ml-auto text-[12px] text-green-600 bg-green-50 border border-green-200 px-[8px] py-[2px] rounded-full">ผูกบัญชีแล้ว</span>
           )}
+          {authUser?.bank_account?.id && !isBankEditing && (
+            <button
+              onClick={handleBankEdit}
+              className="flex items-center gap-[6px] px-[12px] py-[6px] rounded-[8px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors cursor-pointer"
+            >
+              <Pencil size={13} /> แก้ไข
+            </button>
+          )}
         </div>
 
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground">ธนาคาร <span className="text-error">*</span></label>
-          <select
-            value={bankForm.bank_name}
-            onChange={(e) => setBankForm((prev) => ({ ...prev, bank_name: e.target.value }))}
-            className="border border-border rounded-[8px] px-[12px] py-[10px] pr-[32px] text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_10px_center]"
-          >
-            <option value="">-- เลือกธนาคาร --</option>
-            {THAI_BANKS.map((bank) => (
-              <option key={bank} value={bank}>{bank}</option>
-            ))}
-          </select>
+          {isBankEditing ? (
+            <select
+              value={bankForm.bank_name}
+              onChange={(e) => setBankForm((prev) => ({ ...prev, bank_name: e.target.value }))}
+              className="border border-border rounded-[8px] px-[12px] py-[10px] pr-[32px] text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_10px_center]"
+            >
+              <option value="">-- เลือกธนาคาร --</option>
+              {THAI_BANKS.map((bank) => (
+                <option key={bank} value={bank}>{bank}</option>
+              ))}
+            </select>
+          ) : (
+            <input value={bankForm.bank_name || "-"} disabled className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" />
+          )}
         </div>
 
         {[
@@ -351,19 +383,41 @@ const BoosterVerifyTab = () => {
             <label className="text-[13px] font-medium text-foreground">{label} <span className="text-error">*</span></label>
             <input
               value={bankForm[key as keyof typeof bankForm]}
-              onChange={(e) => setBankForm((prev) => ({ ...prev, [key]: e.target.value }))}
-              className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
+              onChange={(e) => {
+                const val = key === 'account_number' ? e.target.value.replace(/\D/g, '') : e.target.value
+                setBankForm((prev) => ({ ...prev, [key]: val }))
+              }}
+              inputMode={key === 'account_number' ? 'numeric' : undefined}
+              disabled={!isBankEditing}
+              className={isBankEditing
+                ? "border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
+                : "border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] bg-[#F8F9FA] text-muted-foreground cursor-not-allowed"
+              }
             />
           </div>
         ))}
 
-        <button
-          onClick={handleBankSubmit}
-          disabled={isSavingBank}
-          className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50 cursor-pointer"
-        >
-          {isSavingBank ? "กำลังบันทึก..." : authUser?.bank_account?.id ? "อัปเดตบัญชี" : "เพิ่มบัญชี"}
-        </button>
+        {isBankEditing && (
+          <div className="flex gap-[8px] justify-end">
+            {authUser?.bank_account?.id && (
+              <button
+                onClick={handleBankCancel}
+                disabled={isSavingBank}
+                className="flex items-center gap-[6px] px-[16px] py-[9px] rounded-[8px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <X size={14} /> ยกเลิก
+              </button>
+            )}
+            <button
+              onClick={handleBankSubmit}
+              disabled={isSavingBank}
+              className="flex items-center gap-[6px] px-[16px] py-[9px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {isSavingBank ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {isSavingBank ? "กำลังบันทึก..." : authUser?.bank_account?.id ? "บันทึก" : "เพิ่มบัญชี"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

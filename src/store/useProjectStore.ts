@@ -37,6 +37,7 @@ export interface Project {
     revenueShare: number;
     minInvestAmount: number;
     maxInvestAmount: number;
+    coverImage: string | null; // รูปปก (แสดงที่ home)
     files: ProjectMedia[]; // รองรับสูงสุด 5 รูป
     video: ProjectMedia | null;
     story: string;
@@ -47,7 +48,7 @@ export interface Project {
 export interface ProjectSummary {
     id: number;
     title: string;
-    state: 'draft' | 'pending_review' | 'funding' | 'executing' | 'closed' | 'cancelled';
+    state: 'draft' | 'pending_review' | 'funding' | 'executing' | 'closed' | 'cancelled' | 'pending_cancel' | 'suspended';
     status: 'active' | 'funded' | 'failed' | 'rejected' | 'completed' | 'cancelled';
     category: { id: number; name: string } | null;
     description: string | null;
@@ -90,6 +91,7 @@ const initialProject: Project = {
     revenueShare: 0,
     minInvestAmount: 0,
     maxInvestAmount: 0,
+    coverImage: null,
     files: [],
     video: null,
     story: '',
@@ -247,6 +249,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     minInvestAmount: d.min_invest_amount ?? 0,
                     maxInvestAmount: d.max_invest_amount ?? 0,
                     storyId,
+                    coverImage: d.cover_image ?? null,
                     files: images,
                     video,
                     story,
@@ -275,6 +278,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         if (data.categoryId !== undefined && data.categoryId > 0) payload.category_id = data.categoryId;
         if (data.minInvestAmount !== undefined) payload.min_invest_amount = data.minInvestAmount;
         if (data.maxInvestAmount !== undefined) payload.max_invest_amount = data.maxInvestAmount;
+        if (data.coverImage !== undefined) payload.cover_image = data.coverImage;
 
         if (Object.keys(payload).length === 0) return;
 

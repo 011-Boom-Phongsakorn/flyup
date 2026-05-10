@@ -66,6 +66,7 @@ export interface PublicProject {
   platform_fee: number;
   owner_profile: OwnerProfile | null;
   // These may come from detailed GET /projects/{id}
+  cover_image?: string | null;
   media?: { id: number; type: string; url: string; sort_order: number }[];
   milestones?: PublicMilestone[];
   stories?: { id: number; title: string; body: string; sort_order: number }[];
@@ -84,6 +85,7 @@ interface PublicProjectState {
   recommendedProjects: PublicProject[];
   newProjects: PublicProject[];
   endingProjects: PublicProject[];
+  executingProjects: PublicProject[];
   currentPublicProject: PublicProject | null;
   categories: Category[];
   isLoading: boolean;
@@ -103,6 +105,7 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
   recommendedProjects: [],
   newProjects: [],
   endingProjects: [],
+  executingProjects: [],
   currentPublicProject: null,
   categories: [],
   isLoading: false,
@@ -113,20 +116,10 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
     try {
       const res = await api.get('/projects');
       const projectsRaw: PublicProject[] = res.data?.data ?? [];
-      const projects = await Promise.all(
-          projectsRaw.map(async (p) => {
-              try {
-                  const detailRes = await api.get(`/projects/${p.id}`);
-                  const media: { type: string | string[]; url: string; sort_order: number }[] = detailRes.data?.data?.media ?? [];
-                  const firstImage = media
-                      .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
-                      .sort((a, b) => a.sort_order - b.sort_order)[0];
-                  return { ...p, thumbnail_url: firstImage?.url };
-              } catch {
-                  return p;
-              }
-          })
-      );
+      const projects = projectsRaw.map((p) => ({
+        ...p,
+        thumbnail_url: p.cover_image ?? undefined,
+      }));
       set({ publicProjects: projects });
     } catch (error) {
       console.error('fetchPublicProjects:', error);
@@ -138,37 +131,26 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
   fetchHomeProjects: async () => {
     set({ isLoading: true });
     try {
-      const [recRes, newRes, endRes] = await Promise.all([
+      const [recRes, newRes, endRes, execRes] = await Promise.all([
         api.get('/projects/recommend'),
         api.get('/projects/new'),
-        api.get('/projects/ending')
+        api.get('/projects/ending'),
+        api.get('/projects/executing'),
       ]);
 
-      const processProjects = async (projectsRaw: PublicProject[]) => {
-        return Promise.all(
-          projectsRaw.map(async (p) => {
-            try {
-              const detailRes = await api.get(`/projects/${p.id}`);
-              const media: { type: string | string[]; url: string; sort_order: number }[] = detailRes.data?.data?.media ?? [];
-              const firstImage = media
-                .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
-                .sort((a, b) => a.sort_order - b.sort_order)[0];
-              return { ...p, thumbnail_url: firstImage?.url };
-            } catch {
-              return p;
-            }
-          })
-        );
-      };
+      const processProjects = (projectsRaw: PublicProject[]) =>
+        projectsRaw.map((p) => ({ ...p, thumbnail_url: p.cover_image ?? undefined }));
 
-      const recommended = await processProjects(recRes.data?.data ?? []);
-      const newP = await processProjects(newRes.data?.data ?? []);
-      const ending = await processProjects(endRes.data?.data ?? []);
+      const recommended = processProjects(recRes.data?.data ?? []);
+      const newP = processProjects(newRes.data?.data ?? []);
+      const ending = processProjects(endRes.data?.data ?? []);
+      const executing = processProjects(execRes.data?.data ?? []);
 
       set({
         recommendedProjects: recommended,
         newProjects: newP,
-        endingProjects: ending
+        endingProjects: ending,
+        executingProjects: executing,
       });
     } catch (error) {
       console.error('fetchHomeProjects:', error);
@@ -195,20 +177,7 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
     try {
       const res = await api.get(`/projects/category/${categoryId}`);
       const projectsRaw: PublicProject[] = res.data?.data ?? [];
-      const projects = await Promise.all(
-          projectsRaw.map(async (p) => {
-              try {
-                  const detailRes = await api.get(`/projects/${p.id}`);
-                  const media: { type: string | string[]; url: string; sort_order: number }[] = detailRes.data?.data?.media ?? [];
-                  const firstImage = media
-                      .filter(m => (Array.isArray(m.type) ? m.type[0] : m.type) === 'image')
-                      .sort((a, b) => a.sort_order - b.sort_order)[0];
-                  return { ...p, thumbnail_url: firstImage?.url };
-              } catch {
-                  return p;
-              }
-          })
-      );
+      const projects = projectsRaw.map((p) => ({ ...p, thumbnail_url: p.cover_image ?? undefined }));
       set({ publicProjects: projects });
     } catch (error) {
       console.error('fetchProjectsByCategory:', error);
