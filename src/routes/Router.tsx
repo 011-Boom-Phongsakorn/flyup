@@ -114,7 +114,7 @@ const Router = () => {
         const token = params.get('token')
         const isVerifyPage = window.location.pathname === '/verify'
         if (token && !isVerifyPage) {
-            loginWithGoogleToken(token)
+            loginWithGoogleToken()
             params.delete('token')
             const newSearch = params.toString()
             window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)
