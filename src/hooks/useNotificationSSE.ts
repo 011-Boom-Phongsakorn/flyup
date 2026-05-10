@@ -95,35 +95,48 @@ const useNotificationSSE = () => {
     useEffect(() => {
         if (!authUser) return
 
-        const token = localStorage.getItem('auth_token')
-        if (!token) return
+        let es: EventSource | null = null
+        let cancelled = false
 
-        const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`
-        const es = new EventSource(url)
+        // Fetch a short-lived one-time SSE token (60s TTL, deleted on first use)
+        // so the main JWT never appears in browser history or server logs
+        api.post('/notifications/sse-token')
+            .then(res => {
+                if (cancelled) return
+                const sseToken: string = res.data?.token
+                if (!sseToken) return
 
-        es.onmessage = (e: MessageEvent) => {
-            try {
-                const notif = JSON.parse(e.data) as Notification
-                if (!notif?.id) return
-                addNotification(notif)
-                handleRefresh(notif)
-                if (authUser?.role === 'admin') {
-                    useAdminBadgeStore.getState().fetchBadges()
-                } else if (authUser?.role === 'pioneer') {
-                    usePioneerBadgeStore.getState().fetchBadges()
-                } else if (authUser?.role?.toLowerCase() === 'booster') {
-                    useBoosterBadgeStore.getState().fetchBadges()
+                const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream?sse_token=${encodeURIComponent(sseToken)}`
+                es = new EventSource(url)
+
+                es.onmessage = (e: MessageEvent) => {
+                    try {
+                        const notif = JSON.parse(e.data) as Notification
+                        if (!notif?.id) return
+                        addNotification(notif)
+                        handleRefresh(notif)
+                        if (authUser?.role === 'admin') {
+                            useAdminBadgeStore.getState().fetchBadges()
+                        } else if (authUser?.role === 'pioneer') {
+                            usePioneerBadgeStore.getState().fetchBadges()
+                        } else if (authUser?.role?.toLowerCase() === 'booster') {
+                            useBoosterBadgeStore.getState().fetchBadges()
+                        }
+                    } catch {
+                        // ignore ping / non-JSON events
+                    }
                 }
-            } catch {
-                // ignore ping / non-JSON events
-            }
-        }
 
-        es.onerror = () => {
-            // EventSource auto-reconnects
-        }
+                es.onerror = () => {
+                    // EventSource auto-reconnects
+                }
+            })
+            .catch(() => { /* ignore auth errors */ })
 
-        return () => es.close()
+        return () => {
+            cancelled = true
+            es?.close()
+        }
     }, [authUser, addNotification, handleRefresh])
 }
 

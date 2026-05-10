@@ -1,7 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router'
-import { Loader2, ChevronRight, Flag } from 'lucide-react'
+import { Loader2, ChevronRight, ChevronLeft, Flag } from 'lucide-react'
 import { useProjectStore, type ProjectSummary } from '../../store/useProjectStore'
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 5
 
 const STATE_LABEL: Record<string, string> = {
   funding:        'กำลังระดมทุน',
@@ -23,21 +27,34 @@ const STATE_BADGE: Record<string, string> = {
 
 const MILESTONE_ELIGIBLE = ['funding', 'executing', 'closed']
 
+const TABS: { key: string; label: string }[] = [
+  { key: 'all',           label: 'ทั้งหมด' },
+  { key: 'executing',     label: 'กำลังดำเนินการ' },
+  { key: 'funding',       label: 'กำลังระดมทุน' },
+  { key: 'closed',        label: 'เสร็จสิ้น' },
+  { key: 'pending_review',label: 'รอตรวจสอบ' },
+  { key: 'draft',         label: 'แบบร่าง' },
+  { key: 'cancelled',     label: 'ถูกยกเลิก' },
+]
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
 const ProjectRow = ({ project }: { project: ProjectSummary }) => {
   const navigate = useNavigate()
   const eligible = MILESTONE_ELIGIBLE.includes(project.state)
   const badge = STATE_BADGE[project.state] ?? 'bg-[#F1F3F5] text-[#6C757D]'
   const label = STATE_LABEL[project.state] ?? project.state
-
   const progress = project.funding_goal > 0
     ? Math.min(100, Math.round((project.current_funding / project.funding_goal) * 100))
     : 0
 
   return (
-    <div className={`bg-white rounded-[14px] border border-border p-[18px] flex items-center gap-[14px] ${eligible ? 'hover:border-primary/50 hover:shadow-md transition-all cursor-pointer' : 'opacity-60'}`}
+    <div
+      className={`bg-white rounded-[14px] border border-border p-[18px] flex items-center gap-[14px] transition-all ${
+        eligible ? 'hover:border-primary/50 hover:shadow-md cursor-pointer' : 'opacity-60'
+      }`}
       onClick={() => eligible && navigate(`/pioneer/dashboard/projects/${project.id}/milestones`)}
     >
-      {/* Thumbnail */}
       <div className="shrink-0 w-[52px] h-[52px] rounded-[10px] bg-[#F1F3F5] overflow-hidden">
         {project.thumbnail_url
           ? <img src={project.thumbnail_url} alt={project.title} className="w-full h-full object-cover" />
@@ -45,13 +62,12 @@ const ProjectRow = ({ project }: { project: ProjectSummary }) => {
         }
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-[8px] mb-[4px]">
+        <div className="flex items-center gap-2 mb-1">
           <span className="font-semibold text-[14px] text-foreground truncate">{project.title}</span>
-          <span className={`shrink-0 text-[11px] font-medium px-[8px] py-[2px] rounded-full ${badge}`}>{label}</span>
+          <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${badge}`}>{label}</span>
         </div>
-        <div className="flex items-center gap-[8px]">
+        <div className="flex items-center gap-2">
           <div className="flex-1 h-[5px] rounded-full bg-[#F1F3F5] overflow-hidden">
             <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
           </div>
@@ -59,27 +75,75 @@ const ProjectRow = ({ project }: { project: ProjectSummary }) => {
         </div>
       </div>
 
-      {/* Arrow */}
       {eligible && <ChevronRight size={16} className="text-muted-foreground shrink-0" />}
     </div>
   )
 }
 
+function Pagination({
+  page, totalPages, onChange,
+}: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  if (totalPages <= 1) return null
+  return (
+    <div className="flex items-center justify-center gap-2 mt-4">
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        className="p-2 rounded-lg border border-border hover:bg-muted cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft size={15} />
+      </button>
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+        <button
+          key={p}
+          onClick={() => onChange(p)}
+          className={`w-8 h-8 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+            p === page ? 'bg-primary text-white' : 'border border-border hover:bg-muted text-foreground'
+          }`}
+        >
+          {p}
+        </button>
+      ))}
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page === totalPages}
+        className="p-2 rounded-lg border border-border hover:bg-muted cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronRight size={15} />
+      </button>
+    </div>
+  )
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
 const MilestoneListPage = () => {
   const { projects, isLoading, fetchMyProjects } = useProjectStore()
+  const [activeTab, setActiveTab] = useState('all')
+  const [page, setPage] = useState(1)
 
-  useEffect(() => {
-    fetchMyProjects()
-  }, [fetchMyProjects])
+  useEffect(() => { fetchMyProjects() }, [fetchMyProjects])
 
-  const eligible = projects.filter(p => MILESTONE_ELIGIBLE.includes(p.state))
-  const others = projects.filter(p => !MILESTONE_ELIGIBLE.includes(p.state))
+  const visibleTabs = useMemo(() =>
+    TABS.filter(t => t.key === 'all' || projects.some(p => p.state === t.key)),
+    [projects]
+  )
+
+  const filtered = useMemo(() => {
+    if (activeTab === 'all') return projects
+    return projects.filter(p => p.state === activeTab)
+  }, [projects, activeTab])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const handleTabChange = (key: string) => { setActiveTab(key); setPage(1) }
 
   return (
-    <div className="flex flex-col gap-[24px] pb-[40px]">
+    <div className="flex flex-col gap-6 pb-10">
       <div>
         <h1 className="text-[22px] font-bold text-foreground">Milestone</h1>
-        <p className="text-[13px] text-muted-foreground mt-[2px]">เลือกโปรเจกต์เพื่อจัดการ Milestone</p>
+        <p className="text-[13px] text-muted-foreground mt-0.5">เลือกโปรเจกต์เพื่อจัดการ Milestone</p>
       </div>
 
       {isLoading ? (
@@ -87,26 +151,51 @@ const MilestoneListPage = () => {
           <Loader2 className="size-7 animate-spin text-primary" />
         </div>
       ) : projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-[12px] py-[60px] border border-dashed border-border rounded-[16px] bg-white text-muted-foreground">
+        <div className="flex flex-col items-center justify-center gap-3 py-16 border border-dashed border-border rounded-2xl bg-white text-muted-foreground">
           <Flag size={32} />
           <span className="text-[14px]">ยังไม่มีโปรเจกต์</span>
         </div>
       ) : (
-        <div className="flex flex-col gap-[24px]">
-          {eligible.length > 0 && (
+        <>
+          {/* Tabs */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {visibleTabs.map(t => {
+              const count = t.key === 'all' ? projects.length : projects.filter(p => p.state === t.key).length
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => handleTabChange(t.key)}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border cursor-pointer ${
+                    activeTab === t.key
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white text-muted-foreground border-border hover:border-primary hover:text-foreground'
+                  }`}
+                >
+                  {t.label}
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                    activeTab === t.key ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* List */}
+          {paginated.length > 0 ? (
             <div className="flex flex-col gap-[10px]">
-              <p className="text-[13px] font-semibold text-foreground">โปรเจกต์ที่จัดการ Milestone ได้</p>
-              {eligible.map(p => <ProjectRow key={p.id} project={p} />)}
+              {paginated.map(p => <ProjectRow key={p.id} project={p} />)}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 border border-dashed border-border rounded-2xl bg-white text-muted-foreground">
+              <Flag size={28} />
+              <span className="text-[14px]">ไม่มีโปรเจกต์ในสถานะนี้</span>
             </div>
           )}
 
-          {others.length > 0 && (
-            <div className="flex flex-col gap-[10px]">
-              <p className="text-[13px] font-semibold text-muted-foreground">โปรเจกต์อื่นๆ</p>
-              {others.map(p => <ProjectRow key={p.id} project={p} />)}
-            </div>
-          )}
-        </div>
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        </>
       )}
     </div>
   )

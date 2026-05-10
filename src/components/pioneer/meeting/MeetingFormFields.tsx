@@ -16,9 +16,15 @@ export default function MeetingFormFields({
 }: MeetingFormFieldsProps) {
   const { milestoneId, date, time, meetingType, meetingUrl, location, agenda } = values;
   const selectedMilestone = milestones.find(m => String(m.id) === String(milestoneId));
-  const maxDate = selectedMilestone?.due_date
-    ? new Date(selectedMilestone.due_date).toISOString().split('T')[0]
-    : undefined;
+  const maxDate = (() => {
+    if (selectedMilestone?.due_date) {
+      return new Date(selectedMilestone.due_date).toISOString().split('T')[0];
+    }
+    // fallback: ไม่เกิน 1 ปีจากวันนี้ เผื่อ milestone ไม่มี due_date
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    return oneYearFromNow.toISOString().split('T')[0];
+  })();
 
   return (
     <>

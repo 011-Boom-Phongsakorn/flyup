@@ -73,18 +73,20 @@ const SidebarBooster = () => {
 
     const handleLogout = () => { logout(); navigate('/') }
 
-    const profileUrl = authUser?.picture || 'https://ui-avatars.com/api/?name=' + (authUser?.email || 'B')
+    const initials = `${(authUser?.first_name as string)?.[0] ?? ''}${(authUser?.last_name as string)?.[0] ?? ''}`.toUpperCase() || '?'
 
     return (
         <aside className="bg-sidebar w-57.5 flex-none h-full text-primary-light flex flex-col pt-2.5 border-r border-sidebar-accent">
 
             {/* Profile */}
             <div className="w-full flex flex-col items-center gap-2 pb-4 px-3">
-                <img
-                    src={typeof profileUrl === 'string' ? profileUrl : '/flyup-logo.png'}
-                    alt="Profile"
-                    className="h-11 w-11 rounded-full border-2 border-sidebar-accent object-cover"
-                />
+                {authUser?.picture ? (
+                    <img src={authUser.picture as string} alt="profile" className="h-11 w-11 rounded-full border-2 border-sidebar-accent object-cover" />
+                ) : (
+                    <div className="h-11 w-11 rounded-full border-2 border-sidebar-accent bg-primary/20 flex items-center justify-center text-primary font-bold text-[15px]">
+                        {initials}
+                    </div>
+                )}
                 <span className="text-sidebar-primary text-[12px] px-2 py-0.5 rounded-full bg-sidebar-primary/20 font-semibold">
                     Booster
                 </span>
@@ -132,7 +134,7 @@ const SidebarBooster = () => {
             <div className="w-full p-2.5 border-t border-sidebar-accent">
                 <button
                     onClick={handleLogout}
-                    className="flex w-full p-2.5 gap-3 text-[13.5px] items-center hover:text-error hover:bg-sidebar-accent hover:rounded-xl transition-all duration-200 cursor-pointer"
+                    className="flex w-full p-2.5 gap-3 text-[13.5px] items-center hover:text-error active:text-error hover:bg-sidebar-accent hover:rounded-xl transition-colors cursor-pointer"
                 >
                     <LogOut size={17} /> ออกจากระบบ
                 </button>

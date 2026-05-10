@@ -7,6 +7,22 @@ import NotificationBell from './NotificationBell';
 
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=400';
 
+// แสดงรูป profile หรือ initials แทน — ไม่ส่ง email ไป third-party
+function UserAvatar({ picture, firstName, lastName, className }: {
+    picture?: string | null
+    firstName?: string | null
+    lastName?: string | null
+    className?: string
+}) {
+    const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || '?'
+    if (picture) return <img src={picture} alt="profile" className={className} />
+    return (
+        <div className={`bg-primary/20 flex items-center justify-center text-primary font-bold text-sm ${className}`}>
+            {initials}
+        </div>
+    )
+}
+
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -107,7 +123,7 @@ const Navbar = () => {
 
     return (
 
-        <nav className={`fixed top-0 left-0 right-0 z-50 w-full py-4 bg-transparent px-4 transition-all duration-300`}>
+        <nav className={`fixed top-0 left-0 right-0 z-50 w-full py-4 bg-background/70 backdrop-blur-sm px-4 transition-all duration-300`}>
             <div className="w-full max-w-[1104px] mx-auto relative">
                 <div className="flex items-center justify-between bg-card/90 backdrop-blur-md w-full border border-border h-[70px] px-6 md:px-8 rounded-full shadow-sm">
 
@@ -186,9 +202,10 @@ const Navbar = () => {
                                         onClick={handleProfileToggle}
                                         className="relative flex items-center justify-center focus:outline-none hover:opacity-90 transition-opacity cursor-pointer"
                                     >
-                                        <img
-                                            src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
-                                            alt="Profile"
+                                        <UserAvatar
+                                            picture={authUser.picture as string}
+                                            firstName={authUser.first_name as string}
+                                            lastName={authUser.last_name as string}
                                             className="w-11 h-11 rounded-full object-cover border-2 border-transparent shadow-sm"
                                         />
                                         <div className="absolute -bottom-1 -right-1 bg-[#8B5CF6] text-white rounded-full p-[2px] border-2 border-white">
@@ -199,9 +216,10 @@ const Navbar = () => {
                                     {showProfileMenu && (
                                         <div className="absolute top-[56px] right-0 w-[260px] bg-card border border-border rounded-[20px] shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[60]">
                                             <div className="flex items-center gap-3 px-5 py-4">
-                                                <img
-                                                    src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
-                                                    alt="Profile"
+                                                <UserAvatar
+                                                    picture={authUser.picture as string}
+                                                    firstName={authUser.first_name as string}
+                                                    lastName={authUser.last_name as string}
                                                     className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                                                 />
                                                 <span className="text-[14px] font-semibold text-foreground truncate">
@@ -220,7 +238,7 @@ const Navbar = () => {
                                                 การตั้งค่าและความเป็นส่วนตัว
                                             </Link>
                                             <button
-                                                onClick={handleLogout}
+                                                onClick={(e) => { e.stopPropagation(); handleLogout(); }}
                                                 className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted transition-colors text-[14px] text-foreground cursor-pointer"
                                             >
                                                 <LogOut size={18} className="text-[#8B5CF6]" />
@@ -266,9 +284,10 @@ const Navbar = () => {
                                         onClick={handleProfileToggle}
                                         className="flex-shrink-0 w-[48px] h-[48px] rounded-full overflow-hidden border-2 border-transparent focus:outline-none cursor-pointer"
                                     >
-                                        <img
-                                            src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
-                                            alt="Profile"
+                                        <UserAvatar
+                                            picture={authUser.picture as string}
+                                            firstName={authUser.first_name as string}
+                                            lastName={authUser.last_name as string}
                                             className="w-full h-full object-cover"
                                         />
                                     </button>
@@ -301,9 +320,10 @@ const Navbar = () => {
                         {authUser && showProfileMenu && (
                             <div className="border-t border-border pt-3 flex flex-col gap-1">
                                 <div className="flex items-center gap-3 px-2 py-2 mb-1">
-                                    <img
-                                        src={authUser.picture || "https://ui-avatars.com/api/?name=" + (authUser.email)}
-                                        alt="Profile"
+                                    <UserAvatar
+                                        picture={authUser.picture as string}
+                                        firstName={authUser.first_name as string}
+                                        lastName={authUser.last_name as string}
                                         className="w-9 h-9 rounded-full object-cover flex-shrink-0"
                                     />
                                     <span className="text-[14px] font-semibold text-foreground truncate">

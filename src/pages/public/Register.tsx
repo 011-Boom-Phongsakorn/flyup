@@ -167,8 +167,8 @@ const Register = () => {
                             </div>
                         </div>
                         <div className="flex flex-col gap-[4px]">
-                            <label className="font-[14px] text-foreground">อีเมล์ <span className="text-error">*</span></label>
-                            <input name="email" onChange={handleChange} value={formData.email} type="text" className={inputStyle('email')} />
+                            <label className="font-[14px] text-foreground">อีเมล <span className="text-error">*</span></label>
+                            <input name="email" onChange={handleChange} value={formData.email} type="email" autoComplete="email" className={inputStyle('email')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
                             <label className="font-[14px] text-foreground">เบอร์โทรศัพท์ <span className="text-error">*</span></label>
