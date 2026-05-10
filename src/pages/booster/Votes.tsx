@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { CheckSquare, Loader2 } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { CheckSquare, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
 import { useBoosterStore } from '../../store/useBoosterStore';
 import api from '../../services/api';
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface VoteMilestone {
   id: number;
@@ -19,69 +19,174 @@ interface VoteMilestone {
   percent_release: number;
 }
 
-// ─── Component ──────────────────────────────────────────────────────────────
+type TabKey = 'all' | 'open' | 'closed';
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'all',    label: 'ทั้งหมด' },
+  { key: 'open',   label: 'เปิดโหวต' },
+  { key: 'closed', label: 'ปิดแล้ว' },
+];
+
+const PAGE_SIZE = 5;
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function VoteRow({ vote, isOpen }: { vote: VoteMilestone; isOpen: boolean }) {
+  const fmtDate = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-3 mb-1 flex-wrap">
+          <h3 className="font-bold text-foreground text-base leading-tight">{vote.projectTitle}</h3>
+          {isOpen ? (
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-primary/5 text-primary border-primary/20">
+              เปิดโหวต
+            </span>
+          ) : (
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+              ปิดแล้ว
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-foreground mb-2">Phase {vote.phase_no}: {vote.title}</p>
+        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground font-medium">
+          {isOpen && vote.voting_opened_at && (
+            <span>เปิดโหวตเมื่อ {fmtDate(vote.voting_opened_at)}</span>
+          )}
+          {!isOpen && vote.voting_closed_at && (
+            <span>ปิดเมื่อ {fmtDate(vote.voting_closed_at)}</span>
+          )}
+          {!isOpen && (
+            <span className={`font-semibold ${
+              vote.status === 'approved' || vote.status === 'paid' ? 'text-green-600' :
+              vote.status === 'rejected' ? 'text-red-500' : 'text-muted-foreground'
+            }`}>
+              ผลโหวต: {
+                vote.status === 'approved' || vote.status === 'paid' ? 'อนุมัติ' :
+                vote.status === 'rejected' ? 'ไม่อนุมัติ' : vote.status
+              }
+            </span>
+          )}
+          <span className="text-muted-foreground">ปล่อยเงิน {vote.percent_release}%</span>
+        </div>
+      </div>
+
+      {isOpen ? (
+        <Link
+          to={`/booster/votes/${vote.id}`}
+          className="shrink-0 px-6 py-2.5 rounded-xl text-sm font-semibold bg-primary text-white hover:opacity-90 transition-opacity"
+        >
+          โหวตเลย
+        </Link>
+      ) : (
+        <Link
+          to={`/booster/votes/${vote.id}`}
+          className="shrink-0 px-6 py-2 rounded-xl text-sm font-semibold border border-border text-muted-foreground hover:bg-muted transition-colors"
+        >
+          ดูรายละเอียด
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function Pagination({
+  page, totalPages, onChange,
+}: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-center gap-2 mt-6">
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft size={16} />
+      </button>
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+        <button
+          key={p}
+          onClick={() => onChange(p)}
+          className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+            p === page
+              ? 'bg-primary text-white'
+              : 'border border-border hover:bg-muted text-foreground'
+          }`}
+        >
+          {p}
+        </button>
+      ))}
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page === totalPages}
+        className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronRight size={16} />
+      </button>
+    </div>
+  );
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 const Votes = () => {
   const { investments, fetchMyInvestments, isLoading: investLoading } = useBoosterStore();
   const [milestones, setMilestones] = useState<VoteMilestone[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabKey>('all');
+  const [page, setPage] = useState(1);
 
-  // 1. Load investments
-  useEffect(() => {
-    fetchMyInvestments();
-  }, [fetchMyInvestments]);
+  useEffect(() => { fetchMyInvestments(); }, [fetchMyInvestments]);
 
-  // 2. Once investments are loaded, fetch milestones for each project
   useEffect(() => {
     if (investLoading) return;
-    if (investments.length === 0) {
-      setMilestones([]);
-      setLoading(false);
-      return;
-    }
+    if (investments.length === 0) { setMilestones([]); setLoading(false); return; }
 
     const projectIds = [...new Set(investments.map(inv => inv.project_id).filter(Boolean))];
 
-    const fetchAllMilestones = async () => {
+    const fetchAll = async () => {
       setLoading(true);
       try {
         const results = await Promise.all(
           projectIds.map(async (pid) => {
             try {
               const res = await api.get(`/projects/${pid}/milestones`);
-              const raw: VoteMilestone[] = (res.data?.data ?? []).map((m: Omit<VoteMilestone, 'project_id' | 'projectTitle'>) => ({
+              return (res.data?.data ?? []).map((m: Omit<VoteMilestone, 'project_id' | 'projectTitle'>) => ({
                 ...m,
                 project_id: pid,
-                projectTitle: investments.find(inv => inv.project_id === pid)?.project?.title || `โปรเจกต์ #${pid}`,
-              }));
-              return raw;
-            } catch {
-              return [] as VoteMilestone[];
-            }
+                projectTitle: investments.find(inv => inv.project_id === pid)?.project?.title ?? `โปรเจกต์ #${pid}`,
+              })) as VoteMilestone[];
+            } catch { return [] as VoteMilestone[]; }
           })
         );
         setMilestones(results.flat());
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     };
 
-    fetchAllMilestones();
+    fetchAll();
   }, [investments, investLoading]);
 
-  // Split into open / closed
-  const openVotes = milestones.filter(m => m.voting_open === true);
-  const closedVotes = milestones.filter(m => m.voting_open === false && m.voting_closed_at);
+  const openVotes   = useMemo(() => milestones.filter(m => m.voting_open === true), [milestones]);
+  const closedVotes = useMemo(() => milestones.filter(m => m.voting_open === false && m.voting_closed_at), [milestones]);
 
-  const fmtDate = (d?: string | null) =>
-    d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+  const filtered = useMemo(() => {
+    if (activeTab === 'open')   return openVotes;
+    if (activeTab === 'closed') return closedVotes;
+    return milestones;
+  }, [activeTab, milestones, openVotes, closedVotes]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const handleTabChange = (key: TabKey) => { setActiveTab(key); setPage(1); };
 
   const isPageLoading = loading || investLoading;
 
   return (
     <div className="w-full">
-      {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">การโหวต</h1>
         <p className="text-sm text-muted-foreground mt-1">โหวตอนุมัติหรือปฏิเสธ Milestone ของโปรเจกต์ที่คุณลงทุน</p>
       </div>
@@ -92,92 +197,49 @@ const Votes = () => {
         </div>
       ) : (
         <>
-          {/* 1. Open for Voting */}
-          <div className="mb-10">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="bg-primary/10 p-1 rounded">
-                <CheckSquare size={18} className="text-primary" />
-              </div>
-              <h2 className="text-lg font-bold text-foreground">เปิดโหวต</h2>
+          {/* Tabs */}
+          <div className="flex items-center gap-2 flex-wrap mb-5">
+            {TABS.map(t => {
+              const count = t.key === 'all' ? milestones.length : t.key === 'open' ? openVotes.length : closedVotes.length;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => handleTabChange(t.key)}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border cursor-pointer ${
+                    activeTab === t.key
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:border-primary hover:text-foreground'
+                  }`}
+                >
+                  {t.label}
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                    activeTab === t.key ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* List */}
+          {paginated.length > 0 ? (
+            <div className="space-y-4">
+              {paginated.map(vote => (
+                <VoteRow key={vote.id} vote={vote} isOpen={vote.voting_open === true} />
+              ))}
             </div>
-
-            {openVotes.length > 0 ? (
-              <div className="space-y-4">
-                {openVotes.map((vote) => (
-                  <div key={vote.id} className="bg-white border border-border rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="font-bold text-foreground text-base">{vote.projectTitle}</h3>
-                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-primary/5 text-primary border-primary/20">
-                          เปิดโหวต
-                        </span>
-                      </div>
-                      <p className="text-sm text-foreground mb-2">Phase {vote.phase_no}: {vote.title}</p>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
-                        {vote.voting_opened_at && (
-                          <span className="flex items-center gap-1.5">
-                            เปิดโหวตเมื่อ {fmtDate(vote.voting_opened_at)}
-                          </span>
-                        )}
-                        <span className="text-muted-foreground">
-                          ปล่อยเงิน {vote.percent_release}%
-                        </span>
-                      </div>
-                    </div>
-                    <Link
-                      to={`/booster/votes/${vote.id}`}
-                      className="flex-shrink-0 px-6 py-2.5 rounded-xl text-sm font-semibold transition-opacity bg-primary text-white hover:opacity-90"
-                    >
-                      โหวตเลย
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8 bg-white border border-border rounded-xl">
-                ไม่มี Milestone ที่เปิดให้โหวตในขณะนี้
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 bg-card border border-border rounded-xl">
+              <CheckSquare size={32} className="mb-3 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                {activeTab === 'open' ? 'ไม่มี Milestone ที่เปิดให้โหวตในขณะนี้' :
+                 activeTab === 'closed' ? 'ยังไม่มีโหวตที่ปิดแล้ว' : 'ยังไม่มีการโหวต'}
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* 2. Closed Voting */}
-          <div>
-            <h2 className="text-lg font-bold text-foreground mb-4">โหวตที่ปิดแล้ว</h2>
-
-            {closedVotes.length > 0 ? (
-              <div className="space-y-4">
-                {closedVotes.map((vote) => (
-                  <div key={vote.id} className="bg-white border border-border rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-bold text-foreground text-base mb-1">
-                        {vote.projectTitle} — Phase {vote.phase_no}: {vote.title}
-                      </h3>
-                      <div className="flex items-center gap-4 text-sm font-medium">
-                        <span className="text-muted-foreground flex items-center gap-3">
-                          ผลโหวต:
-                          <span className={`font-bold ${vote.status === 'completed' || vote.status === 'approved' ? 'text-green-600' : 'text-red-500'}`}>
-                            {vote.status === 'completed' || vote.status === 'approved' ? 'อนุมัติ' : vote.status === 'rejected' ? 'ไม่อนุมัติ' : vote.status}
-                          </span>
-                        </span>
-                        {vote.voting_closed_at && (
-                          <span className="text-muted-foreground text-xs">
-                            ปิดเมื่อ {fmtDate(vote.voting_closed_at)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button disabled className="flex-shrink-0 px-6 py-2 rounded-xl text-sm font-semibold bg-transparent text-muted-foreground border border-border opacity-70 cursor-not-allowed">
-                      ปิดแล้ว
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8 bg-white border border-border rounded-xl">
-                ยังไม่มีโหวตที่ปิดแล้ว
-              </p>
-            )}
-          </div>
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </>
       )}
     </div>

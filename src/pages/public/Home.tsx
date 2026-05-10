@@ -187,7 +187,7 @@ const Home = () => {
               <Loader2 size={32} className="animate-spin text-primary" />
             </div>
           ) : recommendedMain ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className={`grid gap-8 ${recommendedList.length > 0 ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 max-w-2xl'}`}>
               <Link to={`/projects/${recommendedMain.id}`} className="lg:col-span-2 cursor-pointer group">
                 <div className="bg-gray-100 rounded-3xl overflow-hidden relative h-[300px] md:h-[400px] mb-4">
                   <img src={recommendedMain.thumbnail_url || PLACEHOLDER_IMG} alt={recommendedMain.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />

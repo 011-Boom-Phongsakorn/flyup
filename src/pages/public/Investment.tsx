@@ -550,7 +550,7 @@ const Investment = () => {
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-foreground mb-2 text-transparent bg-clip-text bg-[image:var(--gradient-primary)]">การลงทุนสำเร็จ!</h1>
               <p className="text-muted-foreground text-sm leading-relaxed mb-8 px-4">
-                ขอบคุณที่ร่วมสนับสนุนโปรเจกต์ของนักศึกษา ระบบได้ส่งหลักฐานการยืนยันไปยังอีเมล์ของคุณเรียบร้อยแล้ว
+                ขอบคุณที่ร่วมสนับสนุนโปรเจกต์ของนักศึกษา ระบบได้ส่งหลักฐานการยืนยันไปยังอีเมลของคุณเรียบร้อยแล้ว
               </p>
 
               <div className="bg-muted/50 rounded-2xl p-4 border border-border/50 text-left mb-8 space-y-2.5 text-sm mx-auto max-w-sm">

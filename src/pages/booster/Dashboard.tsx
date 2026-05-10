@@ -158,7 +158,7 @@ const BoosterDashboard = () => {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `฿${(v/1000).toFixed(0)}k`} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `฿${(v % 1000 === 0 ? (v/1000).toFixed(0) : (v/1000).toFixed(1))}k` : `฿${v}`} />
                   <Tooltip
                     formatter={(v) => [fmtBaht(Number(v ?? 0)), 'ลงทุน']}
                     contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}

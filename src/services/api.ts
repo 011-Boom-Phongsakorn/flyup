@@ -11,13 +11,7 @@ const instance = axios.create({
   },
 });
 
-// iOS Safari blocks cross-site cookies (ITP) — use token from localStorage instead
-instance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("auth_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Auth is handled via HttpOnly cookie (set by backend on signin/OAuth/selectRole).
+// withCredentials: true above ensures browser sends the cookie on every request.
 
 export default instance;
