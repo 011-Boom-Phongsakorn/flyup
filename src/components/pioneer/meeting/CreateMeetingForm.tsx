@@ -14,6 +14,11 @@ export default function CreateMeetingForm({ milestones, milestonesLoading, onCre
   const { createMeeting, isSubmitting } = useMeetingStore();
   const form = useMeetingForm();
 
+  const selectedMilestone = milestones.find(m => String(m.id) === form.values.milestoneId);
+  const maxDate = selectedMilestone?.due_date
+    ? new Date(selectedMilestone.due_date).toISOString().split('T')[0]
+    : undefined;
+
   const handleSubmit = async () => {
     const payload = form.buildPayload();
     if (!payload) return;
@@ -33,6 +38,7 @@ export default function CreateMeetingForm({ milestones, milestonesLoading, onCre
         setField={form.setField}
         milestones={milestones}
         milestonesLoading={milestonesLoading}
+        maxDate={maxDate}
       />
 
       <button

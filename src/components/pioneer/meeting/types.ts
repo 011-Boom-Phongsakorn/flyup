@@ -1,4 +1,4 @@
-export type MeetingType = 'online' | 'onsite' | 'hybrid';
+﻿export type MeetingType = 'online' | 'onsite' | 'hybrid';
 export type MeetingStatus = 'open' | 'closed' | 'cancelled';
 export type FilterMode = 'upcoming' | 'past' | 'all';
 
