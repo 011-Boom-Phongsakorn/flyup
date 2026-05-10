@@ -272,7 +272,7 @@ const MyProjects = () => {
                             <span>{progress}%</span>
                           </div>
                           <div className="h-[6px] w-full bg-[#E9D5FF] rounded-full overflow-hidden">
-                            <div className="h-full bg-[#8B5CF6] rounded-full" style={{ width: `${progress}%` }} />
+                            <div className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full" style={{ width: `${progress}%` }} />
                           </div>
                         </div>
                       )}

@@ -71,7 +71,7 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
         <p className="text-xs text-gray-500 line-clamp-1 mb-4">{project.description || 'ยังไม่มีรายละเอียด'}</p>
 
         <div className="w-full h-1.5 bg-gray-100 rounded-full mb-3 overflow-hidden mt-auto">
-          <div className="h-full bg-purple-600 rounded-full" style={{ width: `${progress}%` }}></div>
+          <div className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full" style={{ width: `${progress}%` }}></div>
         </div>
 
         <div className="flex justify-between items-center pt-1">

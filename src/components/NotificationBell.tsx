@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
 import {
     BellIcon,
     CheckSquare,
@@ -10,13 +11,13 @@ import {
     Clock,
 } from 'lucide-react'
 import { useNotificationStore, type Notification } from '../store/useNotificationStore'
+import { useAuthStore } from '../store/useAuthStore'
 import useNotificationSSE from '../hooks/useNotificationSSE'
 
 // -------------------- helpers --------------------
 
 function timeAgo(dateStr: string): string {
     const now = new Date()
-    // normalize MySQL datetime format ("2024-01-15 10:30:00") to ISO ("2024-01-15T10:30:00")
     const date = new Date(dateStr ?? '')
     if (!dateStr || isNaN(date.getTime())) return ''
     const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000)
@@ -29,6 +30,58 @@ function timeAgo(dateStr: string): string {
     if (diffHour < 24) return `${diffHour} ชั่วโมงที่แล้ว`
     if (diffDay < 30) return `${diffDay} วันที่แล้ว`
     return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+}
+
+function getNotifPath(notif: Notification, role: string): string {
+    const { type, related_id, related_type } = notif
+
+    if (role === 'pioneer') {
+        switch (type) {
+            case 'milestone':
+            case 'milestone_submitted':
+            case 'milestone_rejected':
+                if (related_type === 'project' && related_id)
+                    return `/pioneer/dashboard/projects/${related_id}/milestones`
+                return '/pioneer/dashboard/milestones'
+            case 'profit':   return '/pioneer/dashboard/profit'
+            case 'meeting':  return '/pioneer/dashboard/meetings'
+            case 'project_status': return '/pioneer/dashboard/projects'
+            default:         return '/pioneer/dashboard'
+        }
+    }
+
+    if (role === 'booster') {
+        switch (type) {
+            case 'new_investment':
+                return related_type === 'investment' && related_id
+                    ? `/booster/investments/${related_id}`
+                    : '/booster/investments'
+            case 'vote':
+            case 'milestone':
+            case 'milestone_submitted':
+                return related_type === 'vote' && related_id
+                    ? `/booster/votes/${related_id}`
+                    : '/booster/votes'
+            case 'milestone_rejected': return '/booster/investments'
+            case 'project_status':     return '/booster/investments'
+            case 'profit':             return '/booster/profits'
+            case 'meeting':            return '/booster/meetings'
+            default:                   return '/booster/dashboard'
+        }
+    }
+
+    if (role === 'admin') {
+        switch (type) {
+            case 'milestone_submitted':
+                return related_type === 'milestone' && related_id
+                    ? `/admin/milestones/${related_id}`
+                    : '/admin/milestones'
+            case 'project_status': return '/admin/projects-approval'
+            default:               return '/admin/dashboard'
+        }
+    }
+
+    return '/'
 }
 
 const NOTIF_CONFIG: Record<string, { icon: React.ReactNode; bg: string }> = {
@@ -53,9 +106,17 @@ function NotifIcon({ type }: { type: string }) {
 
 // -------------------- item --------------------
 
-function NotificationItem({ notif, onRead }: { notif: Notification; onRead: (id: number) => void }) {
+interface NotificationItemProps {
+    notif: Notification
+    path: string
+    onRead: (id: number) => void
+    onNavigate: (path: string) => void
+}
+
+function NotificationItem({ notif, path, onRead, onNavigate }: NotificationItemProps) {
     const handleClick = () => {
         if (!notif.is_read) onRead(notif.id)
+        onNavigate(path)
     }
 
     return (
@@ -89,8 +150,11 @@ interface NotificationBellProps {
 }
 
 const NotificationBell = ({ open: openProp, onOpenChange }: NotificationBellProps = {}) => {
-    const { notifications, unread, isLoading, fetchNotifications, markAsRead, markAllAsRead } =
+    const { notifications, unread, isLoading, fetchNotifications, markAsRead, markAllAsRead, clearUnreadCount } =
         useNotificationStore()
+    const { authUser } = useAuthStore()
+    const navigate = useNavigate()
+
     const [internalOpen, setInternalOpen] = useState(false)
     const isControlled = openProp !== undefined
     const open = isControlled ? openProp : internalOpen
@@ -100,15 +164,12 @@ const NotificationBell = ({ open: openProp, onOpenChange }: NotificationBellProp
     }
     const panelRef = useRef<HTMLDivElement>(null)
 
-    // activate SSE connection
     useNotificationSSE()
 
-    // fetch on mount for the badge count
     useEffect(() => {
         fetchNotifications()
     }, [fetchNotifications])
 
-    // close on click outside
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
@@ -121,7 +182,16 @@ const NotificationBell = ({ open: openProp, onOpenChange }: NotificationBellProp
     }, [isControlled, onOpenChange])
 
     const handleBellClick = () => {
-        setOpen(!open)
+        const next = !open
+        setOpen(next)
+        if (next && unread > 0) clearUnreadCount()
+    }
+
+    const role = authUser?.role ?? ''
+
+    const handleNavigate = (path: string) => {
+        setOpen(false)
+        navigate(path)
     }
 
     return (
@@ -182,7 +252,9 @@ const NotificationBell = ({ open: openProp, onOpenChange }: NotificationBellProp
                                 <NotificationItem
                                     key={notif.id}
                                     notif={notif}
+                                    path={getNotifPath(notif, role)}
                                     onRead={markAsRead}
+                                    onNavigate={handleNavigate}
                                 />
                             ))
                         )}

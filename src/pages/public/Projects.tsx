@@ -234,7 +234,7 @@ const Projects = () => {
 
                     <div className="w-full h-1.5 bg-muted rounded-full mb-3 overflow-hidden mt-auto">
                       <div
-                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all duration-500"
                         style={{ width: `${progress}%` }}
                       ></div>
                     </div>

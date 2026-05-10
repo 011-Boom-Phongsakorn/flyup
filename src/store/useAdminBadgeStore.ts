@@ -8,6 +8,8 @@ export interface AdminBadgeCounts {
     open_complaints: number
     pending_refunds: number
     pending_verifications: number
+    pending_disbursements: number
+    pending_profit_pools: number
 }
 
 interface AdminBadgeStore {
@@ -22,6 +24,8 @@ const empty: AdminBadgeCounts = {
     open_complaints: 0,
     pending_refunds: 0,
     pending_verifications: 0,
+    pending_disbursements: 0,
+    pending_profit_pools: 0,
 }
 
 export const useAdminBadgeStore = create<AdminBadgeStore>((set) => ({

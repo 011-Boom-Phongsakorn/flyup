@@ -5,6 +5,8 @@ import { useBoosterStore } from '../store/useBoosterStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePublicProjectStore } from '../store/usePublicProjectStore'
 import { useAdminBadgeStore } from '../store/useAdminBadgeStore'
+import { usePioneerBadgeStore } from '../store/usePioneerBadgeStore'
+import { useBoosterBadgeStore } from '../store/useBoosterBadgeStore'
 import { useAdminStore } from '../store/useAdminStore'
 import { useMilestoneStore } from '../store/useMilestoneStore'
 
@@ -107,6 +109,10 @@ const useNotificationSSE = () => {
                 handleRefresh(notif)
                 if (authUser?.role === 'admin') {
                     useAdminBadgeStore.getState().fetchBadges()
+                } else if (authUser?.role === 'pioneer') {
+                    usePioneerBadgeStore.getState().fetchBadges()
+                } else if (authUser?.role?.toLowerCase() === 'booster') {
+                    useBoosterBadgeStore.getState().fetchBadges()
                 }
             } catch {
                 // ignore ping / non-JSON events
