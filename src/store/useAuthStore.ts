@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import api from '../services/api'
 import toast from 'react-hot-toast'
-import { jwtDecode } from 'jwt-decode'
 import { AxiosError } from 'axios'
 
 interface University {
@@ -101,11 +100,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
             const response = await api.get('/user/me')
             set({ authUser: response?.data?.data })
         } catch {
-            // ถ้ามี token ใน localStorage อยู่แล้ว (เช่น หลัง Google OAuth)
-            // ไม่ล้าง authUser เพื่อไม่ให้ลบ session ที่เพิ่ง set ไป
-            if (!localStorage.getItem('auth_token')) {
-                set({ authUser: null })
-            }
+            set({ authUser: null })
         } finally {
             set({ isCheckingAuth: false })
         }
@@ -133,19 +128,15 @@ export const useAuthStore = create<AuthStore>((set) => ({
             set({ isRegistering: false })
         }
     },
-    loginWithGoogleToken: (token) => {
-        localStorage.setItem('auth_token', token)
-        const decoded = jwtDecode(token) as DecodedUser
-        set({ authUser: decoded })
+    loginWithGoogleToken: (_token) => {
+        // cookie already set by backend during OAuth flow — just fetch user info
+        api.get('/user/me').then(res => set({ authUser: res.data?.data })).catch(() => {})
     },
     login: async (data) => {
         set({ isLoggingIn: true })
         try {
             const res = await api.post('/signin', data)
-            const token: string = res.data?.token
-            if (token) {
-                localStorage.setItem('auth_token', token)
-            }
+            // cookie set by backend — just fetch user profile
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
         } catch (error: unknown) {
@@ -158,11 +149,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
             } else if (apiMessage === 'your account has been suspended') {
                 toast.error('บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ')
             } else if (errorMessage === 'please verify email') {
-                toast.error('กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
+                toast.error('กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ')
             } else if (err?.response?.data?.login_method === 'google') {
                 toast.error('บัญชีผู้ใช้นี้ลงทะเบียนด้วย Google กรุณาเข้าสู่ระบบด้วย Google')
             } else {
-                toast.error('อีเมล์หรือรหัสผ่านไม่ถูกต้อง')
+                toast.error('อีเมลหรือรหัสผ่านไม่ถูกต้อง')
             }
         } finally {
             set({ isLoggingIn: false })
@@ -170,22 +161,18 @@ export const useAuthStore = create<AuthStore>((set) => ({
     },
     logout: async () => {
         try {
-            await api.post('/user/signout')
+            await api.post('/user/signout') // backend clears the HttpOnly cookie
         } catch {
             // ignore
         } finally {
-            localStorage.removeItem('auth_token')
             set({ authUser: null })
         }
     },
     selectRole: async (role) => {
         set({ isSelectingRole: true })
         try {
-            const res = await api.patch('/user/role', { role })
-            const token: string = res.data?.token
-            if (token) {
-                localStorage.setItem('auth_token', token)
-            }
+            await api.patch('/user/role', { role })
+            // cookie with new role-embedded token set by backend
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
             return true
