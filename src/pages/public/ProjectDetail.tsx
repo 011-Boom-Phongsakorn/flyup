@@ -352,7 +352,7 @@ function ProjectDetail() {
                     updates={updates}
                     creatorName={project?.owner_profile ? `${project.owner_profile.first_name} ${project.owner_profile.last_name}`.trim() : undefined}
                     creatorAvatar={project?.owner_profile?.picture || undefined}
-                    projectId={Number(id)}
+                    projectId={projectId ?? 0}
                     hasInvested={hasInvested}
                     isOwner={isOwner}
                   />

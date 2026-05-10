@@ -182,10 +182,10 @@ const Investment = () => {
   };
 
   const handleConfirmInvestment = async () => {
-    if (!authUser || !id) return;
+    if (!authUser || !project?.id) return;
 
     const success = await createInvestment({
-      project_id: Number(id),
+      project_id: project.id,
       amount: parsedAmount,
     });
 
