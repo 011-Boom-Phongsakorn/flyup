@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 
-type BadgeKey = 'pending_verifications' | 'pending_projects' | 'submitted_milestones' | 'open_complaints' | 'pending_cancel_requests' | 'pending_refunds'
+type BadgeKey = 'pending_verifications' | 'pending_projects' | 'submitted_milestones' | 'open_complaints' | 'pending_cancel_requests' | 'pending_refunds' | 'pending_disbursements' | 'pending_profit_pools'
 
 interface MenuItem {
     icon: React.ReactNode
@@ -42,8 +42,8 @@ const sections: MenuSection[] = [
     {
         label: 'การเงิน',
         items: [
-            { icon: <Wallet size={18} />, title: 'การปล่อยเงิน', path: '/admin/disbursements' },
-            { icon: <TrendingUp size={18} />, title: 'โอนกำไรนักลงทุน', path: '/admin/profit-distribution' },
+            { icon: <Wallet size={18} />, title: 'การปล่อยเงิน', path: '/admin/disbursements', badge: 'pending_disbursements' },
+            { icon: <TrendingUp size={18} />, title: 'โอนกำไรนักลงทุน', path: '/admin/profit-distribution', badge: 'pending_profit_pools' },
             { icon: <RotateCcw size={18} />, title: 'คืนเงิน', path: '/admin/refunds', badge: 'pending_refunds' },
         ],
     },
