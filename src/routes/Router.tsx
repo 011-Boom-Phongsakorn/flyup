@@ -157,9 +157,9 @@ const Router = () => {
                         <Route path='/reset-password' element={!authUser ? <ResetPassword /> : <Navigate to='/' />} />
                         <Route path='/projects' element={<Projects />} />
                         <Route path='/verify' element={<VerifyEmail />} />
-                        <Route path='/projects/:id' element={<ProjectDetail />} />
-                        <Route path='/projects/:id/invest' element={<Investment />} />
-                        <Route path='/projects/:id/milestones' element={<MilestoneDetail />} />
+                        <Route path='/projects/:slug' element={<ProjectDetail />} />
+                        <Route path='/projects/:slug/invest' element={<Investment />} />
+                        <Route path='/projects/:slug/milestones' element={<MilestoneDetail />} />
                     </Route>
 
                     <Route element={<PioneerGuard />}>

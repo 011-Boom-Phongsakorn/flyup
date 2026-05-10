@@ -31,14 +31,14 @@ const PLACEHOLDER_IMG = "https://images.unsplash.com/photo-1498050108023-c5249f4
 const NOW = Date.now();
 
 function ProjectDetail() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>("story");
   const [selectedImage, setSelectedImage] = useState(0);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [showInvestorsModal, setShowInvestorsModal] = useState(false);
 
-  const { currentPublicProject, isDetailLoading, fetchPublicProjectById } = usePublicProjectStore();
+  const { currentPublicProject, isDetailLoading, fetchPublicProjectBySlug } = usePublicProjectStore();
   const { updates, threads, faqs, investorCount: actualInvestorCount, investors, fetchAll, createThread } = useProjectDetailStore();
   const { authUser } = useAuthStore();
   const { investments, fetchMyInvestments } = useBoosterStore();
@@ -48,28 +48,30 @@ function ProjectDetail() {
 
   const isLoggedIn = !!authUser;
   const project = currentPublicProject;
-  // authUser.id มาจาก /user/me, authUser.user_id มาจาก JWT decode (Google OAuth)
+  const projectId = project?.id;
   const authUserId = (authUser?.id ?? authUser?.user_id) as number | undefined;
   const isOwner = !!authUserId && !!project?.owner_user_id && authUserId === project.owner_user_id;
-  // ตรง backend HasVerifiedInvestment ต้องการ status = 'verified' เท่านั้น
   const hasInvested = isLoggedIn && investments.some(
-    inv => inv.project_id === Number(id) && inv.status === 'verified'
+    inv => inv.project_id === projectId && inv.status === 'verified'
   );
 
   useEffect(() => {
-    if (id) {
-      fetchPublicProjectById(Number(id));
-      fetchAll(Number(id));
+    if (slug) {
+      fetchPublicProjectBySlug(slug);
       window.scrollTo(0, 0);
     }
     if (isLoggedIn) fetchMyInvestments();
-  }, [id, fetchPublicProjectById, fetchAll, fetchMyInvestments, isLoggedIn]);
+  }, [slug, fetchPublicProjectBySlug, fetchMyInvestments, isLoggedIn]);
+
+  useEffect(() => {
+    if (projectId) fetchAll(projectId);
+  }, [projectId, fetchAll]);
 
   const handlePostComment = async () => {
-    if (!commentBody.trim()) return;
+    if (!commentBody.trim() || !projectId) return;
     setIsPosting(true);
     try {
-      await createThread(Number(id), commentBody.trim(), isOwner);
+      await createThread(projectId, commentBody.trim(), isOwner);
       setCommentBody('');
       toast.success('โพสต์ความคิดเห็นสำเร็จ');
     } catch {
@@ -161,7 +163,7 @@ function ProjectDetail() {
       if (result.isConfirmed) navigate('/booster/profile?tab=verify');
       return;
     }
-    navigate(`/projects/${id}/invest`);
+    navigate(`/projects/${slug}/invest`);
   };
 
   const tabs = [
@@ -323,7 +325,7 @@ function ProjectDetail() {
                                 </div>
                               </div>
                               <div className="flex justify-end">
-                                <Link to={`/projects/${id}/milestones`} className="text-[12px] text-primary hover:text-primary/70 transition-colors font-medium">
+                                <Link to={`/projects/${slug}/milestones`} className="text-[12px] text-primary hover:text-primary/70 transition-colors font-medium">
                                   ดูรายละเอียดเพิ่มเติม →
                                 </Link>
                               </div>
@@ -332,7 +334,7 @@ function ProjectDetail() {
                         );
                       })}
                       <div className="flex justify-center mt-4">
-                        <Link to={`/projects/${id}/milestones`} className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/5 text-primary rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors border border-primary/20">
+                        <Link to={`/projects/${slug}/milestones`} className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/5 text-primary rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors border border-primary/20">
                           ดูแผนงาน Milestone ทั้งหมด →
                         </Link>
                       </div>
@@ -350,7 +352,7 @@ function ProjectDetail() {
                     updates={updates}
                     creatorName={project?.owner_profile ? `${project.owner_profile.first_name} ${project.owner_profile.last_name}`.trim() : undefined}
                     creatorAvatar={project?.owner_profile?.picture || undefined}
-                    projectId={Number(id)}
+                    projectId={projectId ?? 0}
                     hasInvested={hasInvested}
                     isOwner={isOwner}
                   />

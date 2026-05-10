@@ -115,7 +115,7 @@ const DetailModal = ({
                                     onClick={() => {
                                         const target = complaint.project?.state === 'pending_review'
                                             ? `/admin/projects/${complaint.project_id}`
-                                            : `/projects/${complaint.project_id}`;
+                                            : `/projects/${(complaint.project as { slug?: string })?.slug || complaint.project_id}`;
                                         navigate(target);
                                     }}
                                     className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 mt-0.5"

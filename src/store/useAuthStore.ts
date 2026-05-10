@@ -87,6 +87,13 @@ interface AuthStore {
     resetPassword: (token: string, new_password: string) => Promise<boolean>;
 }
 
+// เมื่อ refresh token หมดอายุ api.ts จะ dispatch event นี้
+if (typeof window !== 'undefined') {
+    window.addEventListener('auth:logout', () => {
+        useAuthStore.getState().logout()
+    })
+}
+
 export const useAuthStore = create<AuthStore>((set) => ({
     authUser: null,
     isCheckingAuth: true,
