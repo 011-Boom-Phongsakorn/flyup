@@ -26,11 +26,18 @@ const Profits = () => {
     const [isLoading, setIsLoading] = useState(false)
 
     useEffect(() => {
-        setIsLoading(true)
-        api.get('/me/profit-payouts')
-            .then(res => setItems(res.data?.data ?? []))
-            .catch(() => {})
-            .finally(() => setIsLoading(false))
+        let cancelled = false
+        async function load() {
+            setIsLoading(true)
+            try {
+                const res = await api.get('/me/profit-payouts')
+                if (!cancelled) setItems(res.data?.data ?? [])
+            } catch { /* ignore */ } finally {
+                if (!cancelled) setIsLoading(false)
+            }
+        }
+        load()
+        return () => { cancelled = true }
     }, [])
 
     const totalProfit = items
