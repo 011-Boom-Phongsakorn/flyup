@@ -9,16 +9,15 @@ interface MeetingFormFieldsProps {
   milestones: MilestoneOption[];
   milestonesLoading: boolean;
   milestoneDisabled?: boolean;
-  maxDate?: string;
 }
 
 export default function MeetingFormFields({
-  values, setField, milestones, milestonesLoading, milestoneDisabled, maxDate,
+  values, setField, milestones, milestonesLoading, milestoneDisabled,
 }: MeetingFormFieldsProps) {
   const { milestoneId, date, time, meetingType, meetingUrl, location, agenda } = values;
   const selectedMilestone = milestones.find(m => String(m.id) === String(milestoneId));
   const maxDate = selectedMilestone?.due_date
-    ? selectedMilestone.due_date.slice(0, 10)
+    ? new Date(selectedMilestone.due_date).toISOString().split('T')[0]
     : undefined;
 
   return (
@@ -49,30 +48,17 @@ export default function MeetingFormFields({
       </div>
 
       {/* Date + Time */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[13px] font-medium text-foreground flex items-center gap-1.5">
-            <Calendar size={14} className="text-muted-foreground" /> วันที่ <span className="text-error">*</span>
-          </label>
-          <input
-            type="date"
-            value={date}
-            onChange={e => setField('date', e.target.value)}
-            max={maxDate}
-            className="border border-border rounded-[8px] px-3 py-2.5 text-[14px] outline-none focus:border-primary transition-colors"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[13px] font-medium text-foreground flex items-center gap-1.5">
-            <Clock size={14} className="text-muted-foreground" /> เวลา <span className="text-error">*</span>
-          </label>
-          <input
-            type="time"
-            value={time}
-            onChange={e => setField('time', e.target.value)}
-            className="border border-border rounded-[8px] px-3 py-2.5 text-[14px] outline-none focus:border-primary transition-colors"
-          />
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[13px] font-medium text-foreground">
+          วันที่และเวลา <span className="text-error">*</span>
+        </label>
+        <DateTimePicker
+          date={date}
+          time={time}
+          onDateChange={v => setField('date', v)}
+          onTimeChange={v => setField('time', v)}
+          maxDate={maxDate}
+        />
       </div>
 
       {/* Meeting Type */}

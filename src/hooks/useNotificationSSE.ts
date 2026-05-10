@@ -5,6 +5,8 @@ import { useBoosterStore } from '../store/useBoosterStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePublicProjectStore } from '../store/usePublicProjectStore'
 import { useAdminBadgeStore } from '../store/useAdminBadgeStore'
+import { useAdminStore } from '../store/useAdminStore'
+import { useMilestoneStore } from '../store/useMilestoneStore'
 
 const useNotificationSSE = () => {
     const { authUser, checkAuth } = useAuthStore()
