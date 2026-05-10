@@ -1,4 +1,4 @@
-export type MeetingType = 'online' | 'onsite' | 'hybrid';
+﻿export type MeetingType = 'online' | 'onsite' | 'hybrid';
 export type MeetingStatus = 'open' | 'closed' | 'cancelled';
 export type FilterMode = 'upcoming' | 'past' | 'all';
 
@@ -22,7 +22,7 @@ export interface MilestoneOption {
   status: string;
   project_id: number;
   project_title: string;
-  due_date?: string | null; // YYYY-MM-DD
+  due_date?: string;
 }
 
 export interface CreateMeetingPayload {

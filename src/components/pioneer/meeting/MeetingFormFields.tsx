@@ -17,7 +17,7 @@ export default function MeetingFormFields({
   const { milestoneId, date, time, meetingType, meetingUrl, location, agenda } = values;
   const selectedMilestone = milestones.find(m => String(m.id) === String(milestoneId));
   const maxDate = selectedMilestone?.due_date
-    ? selectedMilestone.due_date.slice(0, 10)
+    ? new Date(selectedMilestone.due_date).toISOString().split('T')[0]
     : undefined;
 
   return (
@@ -59,11 +59,6 @@ export default function MeetingFormFields({
           onTimeChange={v => setField('time', v)}
           maxDate={maxDate}
         />
-        {maxDate && (
-          <p className="text-[12px] text-muted-foreground">
-            นัดประชุมได้ถึง {new Date(maxDate + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} ตาม deadline ของ milestone
-          </p>
-        )}
       </div>
 
       {/* Meeting Type */}

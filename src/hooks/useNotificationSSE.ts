@@ -1,12 +1,12 @@
-import { useCallback, useEffect } from 'react'
+﻿import { useCallback, useEffect } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useNotificationStore, type Notification } from '../store/useNotificationStore'
 import { useBoosterStore } from '../store/useBoosterStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePublicProjectStore } from '../store/usePublicProjectStore'
+import { useAdminBadgeStore } from '../store/useAdminBadgeStore'
 import { useAdminStore } from '../store/useAdminStore'
 import { useMilestoneStore } from '../store/useMilestoneStore'
-import { useAdminBadgeStore } from '../store/useAdminBadgeStore'
 
 const useNotificationSSE = () => {
     const { authUser, checkAuth } = useAuthStore()
@@ -105,7 +105,9 @@ const useNotificationSSE = () => {
                 if (!notif?.id) return
                 addNotification(notif)
                 handleRefresh(notif)
-                useAdminBadgeStore.getState().fetchBadges()
+                if (authUser?.role === 'admin') {
+                    useAdminBadgeStore.getState().fetchBadges()
+                }
             } catch {
                 // ignore ping / non-JSON events
             }
