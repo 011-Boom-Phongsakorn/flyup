@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect } from 'react'
+import api from '../services/api'
 import { useAuthStore } from '../store/useAuthStore'
 import { useNotificationStore, type Notification } from '../store/useNotificationStore'
 import { useBoosterStore } from '../store/useBoosterStore'
@@ -101,9 +102,9 @@ const useNotificationSSE = () => {
         // Fetch a short-lived one-time SSE token (60s TTL, deleted on first use)
         // so the main JWT never appears in browser history or server logs
         api.post('/notifications/sse-token')
-            .then(res => {
+            .then((res: { data?: { token?: string } }) => {
                 if (cancelled) return
-                const sseToken: string = res.data?.token
+                const sseToken: string = res.data?.token ?? ''
                 if (!sseToken) return
 
                 const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream?sse_token=${encodeURIComponent(sseToken)}`

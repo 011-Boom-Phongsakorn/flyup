@@ -135,7 +135,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     login: async (data) => {
         set({ isLoggingIn: true })
         try {
-            const res = await api.post('/signin', data)
+            await api.post('/signin', data)
             // cookie set by backend — just fetch user profile
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
