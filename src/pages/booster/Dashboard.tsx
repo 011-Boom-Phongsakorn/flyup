@@ -5,7 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import {
-  TrendingUp, Wallet, FolderOpen, ChevronRight, Loader2, ArrowRight, X,
+  TrendingUp, Wallet, FolderOpen, Loader2, ArrowRight, X,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useBoosterStore } from '../../store/useBoosterStore'
@@ -13,13 +13,6 @@ import api from '../../services/api'
 
 const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
-const STATUS_LABEL: Record<string, string> = {
-  verified: 'ยืนยันแล้ว',
-  pending_payment: 'รอชำระ',
-  refund_pending: 'รอคืนเงิน',
-  refunded: 'คืนเงินแล้ว',
-  rejected: 'ปฏิเสธ',
-}
 
 const PIE_COLORS = ['#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6']
 
@@ -94,12 +87,7 @@ const BoosterDashboard = () => {
     return { month: MONTHS_TH[m], amount }
   })
 
-  // recent 5 investments
-  const recent = [...investments]
-    .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
-    .slice(0, 5)
-
-  const toggleProject = (name: string) =>
+const toggleProject = (name: string) =>
     setSelectedProject(prev => prev === name ? null : name)
 
   if (isLoading) {
