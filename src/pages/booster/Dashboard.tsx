@@ -9,14 +9,11 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useBoosterStore } from '../../store/useBoosterStore'
-import api from '../../services/api'
+import { useBoosterProfitStore } from '../../store/useBoosterProfitStore'
 
 const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
-
 const PIE_COLORS = ['#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6']
-
-interface ProfitItem { status: string; amount: number; project_id: number; project_title: string }
 
 function fmtBaht(v: number) {
   return `฿${v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -24,17 +21,12 @@ function fmtBaht(v: number) {
 
 const BoosterDashboard = () => {
   const { investments, isLoading, fetchMyInvestments } = useBoosterStore()
-  const [profitItems, setProfitItems] = useState<ProfitItem[]>([])
+  const { items: profitItems, totalConfirmed: totalProfit, fetchProfitPayouts } = useBoosterProfitStore()
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
   const [invTab, setInvTab] = useState('recent')
 
   useEffect(() => { fetchMyInvestments() }, [fetchMyInvestments])
-
-  useEffect(() => {
-    api.get('/me/profit-payouts')
-      .then(res => setProfitItems(res.data?.data ?? []))
-      .catch(() => {})
-  }, [])
+  useEffect(() => { fetchProfitPayouts() }, [fetchProfitPayouts])
 
   const active = useMemo(
     () => investments.filter(inv => inv.status === 'verified'),
@@ -72,7 +64,9 @@ const BoosterDashboard = () => {
   // stats
   const totalInvested = filteredActive.reduce((s, inv) => s + (inv.amount ?? 0), 0)
   const projectCount  = new Set(filteredActive.map(inv => inv.project_id)).size
-  const totalProfit   = filteredProfit.filter(p => p.status === 'confirmed').reduce((s, p) => s + p.amount, 0)
+  const displayProfit = selectedProject
+    ? filteredProfit.filter(p => p.status === 'confirmed').reduce((s, p) => s + p.amount, 0)
+    : totalProfit
 
   // monthly investment area chart
   const now = new Date()
@@ -170,7 +164,7 @@ const toggleProject = (name: string) =>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-[26px] font-bold text-foreground">{fmtBaht(totalProfit)}</p>
+              <p className="text-[26px] font-bold text-foreground">{fmtBaht(displayProfit)}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">ดูรายละเอียด →</p>
             </CardContent>
           </Card>

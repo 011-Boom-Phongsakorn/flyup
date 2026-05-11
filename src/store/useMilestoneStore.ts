@@ -22,12 +22,22 @@ const mapBackendStatus = (s: string | undefined): MilestoneStatus => {
   }
 }
 
+export interface MeetingBrief {
+  id: number
+  milestone_id: number
+  date: string
+  time: string
+  status: string
+}
+
 interface MilestoneStore {
   milestones: MilestoneData[]
   projectTitle: string
+  meetingsByMilestone: Record<number, MeetingBrief[]>
   isLoading: boolean
   isSubmitting: boolean
-  fetchMilestones: (projectId: string) => Promise<number | null> // returns index of first active phase
+  fetchMilestones: (projectId: string) => Promise<number | null>
+  fetchMeetings: (projectId: string) => Promise<void>
   submitEvidence: (
     milestoneId: number,
     projectId: string,
@@ -43,9 +53,23 @@ interface MilestoneStore {
 export const useMilestoneStore = create<MilestoneStore>((set) => ({
   milestones: [],
   projectTitle: '',
+  meetingsByMilestone: {},
   isLoading: false,
   isSubmitting: false,
   isOpeningVoting: false,
+
+  fetchMeetings: async (projectId) => {
+    try {
+      const res = await api.get(`/me/projects/${projectId}/meetings`, { params: { filter: 'all' } })
+      const meetings: MeetingBrief[] = res.data?.data ?? []
+      const byMilestone: Record<number, MeetingBrief[]> = {}
+      meetings.forEach(m => {
+        if (!byMilestone[m.milestone_id]) byMilestone[m.milestone_id] = []
+        byMilestone[m.milestone_id].push(m)
+      })
+      set({ meetingsByMilestone: byMilestone })
+    } catch { /* ignore */ }
+  },
 
   fetchMilestones: async (projectId) => {
     set({ isLoading: true })
