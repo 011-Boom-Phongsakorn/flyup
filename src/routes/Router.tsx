@@ -111,10 +111,13 @@ const Router = () => {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
-        const token = params.get('token')
+        const accessToken = params.get('access_token')
+        // backward compat: รองรับ ?token=1 เดิม + ?access_token=<jwt> ใหม่
+        const legacyFlag = params.get('token')
         const isVerifyPage = window.location.pathname === '/verify'
-        if (token && !isVerifyPage) {
-            loginWithGoogleToken()
+        if ((accessToken || legacyFlag) && !isVerifyPage) {
+            loginWithGoogleToken(accessToken ?? undefined)
+            params.delete('access_token')
             params.delete('token')
             const newSearch = params.toString()
             window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)

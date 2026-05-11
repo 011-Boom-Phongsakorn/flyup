@@ -45,7 +45,8 @@ export const fmtDate = (d: Date | null) => {
 }
 
 export const fmtDateRange = (start: Date | null, end: Date | null, duration: number) => {
-  if (start && end) return `${fmtDate(start)} – ${fmtDate(end)}`
+  if (start && end) return `${fmtDate(start)} – ${fmtDate(end)} (${duration} วัน)`
+  if (end) return `ถึง ${fmtDate(end)} (${duration} วัน)`
   if (duration > 0) return `ระยะ ${duration} วัน`
   return ''
 }

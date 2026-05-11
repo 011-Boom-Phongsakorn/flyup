@@ -57,7 +57,8 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
 
       const proj = projRes.data?.data ?? {}
       const fundingGoal: number = proj.funding_goal ?? 0
-      const baseDate: Date | null = proj.funded_at ? new Date(proj.funded_at) : null
+      const baseDateStr: string | null = proj.funded_at ?? proj.funding_at ?? null
+      const baseDate: Date | null = baseDateStr ? new Date(baseDateStr) : null
 
       const raw: {
         id?: number
@@ -65,6 +66,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
         title?: string
         description?: string
         duration?: number
+        due_date?: string | null
         funding_goal?: number
         acceptance_criteria?: string
         status?: MilestoneStatus
@@ -85,7 +87,10 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
             .filter(m => (m.phase_no ?? 0) < i + 1)
             .reduce((sum, m) => sum + (m.duration ?? 0), 0)
           startDate = addDays(baseDate, prevDays)
-          endDate = addDays(startDate, duration - 1)
+          endDate = addDays(startDate, duration)
+        } else if (bm.due_date) {
+          endDate = new Date(bm.due_date)
+          if (duration > 0) startDate = addDays(endDate, -duration)
         }
 
         return {

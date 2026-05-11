@@ -1,7 +1,8 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import {
     Loader2, TrendingUp, CheckCircle2, Clock, Lock, X,
-    Plus, Building2, SendHorizonal, Landmark, Copy, ChevronRight, ChevronLeft,
+    Plus, Building2, SendHorizonal, Landmark, Copy, ChevronLeft,
+    ImagePlus, XCircle,
 } from 'lucide-react'
 import { usePioneerProfitStore, type PioneerProfitItem } from '../../store/usePioneerProfitStore'
 import toast from 'react-hot-toast'
@@ -82,18 +83,40 @@ function SubmitProfitModal({
     const eligible = projects.filter(p =>
         (p.state === 'executing' || p.state === 'closed') && p.allMilestonesPaid === true
     )
-    const [projectId, setProjectId]   = useState<number | ''>(eligible[0]?.id ?? '')
-    const [quarterNo, setQuarterNo]   = useState<number | ''>('')
-    const [amount, setAmount]         = useState('')
+    const [projectId, setProjectId]     = useState<number | ''>(eligible[0]?.id ?? '')
+    const [quarterNo, setQuarterNo]     = useState<number | ''>('')
+    const [amount, setAmount]           = useState('')
     const [transferRef, setTransferRef] = useState('')
+    const [slipImage, setSlipImage]     = useState<string>('')
+    const [slipPreview, setSlipPreview] = useState<string>('')
+    const [isUploading, setIsUploading] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const submittedQs  = projectId ? (submittedMap[Number(projectId)] ?? []) : []
     const hasAvailable = [1, 2, 3, 4].some(q => isQuarterAvailable(q, submittedQs))
     const valid = projectId && quarterNo && Number(amount) > 0 && transferRef.trim()
 
+    const handleSlipChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setSlipPreview(URL.createObjectURL(file))
+        setIsUploading(true)
+        try {
+            const fd = new FormData()
+            fd.append('file', file)
+            const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+            setSlipImage(res.data?.data?.url ?? '')
+        } catch {
+            toast.error('อัปโหลดสลิปไม่สำเร็จ')
+            setSlipPreview('')
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
     const handleSubmit = async () => {
         if (!projectId || !quarterNo) return
-        const ok = await submitProfit(Number(projectId), Number(quarterNo), Number(amount), transferRef.trim())
+        const ok = await submitProfit(Number(projectId), Number(quarterNo), Number(amount), transferRef.trim(), slipImage || undefined)
         if (ok) { onSubmitted(); onClose() }
     }
 
@@ -171,6 +194,36 @@ function SubmitProfitModal({
                                 placeholder="เช่น TXN-20260630-001"
                                 className="border border-border rounded-lg px-3 py-2 text-[14px] outline-none focus:border-primary" />
                         </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[13px] font-medium">สลิปการโอน</label>
+                            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleSlipChange} />
+                            {slipPreview ? (
+                                <div className="relative w-full rounded-xl overflow-hidden border border-border">
+                                    <img src={slipPreview} alt="slip" className="w-full max-h-45 object-contain bg-gray-50" />
+                                    {isUploading && (
+                                        <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                                            <Loader2 size={20} className="animate-spin text-primary" />
+                                        </div>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => { setSlipPreview(''); setSlipImage(''); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                                        className="absolute top-2 right-2 bg-white rounded-full shadow p-0.5 hover:bg-red-50 cursor-pointer"
+                                    >
+                                        <XCircle size={18} className="text-red-500" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="flex items-center justify-center gap-2 border border-dashed border-border rounded-xl py-4 text-[13px] text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                                >
+                                    <ImagePlus size={16} /> แนบสลิปการโอน
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -218,35 +271,6 @@ function QuarterSlot({ q, pool, prevSubmitted }: { q: number; pool?: PioneerProf
             <span className="text-[11px] font-bold text-muted-foreground">Q{q}</span>
             <span className="text-[10px] text-muted-foreground">ยังไม่ได้แจ้ง</span>
         </div>
-    )
-}
-
-// ── Project summary card (list view) ─────────────────────────────────────────
-
-function ProjectCard({
-    title, pools, onClick,
-}: { title: string; pools: PioneerProfitItem[]; onClick: () => void }) {
-    const totalSent = pools.reduce((s, p) => s + p.total_amount, 0)
-    const doneCount = pools.filter(p => p.status === 'completed').length
-
-    return (
-        <button
-            onClick={onClick}
-            className="w-full text-left bg-white border border-border rounded-2xl p-5 flex items-center gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer"
-        >
-            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Building2 size={18} className="text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="font-bold text-[15px] text-foreground leading-tight truncate">{title}</p>
-                <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="text-xs text-muted-foreground">{pools.length}/4 ไตรมาส</span>
-                    {totalSent > 0 && <span className="text-xs font-medium text-primary">โอนแล้ว {fmtBaht(totalSent)}</span>}
-                    {doneCount > 0 && <span className="text-xs text-emerald-600">✓ {doneCount} ไตรมาสเสร็จแล้ว</span>}
-                </div>
-            </div>
-            <ChevronRight size={16} className="text-muted-foreground shrink-0" />
-        </button>
     )
 }
 
@@ -435,7 +459,7 @@ const PioneerProfitPage = () => {
                 </div>
             </div>
 
-            {grouped.length === 0 ? (
+            {pools.length === 0 ? (
                 <div className="bg-white border border-border rounded-2xl p-12 flex flex-col items-center gap-3 text-center shadow-sm">
                     <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
                         <TrendingUp size={24} className="text-muted-foreground" />
@@ -446,10 +470,63 @@ const PioneerProfitPage = () => {
                     </p>
                 </div>
             ) : (
-                <div className="flex flex-col gap-3">
-                    {grouped.map(g => (
-                        <ProjectCard key={g.id} title={g.title} pools={g.items} onClick={() => setSelectedId(g.id)} />
-                    ))}
+                <div className="bg-white border border-border rounded-2xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[13px]">
+                            <thead>
+                                <tr className="border-b border-border bg-gray-50/70">
+                                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground whitespace-nowrap">โปรเจกต์</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground whitespace-nowrap">ไตรมาส</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground whitespace-nowrap">ยอดโอนรวม</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground whitespace-nowrap">แจ้งล่าสุด</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground whitespace-nowrap">สถานะ</th>
+                                    <th className="px-4 py-3" />
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {grouped.map((g, idx) => {
+                                    const totalAmt  = g.items.reduce((s, p) => s + p.total_amount, 0)
+                                    const doneCount = g.items.filter(p => p.status === 'completed').length
+                                    const allDone   = doneCount === g.items.length && g.items.length > 0
+                                    const latest    = [...g.items].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+                                    return (
+                                        <tr key={g.id} className={`border-b border-border last:border-0 hover:bg-gray-50/50 transition-colors ${idx % 2 !== 0 ? 'bg-gray-50/30' : ''}`}>
+                                            <td className="px-4 py-3.5 font-semibold text-foreground">{g.title}</td>
+                                            <td className="px-4 py-3.5">
+                                                <span className="font-bold text-foreground">{g.items.length}/4</span>
+                                            </td>
+                                            <td className="px-4 py-3.5 font-semibold text-foreground whitespace-nowrap">{fmtBaht(totalAmt)}</td>
+                                            <td className="px-4 py-3.5 text-muted-foreground whitespace-nowrap">{latest ? fmtDate(latest.created_at) : '—'}</td>
+                                            <td className="px-4 py-3.5">
+                                                <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap ${
+                                                    allDone
+                                                        ? 'bg-green-50 text-green-700 border-green-200'
+                                                        : g.items.length === 4
+                                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                }`}>
+                                                    {allDone
+                                                        ? <><CheckCircle2 size={11} /> ครบทุกไตรมาส</>
+                                                        : g.items.length === 4
+                                                        ? <><Clock size={11} /> รอยืนยัน</>
+                                                        : <><Clock size={11} /> ส่งแล้ว {g.items.length}/4 ไตรมาส</>
+                                                    }
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3.5 text-right">
+                                                <button
+                                                    onClick={() => setSelectedId(g.id)}
+                                                    className="text-[12px] text-primary hover:text-primary/70 font-medium whitespace-nowrap cursor-pointer transition-colors"
+                                                >
+                                                    ดูรายละเอียด →
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 

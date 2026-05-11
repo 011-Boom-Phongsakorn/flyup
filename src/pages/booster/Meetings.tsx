@@ -34,6 +34,8 @@ const TYPE_LABEL: Record<string, string> = { online: 'ออนไลน์', on
 
 // ─── Meeting Card ─────────────────────────────────────────────────────────────
 
+const MEETING_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours after start time
+
 function MeetingCard({ meeting }: { meeting: BoosterMeeting }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -42,7 +44,9 @@ function MeetingCard({ meeting }: { meeting: BoosterMeeting }) {
   const isOpen      = meeting.status === 'open';
 
   const meetingDatetime = getMeetingDatetime(meeting.date, meeting.time);
-  const isUpcoming = isOpen && (!meetingDatetime || meetingDatetime > new Date());
+  const now = new Date();
+  const isOngoing  = isOpen && !!meetingDatetime && meetingDatetime <= now && now < new Date(meetingDatetime.getTime() + MEETING_WINDOW_MS);
+  const isUpcoming = isOpen && (!meetingDatetime || meetingDatetime > now);
 
   const projectTitle = meeting.project?.title || 'โปรเจกต์';
   const phaseLabel   = meeting.milestone
@@ -80,6 +84,16 @@ function MeetingCard({ meeting }: { meeting: BoosterMeeting }) {
             <span className="text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-full">ยกเลิก</span>
           ) : isClosed ? (
             <span className="text-xs font-medium text-muted-foreground border border-border px-3 py-1.5 rounded-full">ปิดแล้ว</span>
+          ) : isOngoing ? (
+            <>
+              <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full animate-pulse hidden sm:inline-block">กำลังประชุม</span>
+              {meeting.link && (
+                <a href={meeting.link} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity">
+                  <Video size={14} /> เข้าร่วม
+                </a>
+              )}
+            </>
           ) : isUpcoming ? (
             <>
               <span className="text-xs font-medium text-primary bg-primary/5 border border-primary/20 px-3 py-1.5 rounded-full hidden sm:inline-block">กำลังจะถึง</span>
@@ -144,7 +158,7 @@ function MeetingCard({ meeting }: { meeting: BoosterMeeting }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const Meetings = () => {
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
+  const [filter, setFilter] = useState<'all' | 'upcoming' | 'ongoing' | 'past'>('upcoming');
   const { boosterMeetings, fetchBoosterMeetings } = useBoosterStore();
 
   useEffect(() => { fetchBoosterMeetings(); }, [fetchBoosterMeetings]);
@@ -156,9 +170,12 @@ const Meetings = () => {
       const isClosed    = m.status === 'closed';
       const isOpen      = m.status === 'open';
       const dt = getMeetingDatetime(m.date, m.time);
-      const upcoming = isOpen && (!dt || dt > new Date());
+      const now = new Date();
+      const ongoing  = isOpen && !!dt && dt <= now && now < new Date(dt.getTime() + MEETING_WINDOW_MS);
+      const upcoming = isOpen && (!dt || dt > now);
+      if (filter === 'ongoing')  return ongoing;
       if (filter === 'upcoming') return upcoming && !isCancelled;
-      if (filter === 'past')    return isClosed || isCancelled || (!upcoming && !isOpen);
+      if (filter === 'past')     return isClosed || isCancelled || (!upcoming && !ongoing && isOpen);
       return true;
     }),
     [boosterMeetings, filter]
@@ -180,6 +197,7 @@ const Meetings = () => {
           <select value={filter} onChange={e => setFilter(e.target.value as typeof filter)}
             className="text-sm bg-background border border-border rounded-lg px-2 py-1 outline-none focus:border-primary cursor-pointer">
             <option value="upcoming">กำลังจะถึง</option>
+            <option value="ongoing">กำลังประชุม</option>
             <option value="past">ที่ผ่านมา</option>
             <option value="all">ทั้งหมด</option>
           </select>

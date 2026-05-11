@@ -64,14 +64,17 @@ const Investment = () => {
   const pollingRef = useRef<number | null>(null);
 
   const { authUser } = useAuthStore();
-  const { currentPublicProject, fetchPublicProjectBySlug } = usePublicProjectStore();
+  const { currentPublicProject, fetchPublicProjectBySlug, fetchPublicProjectById } = usePublicProjectStore();
   const { createInvestment, getInvestmentById, isSubmitting, investmentData, clearInvestmentData } = useInvestmentStore();
 
   const project = currentPublicProject;
 
   useEffect(() => {
-    if (slug) fetchPublicProjectBySlug(slug);
-  }, [slug, fetchPublicProjectBySlug]);
+    if (slug) {
+      if (/^\d+$/.test(slug)) fetchPublicProjectById(Number(slug));
+      else fetchPublicProjectBySlug(slug);
+    }
+  }, [slug, fetchPublicProjectBySlug, fetchPublicProjectById]);
 
   // Guard: ต้องยืนยันตัวตน / ไม่ใช่เจ้าของ / ไม่ใช่ admin
   useEffect(() => {

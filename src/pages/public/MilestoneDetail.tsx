@@ -416,14 +416,15 @@ function MilestoneCard({
 export default function MilestoneDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { currentPublicProject, isDetailLoading, fetchPublicProjectBySlug } = usePublicProjectStore();
+  const { currentPublicProject, isDetailLoading, fetchPublicProjectBySlug, fetchPublicProjectById } = usePublicProjectStore();
 
   useEffect(() => {
     if (slug) {
-      fetchPublicProjectBySlug(slug);
+      if (/^\d+$/.test(slug)) fetchPublicProjectById(Number(slug));
+      else fetchPublicProjectBySlug(slug);
       window.scrollTo(0, 0);
     }
-  }, [slug, fetchPublicProjectBySlug]);
+  }, [slug, fetchPublicProjectBySlug, fetchPublicProjectById]);
 
   const project = currentPublicProject;
   const milestones = (project?.milestones ?? []).slice().sort((a, b) => a.phase_no - b.phase_no);
