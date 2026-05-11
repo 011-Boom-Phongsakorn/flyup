@@ -20,7 +20,7 @@ interface PioneerProfitStore {
     isLoading: boolean
     isSubmitting: boolean
     fetchPools: () => Promise<void>
-    submitProfit: (projectId: number, quarterNo: number, totalAmount: number, transferRef: string) => Promise<boolean>
+    submitProfit: (projectId: number, quarterNo: number, totalAmount: number, transferRef: string, slipImage?: string) => Promise<boolean>
 }
 
 export const usePioneerProfitStore = create<PioneerProfitStore>((set) => ({
@@ -40,13 +40,14 @@ export const usePioneerProfitStore = create<PioneerProfitStore>((set) => ({
         }
     },
 
-    submitProfit: async (projectId, quarterNo, totalAmount, transferRef) => {
+    submitProfit: async (projectId, quarterNo, totalAmount, transferRef, slipImage) => {
         set({ isSubmitting: true })
         try {
             await api.post(`/pioneer/profit-pools/${projectId}`, {
                 quarter_no: quarterNo,
                 total_amount: totalAmount,
                 transfer_ref: transferRef,
+                slip_image: slipImage ?? '',
             })
             toast.success(`แจ้งโอนกำไรไตรมาส ${quarterNo} เรียบร้อยแล้ว`)
             return true

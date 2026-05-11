@@ -360,11 +360,20 @@ function PoolDetailView({ pool, onBack }: { pool: ProfitPoolDetail; onBack: () =
     )
 }
 
+type FilterTab = 'all' | 'pending' | 'completed'
+
+const FILTER_TABS: { value: FilterTab; label: string }[] = [
+    { value: 'all',       label: 'ทั้งหมด' },
+    { value: 'pending',   label: 'รอดำเนินการ' },
+    { value: 'completed', label: 'เสร็จสิ้น' },
+]
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 const AdminProfitDistribution = () => {
     const { pools, isLoading, fetchPools, fetchDetail, detail } = useAdminProfitPoolStore()
     const [search, setSearch] = useState('')
+    const [filterTab, setFilterTab] = useState<FilterTab>('all')
     const [showCreate, setShowCreate] = useState(false)
     const [selectedPoolId, setSelectedPoolId] = useState<number | null>(null)
 
@@ -377,6 +386,7 @@ const AdminProfitDistribution = () => {
 
     const handleBack = () => {
         setSelectedPoolId(null)
+        fetchPools() // refresh list เมื่อกลับจาก detail
     }
 
     if (selectedPoolId !== null && detail) {
@@ -390,7 +400,9 @@ const AdminProfitDistribution = () => {
 
     const filtered = pools.filter((p) => {
         const q = search.toLowerCase()
-        return p.project_title.toLowerCase().includes(q) || p.pioneer_name.toLowerCase().includes(q)
+        const matchSearch = p.project_title.toLowerCase().includes(q) || p.pioneer_name.toLowerCase().includes(q)
+        const matchTab = filterTab === 'all' || p.status === filterTab
+        return matchSearch && matchTab
     })
 
     return (
@@ -405,7 +417,29 @@ const AdminProfitDistribution = () => {
                 </button>
             </div>
 
-            <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาโปรเจกต์หรือ Pioneer..." resultCount={filtered.length} />
+            <div className="flex items-center justify-between flex-wrap gap-3">
+                <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาโปรเจกต์หรือ Pioneer..." resultCount={filtered.length} />
+                <div className="inline-flex bg-muted rounded-[10px] p-1 gap-1 shrink-0">
+                    {FILTER_TABS.map(t => (
+                        <button
+                            key={t.value}
+                            onClick={() => setFilterTab(t.value)}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+                                filterTab === t.value
+                                    ? 'bg-white text-primary shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            {t.label}
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                filterTab === t.value ? 'bg-primary/10 text-primary' : 'bg-muted-foreground/10'
+                            }`}>
+                                {t.value === 'all' ? pools.length : pools.filter(p => p.status === t.value).length}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            </div>
 
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
                 <div className="grid grid-cols-[2fr_1fr_80px_1fr_1fr_100px_80px] bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">

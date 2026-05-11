@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import api from '../services/api'
+import api, { setStoredToken, clearStoredTokens } from '../services/api'
 import toast from 'react-hot-toast'
 import { AxiosError } from 'axios'
 
@@ -78,7 +78,7 @@ interface AuthStore {
     isSelectingRole: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
-    loginWithGoogleToken: () => void;
+    loginWithGoogleToken: (accessToken?: string) => void;
     logout: () => Promise<void>;
     selectRole: (role: 'pioneer' | 'booster') => Promise<boolean>;
     isSendingReset: boolean;
@@ -135,15 +135,16 @@ export const useAuthStore = create<AuthStore>((set) => ({
             set({ isRegistering: false })
         }
     },
-    loginWithGoogleToken: () => {
-        // cookie already set by backend during OAuth flow — just fetch user info
+    loginWithGoogleToken: (accessToken?: string) => {
+        if (accessToken) setStoredToken(accessToken);
         api.get('/user/me').then(res => set({ authUser: res.data?.data })).catch(() => {})
     },
     login: async (data) => {
         set({ isLoggingIn: true })
         try {
-            await api.post('/signin', data)
-            // cookie set by backend — just fetch user profile
+            const signinRes = await api.post('/signin', data)
+            const token: string | undefined = signinRes.data?.token
+            if (token) setStoredToken(token)
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
         } catch (error: unknown) {
@@ -168,10 +169,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
     },
     logout: async () => {
         try {
-            await api.post('/user/signout') // backend clears the HttpOnly cookie
+            await api.post('/user/signout')
         } catch {
             // ignore
         } finally {
+            clearStoredTokens()
             set({ authUser: null })
         }
     },

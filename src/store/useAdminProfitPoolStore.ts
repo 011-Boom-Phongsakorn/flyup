@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { toast } from 'react-hot-toast'
 import api from '../services/api'
+import { useAdminBadgeStore } from './useAdminBadgeStore'
 
 export interface BankAccount {
   bank_name: string
@@ -125,18 +126,28 @@ export const useAdminProfitPoolStore = create<AdminProfitPoolStore>((set) => ({
       })
       toast.success('ยืนยันการโอนกำไรสำเร็จ')
       set((state) => {
-        if (!state.detail) return {}
+        const updatedPayouts = (state.detail?.payouts ?? []).map((p) =>
+          p.id === payoutId
+            ? { ...p, status: 'confirmed' as const, transfer_ref: transferRef, admin_note: note, confirmed_at: new Date().toISOString() }
+            : p
+        )
+        const allConfirmed = updatedPayouts.length > 0 && updatedPayouts.every(p => p.status === 'confirmed')
+        const confirmedCount = updatedPayouts.filter(p => p.status === 'confirmed').length
         return {
-          detail: {
+          detail: state.detail ? {
             ...state.detail,
-            payouts: state.detail.payouts.map((p) =>
-              p.id === payoutId
-                ? { ...p, status: 'confirmed' as const, transfer_ref: transferRef, admin_note: note, confirmed_at: new Date().toISOString() }
-                : p
-            ),
-          },
+            payouts: updatedPayouts,
+            status: allConfirmed ? 'completed' : state.detail.status,
+          } : null,
+          pools: state.pools.map(pool =>
+            pool.id === poolId
+              ? { ...pool, confirmed_count: confirmedCount, status: allConfirmed ? 'completed' as const : pool.status }
+              : pool
+          ),
         }
       })
+      // refresh sidebar badge ทันที
+      useAdminBadgeStore.getState().fetchBadges()
       return true
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'ยืนยันการโอนไม่สำเร็จ'

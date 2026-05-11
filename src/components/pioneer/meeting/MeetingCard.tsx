@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Video, MapPin, ChevronDown, ExternalLink, CheckCircle, Pencil, Trash2, Ban,
 } from 'lucide-react';
-import { MEETING_TYPE_LABEL, type Meeting } from './types';
+import { MEETING_TYPE_LABEL, MEETING_WINDOW_MS, type Meeting } from './types';
 
 function formatDateThai(iso: string) {
   if (!iso) return '';
@@ -49,7 +49,9 @@ export default function MeetingCard({
       return combined
     } catch { return null }
   })()
-  const isUpcoming = isOpen && (!meetingDatetime || meetingDatetime > new Date())
+  const now = new Date()
+  const isOngoing  = isOpen && !!meetingDatetime && meetingDatetime <= now && now < new Date(meetingDatetime.getTime() + MEETING_WINDOW_MS)
+  const isUpcoming = isOpen && (!meetingDatetime || meetingDatetime > now)
   const canModify = isUpcoming;
 
   return (
@@ -76,10 +78,34 @@ export default function MeetingCard({
             <span className="text-xs font-medium text-error border border-error/30 bg-error/5 px-3 py-1.5 rounded-full">
               ยกเลิก
             </span>
-          ) : isClosed || (isOpen && !isUpcoming) ? (
+          ) : isClosed || (isOpen && !isUpcoming && !isOngoing) ? (
             <span className="text-xs font-medium text-muted-foreground border border-border px-3 py-1.5 rounded-full">
               เสร็จสิ้น
             </span>
+          ) : isOngoing ? (
+            <>
+              <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full animate-pulse hidden sm:inline-block">
+                กำลังประชุม
+              </span>
+              {meeting.link && (
+                <a
+                  href={meeting.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity"
+                >
+                  <Video size={13} /> เข้าร่วม
+                </a>
+              )}
+              {hasDetail && (
+                <button
+                  onClick={() => setExpanded(!expanded)}
+                  className={`p-2 rounded-lg hover:bg-muted transition-colors ${expanded ? 'text-primary' : 'text-muted-foreground'} cursor-pointer`}
+                >
+                  <ChevronDown size={16} className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+            </>
           ) : (
             <>
               <span className="text-xs font-medium text-primary bg-purple-50 border border-primary/20 px-3 py-1.5 rounded-full hidden sm:inline-block">

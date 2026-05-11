@@ -1,6 +1,8 @@
 ﻿export type MeetingType = 'online' | 'onsite' | 'hybrid';
 export type MeetingStatus = 'open' | 'closed' | 'cancelled';
-export type FilterMode = 'upcoming' | 'past' | 'all';
+export type FilterMode = 'upcoming' | 'ongoing' | 'past' | 'all';
+
+export const MEETING_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export interface Meeting {
   id: number;

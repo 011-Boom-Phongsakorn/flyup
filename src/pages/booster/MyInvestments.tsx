@@ -8,30 +8,92 @@ import { useBoosterStore, type BoosterInvestment } from '../../store/useBoosterS
 const PAGE_SIZE = 5;
 
 const statusConfig: Record<string, { label: string; color: string }> = {
-  pending:        { label: 'รอชำระเงิน',    color: 'bg-yellow-100 text-yellow-700' },
-  verified:       { label: 'กำลังระดมทุน',  color: 'bg-purple-100 text-purple-700' },
-  funding:        { label: 'กำลังระดมทุน',  color: 'bg-purple-100 text-purple-700' },
-  completed:      { label: 'รอดำเนินการ',   color: 'bg-blue-100 text-blue-700' },
-  paid:           { label: 'ดำเนินการแล้ว', color: 'bg-green-100 text-green-700' },
-  refund_pending: { label: 'รอคืนเงิน',     color: 'bg-orange-100 text-orange-700' },
-  refunded:       { label: 'คืนเงินแล้ว',   color: 'bg-orange-100 text-orange-700' },
-  cancelled:      { label: 'ยกเลิก',        color: 'bg-red-100 text-red-700' },
+  pending:        { label: 'รอชำระเงิน',      color: 'bg-yellow-100 text-yellow-700' },
+  refund_pending: { label: 'รอคืนเงิน',       color: 'bg-orange-100 text-orange-700' },
+  refunded:       { label: 'คืนเงินแล้ว',     color: 'bg-orange-100 text-orange-700' },
+  cancelled:      { label: 'ยกเลิก',          color: 'bg-red-100 text-red-700' },
+  rejected:       { label: 'ไม่ผ่าน',         color: 'bg-red-100 text-red-700' },
 };
+
+// สถานะที่ดูจาก project.state เมื่อ investment = verified
+const projectStateConfig: Record<string, { label: string; color: string }> = {
+  funding:        { label: 'กำลังระดมทุน',    color: 'bg-purple-100 text-purple-700' },
+  executing:      { label: 'กำลังดำเนินการ',  color: 'bg-blue-100 text-blue-700' },
+  closed:         { label: 'โปรเจกต์เสร็จสิ้น', color: 'bg-green-100 text-green-700' },
+  failed:         { label: 'ระดมทุนไม่สำเร็จ', color: 'bg-red-100 text-red-700' },
+};
+
+function getEffectiveStatus(inv: BoosterInvestment): { label: string; color: string } {
+  if (inv.status === 'verified') {
+    const projectState = inv.project?.state ?? 'funding';
+    return projectStateConfig[projectState] ?? { label: 'กำลังระดมทุน', color: 'bg-purple-100 text-purple-700' };
+  }
+  return statusConfig[inv.status] ?? { label: inv.status, color: 'bg-gray-100 text-gray-600' };
+}
 
 const TABS: { key: string; label: string }[] = [
   { key: 'all',           label: 'ทั้งหมด' },
   { key: 'pending',       label: 'รอชำระเงิน' },
   { key: 'funding',       label: 'กำลังระดมทุน' },
-  { key: 'paid',          label: 'ดำเนินการแล้ว' },
+  { key: 'executing',     label: 'กำลังดำเนินการ' },
+  { key: 'closed',        label: 'เสร็จสิ้น' },
   { key: 'refund_pending',label: 'รอคืนเงิน' },
   { key: 'refunded',      label: 'คืนเงินแล้ว' },
   { key: 'cancelled',     label: 'ยกเลิก' },
 ];
 
+// ─── Grouping ─────────────────────────────────────────────────────────────────
+
+interface GroupedInvestment {
+  project_id: number;
+  primary: BoosterInvestment;   // representative (most active)
+  all: BoosterInvestment[];
+  totalAmount: number;
+}
+
+// priority order: refund_pending > verified > pending > refunded > cancelled
+const STATUS_PRIORITY: Record<string, number> = {
+  refund_pending: 5, verified: 4, pending: 3, refunded: 2, cancelled: 1, rejected: 1,
+}
+
+function groupInvestments(invs: BoosterInvestment[]): GroupedInvestment[] {
+  const map = new Map<number, BoosterInvestment[]>()
+  invs.forEach(inv => {
+    if (!map.has(inv.project_id)) map.set(inv.project_id, [])
+    map.get(inv.project_id)!.push(inv)
+  })
+  return [...map.entries()].map(([project_id, list]) => {
+    const primary = [...list].sort((a, b) =>
+      (STATUS_PRIORITY[b.status] ?? 0) - (STATUS_PRIORITY[a.status] ?? 0)
+    )[0]
+    return {
+      project_id,
+      primary,
+      all: list,
+      totalAmount: list.reduce((s, i) => s + (i.amount ?? 0), 0),
+    }
+  })
+}
+
+function matchesTabGroup(g: GroupedInvestment, tab: string): boolean {
+  return matchesTab(g.primary, tab)
+}
+
+function matchesTab(inv: BoosterInvestment, tab: string): boolean {
+  if (tab === 'all') return true;
+  if (tab === 'pending') return inv.status === 'pending';
+  if (tab === 'refund_pending') return inv.status === 'refund_pending';
+  if (tab === 'refunded') return inv.status === 'refunded';
+  if (tab === 'cancelled') return inv.status === 'cancelled' || inv.status === 'rejected';
+  // tabs ที่ map จาก project.state
+  if (inv.status === 'verified') return (inv.project?.state ?? 'funding') === tab;
+  return false;
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: string }) {
-  const cfg = statusConfig[status] ?? { label: status, color: 'bg-gray-100 text-gray-600' };
+function StatusBadge({ inv }: { inv: BoosterInvestment }) {
+  const cfg = getEffectiveStatus(inv);
   return (
     <span className={`text-xs font-semibold px-3 py-1 rounded-full ${cfg.color}`}>
       {cfg.label}
@@ -39,7 +101,8 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function InvestmentRow({ inv }: { inv: BoosterInvestment }) {
+function InvestmentRow({ group }: { group: GroupedInvestment }) {
+  const inv = group.primary;
   const project = inv.project;
   const title = project?.title || '—';
   const coverImage =
@@ -52,9 +115,12 @@ function InvestmentRow({ inv }: { inv: BoosterInvestment }) {
       : 0;
   const milestoneCount = project?.milestones?.filter(m => m.status === 'completed').length ?? 0;
   const totalMilestones = project?.milestones?.length ?? 0;
-  const dateStr = new Date(inv.created_at).toLocaleDateString('th-TH', {
+  const latestDate = [...group.all]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+  const dateStr = new Date(latestDate.created_at).toLocaleDateString('th-TH', {
     day: 'numeric', month: 'short', year: 'numeric',
   });
+  const isMultiple = group.all.length > 1;
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -69,10 +135,15 @@ function InvestmentRow({ inv }: { inv: BoosterInvestment }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-1.5 flex-wrap">
           <h3 className="font-bold text-foreground text-base leading-tight">{title}</h3>
-          <StatusBadge status={inv.status} />
+          <StatusBadge inv={inv} />
+          {isMultiple && (
+            <span className="text-[11px] font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+              {group.all.length} รายการ
+            </span>
+          )}
         </div>
         <p className="text-sm text-muted-foreground mb-2">
-          ลงทุน ฿{inv.amount?.toLocaleString()} · {dateStr}
+          ลงทุน ฿{group.totalAmount.toLocaleString()} · {dateStr}
         </p>
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <span className="bg-muted px-2.5 py-1 rounded-full">
@@ -159,24 +230,22 @@ const MyInvestments = () => {
     };
   }, [investments]);
 
-  const filtered = useMemo(() => {
-    if (activeTab === 'all') return investments;
-    // group verified+funding under the 'funding' tab
-    if (activeTab === 'funding') return investments.filter(i => i.status === 'funding' || i.status === 'verified');
-    return investments.filter(i => i.status === activeTab);
-  }, [investments, activeTab]);
+  const groups = useMemo(() => groupInvestments(investments), [investments])
+
+  const filtered = useMemo(() =>
+    groups.filter(g => matchesTabGroup(g, activeTab)),
+    [groups, activeTab]
+  );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleTabChange = (key: string) => { setActiveTab(key); setPage(1); };
 
-  // hide tabs with 0 items (except 'all')
-  const visibleTabs = TABS.filter(t => {
-    if (t.key === 'all') return true;
-    if (t.key === 'funding') return investments.some(i => i.status === 'funding' || i.status === 'verified');
-    return investments.some(i => i.status === t.key);
-  });
+  const ALWAYS_SHOW = new Set(['all', 'funding', 'executing']);
+  const visibleTabs = TABS.filter(t =>
+    ALWAYS_SHOW.has(t.key) || groups.some(g => matchesTabGroup(g, t.key))
+  );
 
   if (isLoading) {
     return (
@@ -215,10 +284,8 @@ const MyInvestments = () => {
       <div className="flex items-center gap-2 flex-wrap mb-5">
         {visibleTabs.map(t => {
           const count = t.key === 'all'
-            ? investments.length
-            : t.key === 'funding'
-              ? investments.filter(i => i.status === 'funding' || i.status === 'verified').length
-              : investments.filter(i => i.status === t.key).length;
+            ? groups.length
+            : groups.filter(g => matchesTabGroup(g, t.key)).length;
           return (
             <button
               key={t.key}
@@ -243,7 +310,7 @@ const MyInvestments = () => {
       {/* List */}
       <div className="space-y-4">
         {paginated.length > 0 ? (
-          paginated.map(inv => <InvestmentRow key={inv.id} inv={inv} />)
+          paginated.map(g => <InvestmentRow key={g.project_id} group={g} />)
         ) : (
           <div className="text-center py-16 bg-card border border-border rounded-2xl">
             <Wallet size={32} className="mx-auto mb-3 text-muted-foreground" />

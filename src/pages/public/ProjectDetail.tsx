@@ -38,7 +38,7 @@ function ProjectDetail() {
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [showInvestorsModal, setShowInvestorsModal] = useState(false);
 
-  const { currentPublicProject, isDetailLoading, fetchPublicProjectBySlug } = usePublicProjectStore();
+  const { currentPublicProject, isDetailLoading, fetchPublicProjectBySlug, fetchPublicProjectById } = usePublicProjectStore();
   const { updates, threads, faqs, investorCount: actualInvestorCount, investors, fetchAll, createThread } = useProjectDetailStore();
   const { authUser } = useAuthStore();
   const { investments, fetchMyInvestments } = useBoosterStore();
@@ -57,11 +57,12 @@ function ProjectDetail() {
 
   useEffect(() => {
     if (slug) {
-      fetchPublicProjectBySlug(slug);
+      if (/^\d+$/.test(slug)) fetchPublicProjectById(Number(slug));
+      else fetchPublicProjectBySlug(slug);
       window.scrollTo(0, 0);
     }
     if (isLoggedIn) fetchMyInvestments();
-  }, [slug, fetchPublicProjectBySlug, fetchMyInvestments, isLoggedIn]);
+  }, [slug, fetchPublicProjectBySlug, fetchPublicProjectById, fetchMyInvestments, isLoggedIn]);
 
   useEffect(() => {
     if (projectId) fetchAll(projectId);
@@ -282,45 +283,79 @@ function ProjectDetail() {
                 )}
 
                 {/* ── Milestone Content ── */}
-                {activeTab === "milestone" && (
-                  hasMilestones ? (
-                    <div className="flex flex-col gap-[24px] mt-[20px] relative w-full">
-                      <div className="absolute left-[24px] top-[24px] bottom-[24px] w-[1px] bg-border z-0 hidden md:block" />
+                {activeTab === "milestone" && (() => {
+                  const getMilestoneStatus = (status: string) => {
+                    switch (status) {
+                      case 'paid':       return { label: 'จ่ายเงินแล้ว',      cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+                      case 'approved':   return { label: 'Admin อนุมัติแล้ว', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+                      case 'active':     return { label: 'กำลังดำเนินการ',    cls: 'bg-primary/5 text-primary border-primary/20' };
+                      case 'submitted':  return { label: 'ส่งงานแล้ว',        cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+                      case 'rejected':
+                      case 'failed':     return { label: 'ถูกปฏิเสธ',         cls: 'bg-red-50 text-red-600 border-red-200' };
+                      default:           return { label: 'รอดำเนินการ',        cls: 'bg-gray-50 text-gray-500 border-gray-200' };
+                    }
+                  };
+                  const isDone    = (s: string) => s === 'paid' || s === 'approved';
+                  const isCurrent = (s: string) => s === 'active' || s === 'submitted';
+
+                  return hasMilestones ? (
+                    <div className="flex flex-col mt-[20px] w-full">
                       {milestones.map((m, index) => {
                         const phaseNumber = m.phase_no || (index + 1);
                         const criteria = (m.acceptance_criteria ?? '').split('\n').filter((c: string) => c.trim());
+                        const done = isDone(m.status);
+                        const current = isCurrent(m.status);
+                        const st = getMilestoneStatus(m.status);
+                        const isLast = index === milestones.length - 1;
                         return (
-                          <div key={m.id || index} className="flex gap-[20px] relative z-10 w-full">
-                            <div className={`hidden md:flex shrink-0 w-[48px] h-[48px] rounded-full items-center justify-center font-bold text-[20px] shadow-sm ${index === 0 ? 'bg-primary text-white' : 'bg-white border border-border text-foreground'}`}>
-                              {phaseNumber}
+                          <div key={m.id || index} className="flex gap-[16px] relative w-full">
+                            {/* Left: circle + connector */}
+                            <div className="hidden md:flex flex-col items-center shrink-0">
+                              <div className={`w-[48px] h-[48px] rounded-2xl flex items-center justify-center font-bold text-[18px] shadow-sm transition-all z-10 ${
+                                done    ? 'bg-emerald-500 text-white shadow-emerald-200' :
+                                current ? 'bg-primary text-white shadow-primary/20 ring-4 ring-primary/10' :
+                                          'bg-white border-2 border-border text-gray-400'
+                              }`}>
+                                {done ? <CheckCircle2 size={22} /> : phaseNumber}
+                              </div>
+                              {!isLast && (
+                                <div className={`w-[2px] flex-1 min-h-[32px] mt-1 rounded-full ${done ? 'bg-emerald-300' : 'bg-border'}`} />
+                              )}
                             </div>
-                            <div className="flex-1 bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[20px]">
-                              <div className="flex flex-col xl:flex-row justify-between xl:items-start gap-[20px]">
-                                <div className="flex flex-col gap-[8px] flex-1 min-w-0">
-                                  <h3 className="text-[16px] font-bold text-foreground">Phase {phaseNumber}: {m.title}</h3>
-                                  {m.description && <p className="text-[14px] text-muted-foreground">{m.description}</p>}
+                            {/* Card */}
+                            <div className={`flex-1 mb-[20px] bg-white border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[16px] ${
+                              current ? 'border-primary/30 shadow-primary/5' :
+                              done    ? 'border-emerald-200' :
+                                        'border-border'
+                            }`}>
+                              <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-[12px]">
+                                <div className="flex flex-col gap-[6px] flex-1 min-w-0">
+                                  <div className="flex items-center gap-[8px] flex-wrap">
+                                    <h3 className="text-[15px] font-bold text-foreground">Phase {phaseNumber}: {m.title}</h3>
+                                    <span className={`px-[10px] py-[3px] rounded-full text-[11px] font-semibold border ${st.cls}`}>
+                                      {st.label}
+                                    </span>
+                                  </div>
+                                  {m.description && <p className="text-[13px] text-muted-foreground">{m.description}</p>}
                                   {m.duration && m.duration > 0 && (
                                     <p className="inline-flex items-center gap-[5px] text-[12px] text-muted-foreground">
-                                      <Calendar size={12} /> กำหนดส่ง: {m.duration} วัน
+                                      <Calendar size={12} /> ระยะเวลา {m.duration} วัน
                                     </p>
                                   )}
                                   {criteria.length > 0 && (
-                                    <div className="flex flex-col gap-[8px] mt-[8px]">
-                                      <span className="text-[12px] font-bold text-foreground">สิ่งที่ส่งมอบ:</span>
-                                      <div className="flex flex-wrap gap-[8px]">
+                                    <div className="flex flex-col gap-[6px] mt-[4px]">
+                                      <span className="text-[12px] font-semibold text-foreground">สิ่งที่ส่งมอบ:</span>
+                                      <div className="flex flex-wrap gap-[6px]">
                                         {criteria.map((c: string, i: number) => (
-                                          <span key={i} className="px-[12px] py-[4px] border border-border rounded-full text-[12px] text-foreground bg-white whitespace-nowrap">{c}</span>
+                                          <span key={i} className="px-[10px] py-[3px] border border-border rounded-full text-[12px] text-foreground bg-white whitespace-nowrap">{c}</span>
                                         ))}
                                       </div>
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex flex-row xl:flex-col items-center xl:items-end justify-between xl:justify-start gap-[12px] shrink-0">
-                                  <span className="text-[20px] font-bold text-primary">
+                                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-[8px] shrink-0">
+                                  <span className={`text-[18px] font-bold ${done ? 'text-emerald-600' : 'text-primary'}`}>
                                     {targetAmount > 0 ? `฿${((targetAmount * m.percent_release) / 100).toLocaleString()}` : `${m.percent_release}%`}
-                                  </span>
-                                  <span className={`px-[12px] py-[4px] rounded-full text-[12px] font-medium border ${m.status === 'completed' ? 'bg-primary text-white border-primary' : 'bg-white text-foreground border-border'}`}>
-                                    {m.status === 'completed' ? 'เสร็จสิ้น' : 'รอดำเนินการ'}
                                   </span>
                                 </div>
                               </div>
@@ -333,7 +368,7 @@ function ProjectDetail() {
                           </div>
                         );
                       })}
-                      <div className="flex justify-center mt-4">
+                      <div className="flex justify-center mt-2">
                         <Link to={`/projects/${slug}/milestones`} className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/5 text-primary rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors border border-primary/20">
                           ดูแผนงาน Milestone ทั้งหมด →
                         </Link>
@@ -343,8 +378,8 @@ function ProjectDetail() {
                     <div className="flex flex-col items-center justify-center gap-[12px] mt-[40px] p-[40px] border border-dashed border-border rounded-[16px] bg-white">
                       <span className="text-muted-foreground text-[14px]">ยังไม่ได้กำหนด Milestone</span>
                     </div>
-                  )
-                )}
+                  );
+                })()}
 
                 {/* ── Updates ── */}
                 {activeTab === "updates" && (

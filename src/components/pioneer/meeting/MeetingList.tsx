@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import MeetingCard from './MeetingCard';
 import type { FilterMode, Meeting, MilestoneOption } from './types';
+import { MEETING_WINDOW_MS } from './types';
 
 interface MeetingListProps {
   meetings: Meeting[];
@@ -15,6 +16,7 @@ interface MeetingListProps {
 const FILTER_TABS: { value: FilterMode; label: string }[] = [
   { value: 'all', label: 'ทั้งหมด' },
   { value: 'upcoming', label: 'กำลังจะถึง' },
+  { value: 'ongoing', label: 'กำลังประชุม' },
   { value: 'past', label: 'ผ่านมาแล้ว' },
 ];
 
@@ -27,6 +29,14 @@ function getMeetingDatetime(m: Meeting): Date | null {
       t.getUTCHours(), t.getUTCMinutes()
     ))
   } catch { return null }
+}
+
+function isOngoingMeeting(m: Meeting): boolean {
+  if (m.status !== 'open') return false
+  const dt = getMeetingDatetime(m)
+  if (!dt) return false
+  const now = new Date()
+  return dt <= now && now < new Date(dt.getTime() + MEETING_WINDOW_MS)
 }
 
 function isUpcomingMeeting(m: Meeting): boolean {
@@ -49,8 +59,9 @@ export default function MeetingList({ meetings, loading, filter, onFilterChange,
   };
 
   const filtered = meetings.filter(m => {
+    if (filter === 'ongoing')  return isOngoingMeeting(m)
     if (filter === 'upcoming') return isUpcomingMeeting(m)
-    if (filter === 'past') return !isUpcomingMeeting(m)
+    if (filter === 'past')     return !isUpcomingMeeting(m) && !isOngoingMeeting(m)
     return true
   })
 
