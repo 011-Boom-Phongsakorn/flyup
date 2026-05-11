@@ -36,18 +36,23 @@ const BoosterDashboard = () => {
       .catch(() => {})
   }, [])
 
-  const active = investments.filter(inv => inv.status === 'verified')
+  const active = useMemo(
+    () => investments.filter(inv => inv.status === 'verified'),
+    [investments]
+  )
 
   // portfolio by project (for pie + legend)
-  const portMap: Record<string, number> = {}
-  active.forEach(inv => {
-    const title = inv.project?.title ?? `Project ${inv.project_id}`
-    portMap[title] = (portMap[title] ?? 0) + (inv.amount ?? 0)
-  })
-  const portfolioData = Object.entries(portMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([name, value]) => ({ name, value }))
+  const portfolioData = useMemo(() => {
+    const portMap: Record<string, number> = {}
+    active.forEach(inv => {
+      const title = inv.project?.title ?? `Project ${inv.project_id}`
+      portMap[title] = (portMap[title] ?? 0) + (inv.amount ?? 0)
+    })
+    return Object.entries(portMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, value]) => ({ name, value }))
+  }, [active])
 
   // filtered data based on selectedProject
   const filteredActive = useMemo(() =>
