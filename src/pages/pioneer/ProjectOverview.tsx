@@ -2,9 +2,6 @@ import { useEffect, useState } from 'react';
 import { type LucideIcon, CircleCheckBig, Send } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router'
 import { useProjectStore, type Project } from '../../store/useProjectStore';
-import api from '../../services/api';
-import { AxiosError } from 'axios';
-import toast from 'react-hot-toast';
 
 interface StageItems {
   icon: LucideIcon;
@@ -49,7 +46,7 @@ const step: StageItems[] = [
 const ProjectOverview = () => {
   const { projectId } = useParams()
   const navigate = useNavigate()
-  const { currentProject, loadCurrentProject } = useProjectStore()
+  const { currentProject, loadCurrentProject, submitProject } = useProjectStore()
   const [showModal, setShowModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -60,21 +57,12 @@ const ProjectOverview = () => {
   const canSubmit = step.every(s => s.isComplete(currentProject, projectId))
 
   const handleSubmit = async () => {
+    if (!projectId) return
     setIsSubmitting(true)
-    try {
-      await api.patch(`/pioneer/projects/${projectId}/submit`)
-      navigate('/pioneer/dashboard/projects')
-    } catch (error) {
-      const msg = error instanceof AxiosError ? error.response?.data?.message : null;
-      if (msg === 'you already have an active project') {
-        toast.error('คุณมีโปรเจกต์ที่กำลังดำเนินอยู่แล้ว ไม่สามารถส่งโปรเจกต์ใหม่ได้ในขณะนี้');
-      } else {
-        toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
-      }
-    } finally {
-      setIsSubmitting(false)
-      setShowModal(false)
-    }
+    const ok = await submitProject(projectId)
+    setIsSubmitting(false)
+    setShowModal(false)
+    if (ok) navigate('/pioneer/dashboard/projects')
   }
 
   return (

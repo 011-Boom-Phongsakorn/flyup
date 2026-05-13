@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Copy, TrendingUp, Wallet, Eye, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Copy, TrendingUp, Wallet, Eye, Loader2 } from 'lucide-react';
+import Pagination from '../../components/shared/Pagination';
 import { useBoosterStore, type BoosterInvestment } from '../../store/useBoosterStore';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -172,43 +173,6 @@ function InvestmentRow({ group }: { group: GroupedInvestment }) {
           รายละเอียด
         </Link>
       </div>
-    </div>
-  );
-}
-
-function Pagination({
-  page, totalPages, onChange,
-}: { page: number; totalPages: number; onChange: (p: number) => void }) {
-  if (totalPages <= 1) return null;
-  return (
-    <div className="flex items-center justify-center gap-2 mt-6">
-      <button
-        onClick={() => onChange(page - 1)}
-        disabled={page === 1}
-        className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
-      >
-        <ChevronLeft size={16} />
-      </button>
-      {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-        <button
-          key={p}
-          onClick={() => onChange(p)}
-          className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-            p === page
-              ? 'bg-primary text-white'
-              : 'border border-border hover:bg-muted text-foreground'
-          }`}
-        >
-          {p}
-        </button>
-      ))}
-      <button
-        onClick={() => onChange(page + 1)}
-        disabled={page === totalPages}
-        className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-colors"
-      >
-        <ChevronRight size={16} />
-      </button>
     </div>
   );
 }

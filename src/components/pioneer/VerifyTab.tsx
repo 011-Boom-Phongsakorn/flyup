@@ -16,11 +16,12 @@ const THAI_BANKS = [
   "ธนาคารยูโอบี (UOB)",
 ];
 import { useAuthStore } from "../../store/useAuthStore";
+import { useProfileStore } from "../../store/useProfileStore";
 import toast from "react-hot-toast";
-import api from "../../services/api";
 
 const VerifyTab = () => {
   const { authUser, checkAuth } = useAuthStore();
+  const { uploadFile, patchProfile, submitStudentVerify, submitIdVerify, saveBankAccount } = useProfileStore();
 
   const derivedStudentCode =
     authUser?.student_profile?.student_code ??
@@ -127,48 +128,17 @@ const VerifyTab = () => {
     }
     setIsSavingStudent(true);
     try {
-      let studentCardUrl = storedStudentCardUrl;
-      if (studentFile) {
-        const fd = new FormData();
-        fd.append("file", studentFile);
-        const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        studentCardUrl = res.data.data.url;
+      const studentCardUrl = studentFile ? await uploadFile(studentFile) : storedStudentCardUrl;
+      const idCardUrl      = idCardFile  ? await uploadFile(idCardFile)  : storedIdCardUrl;
+      const selfieUrl      = selfieFile  ? await uploadFile(selfieFile)  : storedSelfieUrl;
+
+      await patchProfile({ student_code: studentForm.student_code || undefined });
+
+      if (!studentCardLocked && studentCardUrl) {
+        await submitStudentVerify({ student_card_url: studentCardUrl, declare_truth: acceptAccuracy, accept_pioneer_terms: acceptTerms });
       }
-
-      let idCardUrl = storedIdCardUrl;
-      if (idCardFile) {
-        const fd = new FormData();
-        fd.append("file", idCardFile);
-        const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        idCardUrl = res.data.data.url;
-      }
-
-      let selfieUrl = storedSelfieUrl;
-      if (selfieFile) {
-        const fd = new FormData();
-        fd.append("file", selfieFile);
-        const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        selfieUrl = res.data.data.url;
-      }
-
-      await api.patch("/user/profile", {
-        student_code: studentForm.student_code || undefined,
-      });
-
-      if (!studentCardLocked) {
-        await api.post("/user/student-verify", {
-          student_card_url: studentCardUrl,
-          declare_truth: acceptAccuracy,
-          accept_pioneer_terms: acceptTerms,
-        });
-      }
-
-      if (!idCardLocked) {
-        await api.post("/user/id-verify", {
-          id_card_url: idCardUrl,
-          selfie_url: selfieUrl,
-          declare_truth: acceptAccuracy,
-        });
+      if (!idCardLocked && idCardUrl && selfieUrl) {
+        await submitIdVerify({ id_card_url: idCardUrl, selfie_url: selfieUrl ?? '', declare_truth: acceptAccuracy });
       }
 
       await checkAuth();
@@ -196,33 +166,15 @@ const VerifyTab = () => {
       return;
     }
     setIsSavingBank(true);
-    try {
-      if (authUser?.bank_account?.id) {
-        await api.patch(`/user/update-bank/${authUser.bank_account.id}`, {
-          bank_name: bankForm.bank_name || undefined,
-          account_name: bankForm.account_name || undefined,
-          account_number: bankForm.account_number || undefined,
-        });
-      } else {
-        await api.post("/user/add-bank", {
-          bank_name: bankForm.bank_name || undefined,
-          account_name: bankForm.account_name || undefined,
-          account_number: bankForm.account_number || undefined,
-        });
-      }
-      await checkAuth();
-      setIsBankEditing(false);
-      toast.success("บันทึกข้อมูลบัญชีสำเร็จ");
-    } catch (err: unknown) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      if (message === "account number already exists") {
-        toast.error("เลขบัญชีนี้มีในระบบแล้ว กรุณาใช้เลขบัญชีอื่น");
-      } else {
-        toast.error("เกิดข้อผิดพลาด");
-      }
-    } finally {
-      setIsSavingBank(false);
-    }
+    const ok = await saveBankAccount({
+      bank_name: bankForm.bank_name,
+      account_name: bankForm.account_name,
+      account_number: bankForm.account_number,
+      existingId: authUser?.bank_account?.id,
+    });
+    if (ok) { setIsBankEditing(false); toast.success("บันทึกข้อมูลบัญชีสำเร็จ"); }
+    else toast.error("เกิดข้อผิดพลาด");
+    setIsSavingBank(false);
   };
 
   const studentCardPreview = studentFile

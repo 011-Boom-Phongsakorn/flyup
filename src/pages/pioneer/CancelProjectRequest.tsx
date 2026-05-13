@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft, AlertTriangle, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../../services/api';
-import { AxiosError } from 'axios';
+import { useProjectStore } from '../../store/useProjectStore';
 
 const CANCEL_REASONS = [
   'เปลี่ยนแปลงแผนธุรกิจ',
@@ -17,6 +16,7 @@ const CANCEL_REASONS = [
 const CancelProjectRequest = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
+  const { requestCancelProject } = useProjectStore();
 
   const [selectedReason, setSelectedReason] = useState('');
   const [details, setDetails] = useState('');
@@ -28,38 +28,13 @@ const CancelProjectRequest = () => {
       toast.error('กรุณาเลือกเหตุผลที่ต้องการยกเลิก');
       return;
     }
-    if (!details.trim()) {
-      setDetailsError('กรุณาระบุรายละเอียดเพิ่มเติม');
-      return;
-    }
-    if (details.trim().length < 20) {
-      setDetailsError('กรุณาระบุรายละเอียดอย่างน้อย 20 ตัวอักษร');
-      return;
-    }
+    if (!details.trim()) { setDetailsError('กรุณาระบุรายละเอียดเพิ่มเติม'); return; }
+    if (details.trim().length < 20) { setDetailsError('กรุณาระบุรายละเอียดอย่างน้อย 20 ตัวอักษร'); return; }
     setDetailsError('');
-
     setIsSubmitting(true);
-    try {
-      await api.patch(`/pioneer/projects/${projectId}/submit-cancel`, {
-        reason: selectedReason,
-        description: details.trim(),
-      });
-      toast.success('ส่งคำขอยกเลิกเรียบร้อยแล้ว รอ Admin พิจารณา');
-      navigate('/pioneer/dashboard/projects');
-    } catch (error) {
-      const msg = error instanceof AxiosError ? error.response?.data?.message : null;
-      if (msg === 'cancel request is already pending') {
-        toast.error('คุณได้ส่งคำขอยกเลิกไปแล้ว กรุณารอ Admin พิจารณา');
-      } else if (msg === 'project is already cancelled or state is draft') {
-        toast.error('ไม่สามารถส่งคำขอได้ เนื่องจากโปรเจกต์ถูกยกเลิกแล้ว หรืออยู่ในสถานะแบบร่าง');
-      } else if (msg === 'description is required') {
-        setDetailsError('กรุณาระบุรายละเอียดเพิ่มเติม');
-      } else {
-        toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+    const ok = await requestCancelProject(projectId!, selectedReason, details.trim());
+    setIsSubmitting(false);
+    if (ok) navigate('/pioneer/dashboard/projects');
   };
 
   return (

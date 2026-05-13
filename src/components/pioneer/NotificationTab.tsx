@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
-import api from "../../services/api";
 import toast from "react-hot-toast";
 
 interface NotifItem {
@@ -30,7 +29,7 @@ function safePrefs(raw: unknown): Record<string, boolean> {
 }
 
 const NotificationTab = () => {
-  const authUser = useAuthStore((s) => s.authUser);
+  const { authUser, fetchNotificationPrefs, saveNotificationPrefs } = useAuthStore();
 
   const [toggles, setToggles] = useState<Record<string, boolean>>(() => ({
     ...defaultToggles,
@@ -40,20 +39,17 @@ const NotificationTab = () => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    api.get("/user/notification-preferences")
-      .then((res) => {
-        const prefs = safePrefs(res.data?.data);
-        if (Object.keys(prefs).length > 0) {
-          setToggles({ ...defaultToggles, ...prefs });
-          useAuthStore.setState((state) => ({
-            authUser: state.authUser
-              ? { ...state.authUser, notification_preferences: prefs }
-              : state.authUser,
-          }));
-        }
-      })
-      .catch(() => {});
-  }, []);
+    fetchNotificationPrefs().then((prefs) => {
+      if (Object.keys(prefs).length > 0) {
+        setToggles({ ...defaultToggles, ...prefs });
+        useAuthStore.setState((state) => ({
+          authUser: state.authUser
+            ? { ...state.authUser, notification_preferences: prefs }
+            : state.authUser,
+        }));
+      }
+    });
+  }, [fetchNotificationPrefs]);
 
   const handleToggle = (key: string) => {
     const newValue = !toggles[key];
@@ -63,19 +59,18 @@ const NotificationTab = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSaving(key);
-      try {
-        await api.patch("/user/notification-preferences", { notification_preferences: newToggles });
+      const ok = await saveNotificationPrefs(newToggles);
+      if (ok) {
         useAuthStore.setState((state) => ({
           authUser: state.authUser
             ? { ...state.authUser, notification_preferences: newToggles }
             : state.authUser,
         }));
-      } catch {
+      } else {
         setToggles((prev) => ({ ...prev, [key]: !newValue }));
         toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
-      } finally {
-        setSaving(null);
       }
+      setSaving(null);
     }, 400);
   };
 

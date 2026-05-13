@@ -30,6 +30,15 @@ export interface MeetingBrief {
   status: string
 }
 
+export interface VoterItem {
+  user_id: number
+  first_name: string
+  last_name: string
+  picture?: string | null
+  voted: boolean
+  choice: string
+}
+
 interface MilestoneStore {
   milestones: MilestoneData[]
   projectTitle: string
@@ -48,6 +57,7 @@ interface MilestoneStore {
   recallEvidence: (milestoneId: number) => Promise<boolean>
   isOpeningVoting: boolean
   openVoting: (milestoneId: number) => Promise<boolean>
+  fetchVoters: (milestoneId: number) => Promise<VoterItem[]>
 }
 
 export const useMilestoneStore = create<MilestoneStore>((set) => ({
@@ -226,6 +236,15 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
     } catch {
       toast.error('ไม่สามารถยกเลิกได้')
       return false
+    }
+  },
+
+  fetchVoters: async (milestoneId) => {
+    try {
+      const res = await api.get(`/pioneer/investments/milestones/${milestoneId}/voters`)
+      return res.data?.data ?? []
+    } catch {
+      return []
     }
   },
 }))

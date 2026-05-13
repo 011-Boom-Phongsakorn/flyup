@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react'
 import { Loader2, Lock, X, SendHorizonal, CheckCircle2, ImagePlus, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
-import api from '../../../services/api'
 import { usePioneerProfitStore } from '../../../store/usePioneerProfitStore'
+import { useProfileStore } from '../../../store/useProfileStore'
 import BankAccountCard from './BankAccountCard'
 import { isQuarterAvailable, type MyProject } from './profitUtils'
 
@@ -15,6 +15,7 @@ interface Props {
 
 export default function SubmitProfitModal({ projects, submittedMap, onClose, onSubmitted }: Props) {
   const { isSubmitting, submitProfit } = usePioneerProfitStore()
+  const { uploadFile } = useProfileStore()
   const eligible = projects.filter(p =>
     (p.state === 'executing' || p.state === 'closed') && p.allMilestonesPaid === true
   )
@@ -36,17 +37,11 @@ export default function SubmitProfitModal({ projects, submittedMap, onClose, onS
     if (!file) return
     setSlipPreview(URL.createObjectURL(file))
     setIsUploading(true)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-      setSlipImage(res.data?.data?.url ?? '')
-    } catch {
-      toast.error('อัปโหลดสลิปไม่สำเร็จ')
-      setSlipPreview('')
-    } finally {
-      setIsUploading(false)
-    }
+    const url = await uploadFile(file)
+    if (url) setSlipImage(url)
+    else { toast.error('อัปโหลดสลิปไม่สำเร็จ'); setSlipPreview('') }
+    setIsUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleSubmit = async () => {

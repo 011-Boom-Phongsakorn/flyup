@@ -4,7 +4,6 @@ import { ArrowLeft, CheckCircle2, ChevronRight, FileText, Image as ImageIcon, Li
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'react-hot-toast';
 import { useBoosterStore } from '../../store/useBoosterStore';
-import api from '../../services/api';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -33,7 +32,7 @@ interface MilestoneDetail {
 const VoteDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { voteOnMilestone, getMyVote, investments, fetchMyInvestments } = useBoosterStore();
+  const { voteOnMilestone, getMyVote, investments, fetchMyInvestments, findMilestoneById } = useBoosterStore();
 
   const [milestone, setMilestone] = useState<MilestoneDetail | null>(null);
   const [projectTitle, setProjectTitle] = useState('');
@@ -57,30 +56,21 @@ const VoteDetail = () => {
       setLoading(true);
       try {
         const projectIds = [...new Set(investments.map(inv => inv.project_id).filter(Boolean))];
+        const getTitleById = (pid: number) =>
+          investments.find(inv => inv.project_id === pid)?.project?.title ?? `โปรเจกต์ #${pid}`;
 
-        let found: MilestoneDetail | null = null;
-        for (const pid of projectIds) {
-          try {
-            const res = await api.get(`/projects/${pid}/milestones`);
-            const milestones: MilestoneDetail[] = res.data?.data ?? [];
-            const m = milestones.find(m => m.id === Number(id));
-            if (m) {
-              found = { ...m, project_id: pid };
-              setMilestone(found);
-              const proj = investments.find(inv => inv.project_id === pid);
-              setProjectTitle(proj?.project?.title || `โปรเจกต์ #${pid}`);
-              break;
+        const result = await findMilestoneById(Number(id), projectIds, getTitleById);
+        if (result) {
+          const found = result.milestone as MilestoneDetail;
+          setMilestone(found);
+          setProjectTitle(result.projectTitle);
+
+          if (found.voting_open) {
+            const existingVote = await getMyVote(Number(id));
+            if (existingVote) {
+              setVoteValue(existingVote.choice as 'approve' | 'reject');
+              setIsVoted(true);
             }
-          } catch {
-            // continue to next project
-          }
-        }
-
-        if (found?.voting_open) {
-          const existingVote = await getMyVote(Number(id));
-          if (existingVote) {
-            setVoteValue(existingVote.choice as 'approve' | 'reject');
-            setIsVoted(true);
           }
         }
       } finally {

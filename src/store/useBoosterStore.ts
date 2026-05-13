@@ -73,6 +73,8 @@ interface BoosterStoreState {
   requestRefund: (investmentId: number, reason: string) => Promise<boolean>;
   voteOnMilestone: (milestoneId: number, payload: { choice: 'approve' | 'reject', comment?: string }) => Promise<boolean | 'already_voted'>;
   getMyVote: (milestoneId: number) => Promise<{ choice: string; comment?: string } | null>;
+  fetchVoteMilestones: (projectIds: number[], getTitleById: (pid: number) => string) => Promise<import('../components/booster/VoteRow').VoteMilestone[]>;
+  findMilestoneById: (milestoneId: number, projectIds: number[], getTitleById: (pid: number) => string) => Promise<{ milestone: object & { project_id: number }; projectTitle: string } | null>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -190,5 +192,33 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
     } catch {
       return null;
     }
+  },
+
+  findMilestoneById: async (milestoneId: number, projectIds: number[], getTitleById: (pid: number) => string) => {
+    for (const pid of projectIds) {
+      try {
+        const res = await api.get(`/projects/${pid}/milestones`);
+        const milestones: Array<{ id: number } & object> = res.data?.data ?? [];
+        const found = milestones.find((m) => m.id === milestoneId);
+        if (found) return { milestone: { ...found, project_id: pid }, projectTitle: getTitleById(pid) };
+      } catch { /* continue */ }
+    }
+    return null;
+  },
+
+  fetchVoteMilestones: async (projectIds, getTitleById) => {
+    const results = await Promise.all(
+      projectIds.map(async (pid) => {
+        try {
+          const res = await api.get(`/projects/${pid}/milestones`);
+          return (res.data?.data ?? []).map((m: object) => ({
+            ...m,
+            project_id: pid,
+            projectTitle: getTitleById(pid),
+          }));
+        } catch { return []; }
+      })
+    );
+    return results.flat();
   },
 }));

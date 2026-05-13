@@ -2,10 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { ShieldCheck, Camera, Phone, Mail } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import toast from "react-hot-toast";
-import api from "../../services/api";
-
 const AdminProfileTab = () => {
-  const { authUser, checkAuth } = useAuthStore();
+  const { authUser, checkAuth, uploadProfilePicture, updateProfile } = useAuthStore();
   const [form, setForm] = useState({
     first_name: (authUser?.first_name as string) ?? "",
     last_name: (authUser?.last_name as string) ?? "",
@@ -37,41 +35,19 @@ const AdminProfileTab = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsUploadingPicture(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const uploadRes = await api.post("/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      const pictureUrl: string = uploadRes.data.data.url;
-      await api.patch("/user/profile", { picture: pictureUrl });
-      initialized.current = false;
-      await checkAuth();
-      toast.success("เปลี่ยนรูปโปรไฟล์สำเร็จ");
-    } catch {
-      toast.error("อัปโหลดรูปไม่สำเร็จ");
-    } finally {
-      setIsUploadingPicture(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+    const url = await uploadProfilePicture(file);
+    if (url) toast.success("เปลี่ยนรูปโปรไฟล์สำเร็จ");
+    else toast.error("อัปโหลดรูปไม่สำเร็จ");
+    setIsUploadingPicture(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSave = async () => {
     setIsSaving(true);
-    try {
-      await api.patch("/user/profile", {
-        first_name: form.first_name,
-        last_name: form.last_name,
-        phone: form.phone,
-      });
-      initialized.current = false;
-      await checkAuth();
-      toast.success("บันทึกสำเร็จ");
-    } catch {
-      toast.error("บันทึกไม่สำเร็จ");
-    } finally {
-      setIsSaving(false);
-    }
+    const ok = await updateProfile({ first_name: form.first_name, last_name: form.last_name, phone: form.phone });
+    if (ok) { initialized.current = false; await checkAuth(); toast.success("บันทึกสำเร็จ"); }
+    else toast.error("บันทึกไม่สำเร็จ");
+    setIsSaving(false);
   };
 
   return (

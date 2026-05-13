@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
-import api from '../../services/api'
+import { useAuthStore } from '../../store/useAuthStore'
 
 type VerifyStatus = 'loading' | 'success' | 'error'
 
@@ -9,6 +9,7 @@ const VerifyEmail = () => {
     const [searchParams] = useSearchParams()
     const [status, setStatus] = useState<VerifyStatus>('loading')
     const [message, setMessage] = useState('')
+    const { verifyEmail } = useAuthStore()
     const token = searchParams.get('token')
 
     useEffect(() => {
@@ -18,19 +19,17 @@ const VerifyEmail = () => {
                 setMessage('ไม่พบ Token สำหรับยืนยันอีเมล')
                 return
             }
-
-            try {
-                await api.get(`/verify-email?token=${token}`)
+            const ok = await verifyEmail(token)
+            if (ok) {
                 setStatus('success')
                 setMessage('ยืนยันอีเมลสำเร็จแล้ว!')
-            } catch {
+            } else {
                 setStatus('error')
                 setMessage('ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว')
             }
         }
-
         verify()
-    }, [token])
+    }, [token, verifyEmail])
 
     return (
         <div className="flex items-center justify-center min-h-[70vh] px-4">

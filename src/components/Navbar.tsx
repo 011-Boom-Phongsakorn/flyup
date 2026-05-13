@@ -4,24 +4,9 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuthStore } from '../store/useAuthStore';
 import { usePublicProjectStore } from '../store/usePublicProjectStore';
 import NotificationBell from './NotificationBell';
+import UserAvatar from './shared/UserAvatar';
 
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=400';
-
-// แสดงรูป profile หรือ initials แทน — ไม่ส่ง email ไป third-party
-function UserAvatar({ picture, firstName, lastName, className }: {
-    picture?: string | null
-    firstName?: string | null
-    lastName?: string | null
-    className?: string
-}) {
-    const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || '?'
-    if (picture) return <img src={picture} alt="profile" className={className} />
-    return (
-        <div className={`bg-primary/20 flex items-center justify-center text-primary font-bold text-sm ${className}`}>
-            {initials}
-        </div>
-    )
-}
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);

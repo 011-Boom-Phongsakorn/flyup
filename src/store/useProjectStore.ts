@@ -78,6 +78,8 @@ interface ProjectState {
     updateProjectInfo: (data: Partial<Project>) => void;
     updateMilestone: (index: number, data: Partial<Milestone>) => void;
     updateProjectStatus: (projectId: number) => Promise<void>;
+    submitProject: (projectId: string) => Promise<boolean>;
+    requestCancelProject: (projectId: string, reason: string, description?: string) => Promise<boolean>;
 }
 
 const initialProject: Project = {
@@ -502,5 +504,40 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             console.error(error);
             toast.error('ไม่สามารถยกเลิกโปรเจกต์ได้');
         }
-    }
+    },
+
+    submitProject: async (projectId) => {
+        try {
+            await api.patch(`/pioneer/projects/${projectId}/submit`)
+            return true
+        } catch (error) {
+            const { AxiosError } = await import('axios')
+            const msg = error instanceof AxiosError ? error.response?.data?.message : null
+            if (msg === 'you already have an active project') {
+                toast.error('คุณมีโปรเจกต์ที่กำลังดำเนินอยู่แล้ว ไม่สามารถส่งโปรเจกต์ใหม่ได้ในขณะนี้')
+            } else {
+                toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่')
+            }
+            return false
+        }
+    },
+
+    requestCancelProject: async (projectId, reason, description?: string) => {
+        try {
+            await api.patch(`/pioneer/projects/${projectId}/submit-cancel`, { reason, description })
+            toast.success('ส่งคำขอยกเลิกเรียบร้อยแล้ว รอ Admin พิจารณา')
+            return true
+        } catch (error) {
+            const { AxiosError } = await import('axios')
+            const msg = error instanceof AxiosError ? error.response?.data?.message : null
+            if (msg === 'cancel request is already pending') {
+                toast.error('คุณได้ส่งคำขอยกเลิกไปแล้ว กรุณารอ Admin พิจารณา')
+            } else if (msg === 'project is already cancelled or state is draft') {
+                toast.error('ไม่สามารถส่งคำขอได้ เนื่องจากโปรเจกต์ถูกยกเลิกแล้ว หรืออยู่ในสถานะแบบร่าง')
+            } else if (msg !== 'description is required') {
+                toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
+            }
+            return false
+        }
+    },
 }))

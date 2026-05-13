@@ -85,6 +85,11 @@ interface AuthStore {
     isResetting: boolean;
     forgotPassword: (email: string) => Promise<boolean>;
     resetPassword: (token: string, new_password: string) => Promise<boolean>;
+    verifyEmail: (token: string) => Promise<boolean>;
+    fetchNotificationPrefs: () => Promise<Record<string, boolean>>;
+    saveNotificationPrefs: (prefs: Record<string, boolean>) => Promise<boolean>;
+    uploadProfilePicture: (file: File) => Promise<string | null>;
+    updateProfile: (data: Record<string, unknown>) => Promise<boolean>;
 }
 
 // เมื่อ refresh token หมดอายุ api.ts จะ dispatch event นี้
@@ -225,5 +230,56 @@ export const useAuthStore = create<AuthStore>((set) => ({
         } finally {
             set({ isResetting: false })
         }
-    }
+    },
+    verifyEmail: async (token) => {
+        try {
+            await api.get(`/verify-email?token=${token}`)
+            return true
+        } catch {
+            return false
+        }
+    },
+    fetchNotificationPrefs: async () => {
+        try {
+            const res = await api.get('/user/notification-preferences')
+            return (res.data?.data ?? {}) as Record<string, boolean>
+        } catch {
+            return {}
+        }
+    },
+    saveNotificationPrefs: async (prefs) => {
+        try {
+            await api.patch('/user/notification-preferences', { notification_preferences: prefs })
+            return true
+        } catch {
+            return false
+        }
+    },
+    uploadProfilePicture: async (file) => {
+        try {
+            const formData = new FormData()
+            formData.append('file', file)
+            const res = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+            const url: string = res.data?.data?.url
+            if (!url) return null
+            await api.patch('/user/profile', { picture: url })
+            set(state => ({
+                authUser: state.authUser ? { ...state.authUser, picture: url } : state.authUser,
+            }))
+            return url
+        } catch {
+            return null
+        }
+    },
+    updateProfile: async (data) => {
+        try {
+            await api.patch('/user/profile', data)
+            set(state => ({
+                authUser: state.authUser ? { ...state.authUser, ...data } : state.authUser,
+            }))
+            return true
+        } catch {
+            return false
+        }
+    },
 }))
