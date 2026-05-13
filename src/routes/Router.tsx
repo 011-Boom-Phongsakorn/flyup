@@ -24,6 +24,9 @@ import Investment from '../pages/public/Investment';
 import ForgotPassword from '../pages/public/ForgotPassword';
 import ResetPassword from '../pages/public/ResetPassword';
 import MilestoneDetail from '../pages/public/MilestoneDetail';
+import AboutUs from '../pages/public/AboutUs';
+import Terms from '../pages/public/Terms';
+import HelpCenter from '../pages/public/HelpCenter';
 
 import { Loader2 } from 'lucide-react';
 
@@ -163,6 +166,9 @@ const Router = () => {
                         <Route path='/projects/:slug' element={<ProjectDetail />} />
                         <Route path='/projects/:slug/invest' element={<Investment />} />
                         <Route path='/projects/:slug/milestones' element={<MilestoneDetail />} />
+                        <Route path='/about/we' element={<AboutUs />} />
+                        <Route path='/legal/terms' element={<Terms />} />
+                        <Route path='/help' element={<HelpCenter />} />
                     </Route>
 
                     <Route element={<PioneerGuard />}>
