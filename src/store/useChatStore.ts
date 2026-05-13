@@ -26,7 +26,6 @@ interface ChatStore {
 
   toggle: () => void
   close: () => void
-  clearSession: () => void
   sendMessage: (message: string) => Promise<void>
   confirmAction: (actionId: number, confirm: boolean) => Promise<void>
 }
@@ -40,7 +39,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   toggle: () => set(s => ({ isOpen: !s.isOpen })),
   close: () => set({ isOpen: false }),
-  clearSession: () => set({ sessionId: null, messages: [], pendingAction: null }),
 
   sendMessage: async (message: string) => {
     const { sessionId } = get()

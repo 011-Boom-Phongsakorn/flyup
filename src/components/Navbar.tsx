@@ -123,9 +123,9 @@ const Navbar = () => {
 
     return (
 
-        <nav className={`fixed top-0 left-0 right-0 z-50 w-full py-4 bg-background/70 backdrop-blur-sm px-4 transition-all duration-300`}>
+        <nav className={`fixed top-0 left-0 right-0 z-50 w-full py-4 px-4 transition-all duration-300`}>
             <div className="w-full max-w-[1104px] mx-auto relative">
-                <div className="flex items-center justify-between bg-card/90 backdrop-blur-md w-full border border-border h-[70px] px-6 md:px-8 rounded-full shadow-sm">
+                <div className="flex items-center justify-between bg-card/90 backdrop-blur-sm w-full border border-border h-[70px] px-6 md:px-8 rounded-full shadow-sm">
 
                     <Link to='/' className="flex-shrink-0" onClick={closeMenu}>
                         <img src="/flyup-logo.png" alt="Flyup Logo" className="h-[50px] md:h-[70px] w-auto transition-all" />
