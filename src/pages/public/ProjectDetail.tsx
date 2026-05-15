@@ -450,7 +450,7 @@ function ProjectDetail() {
 
             {/* ── Fund Card ── */}
             <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-primary to-purple-300" />
+              <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-pink-500 to-purple-600" />
 
               <h2 className="text-[32px] font-bold text-primary tracking-tight mt-[4px]">
                 ฿{fundedAmount.toLocaleString()}
@@ -642,7 +642,7 @@ function ProjectDetail() {
               {investors.length === 0 ? (
                 <p className="text-center text-muted-foreground text-[14px] py-[32px]">ยังไม่มีข้อมูลผู้สนับสนุน</p>
               ) : (
-                investors.map((inv, idx) => {
+                [...investors].sort((a, b) => b.principal_amount - a.principal_amount).map((inv, idx) => {
                   const name = `${inv.first_name} ${inv.last_name}`.trim();
                   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
                   const pct = fundedAmount > 0 ? ((inv.principal_amount / fundedAmount) * 100).toFixed(1) : '0.0';
@@ -660,7 +660,6 @@ function ProjectDetail() {
                       {/* Name */}
                       <div className="flex-1 min-w-0">
                         <p className="text-[14px] font-semibold text-foreground truncate">{name || 'ไม่ระบุชื่อ'}</p>
-                        <p className="text-[12px] text-muted-foreground">{inv.investment_count} ครั้ง</p>
                       </div>
                       {/* Amount + % */}
                       <div className="text-right flex-shrink-0">

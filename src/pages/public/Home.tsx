@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import {
   ChevronRight,
@@ -85,9 +85,25 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 
 // ─── Home Page ──────────────────────────────────────────────────────────────
 
+const HERO_WORDS = ['โปรเจกต์ที่ใช่', 'นวัตกรรมใหม่', 'ไอเดียที่ดี', 'ความฝันของคุณ'];
+
 const Home = () => {
   const { authUser } = useAuthStore();
   const hideCreateBtn = authUser?.role === 'booster' || authUser?.role === 'admin';
+
+  const [heroWordIdx, setHeroWordIdx] = useState(0);
+  const [heroVisible, setHeroVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroVisible(false);
+      setTimeout(() => {
+        setHeroWordIdx(i => (i + 1) % HERO_WORDS.length);
+        setHeroVisible(true);
+      }, 350);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   const {
     publicProjects, // Keep for stats
@@ -131,7 +147,14 @@ const Home = () => {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 text-foreground">
-                ลงทุนโปรเจกต์ที่ใช่ <br />
+                ลงทุน
+                <span
+                  className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 inline-block transition-all duration-350"
+                  style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'translateY(0px)' : 'translateY(-10px)' }}
+                >
+                  {HERO_WORDS[heroWordIdx]}
+                </span>
+                <br />
                 กับ <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">FlyUp</span>
               </h1>
 

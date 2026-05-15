@@ -490,7 +490,7 @@ export default function MilestoneDetail() {
               </div>
               <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-primary to-emerald-500 rounded-full transition-all duration-1000 ease-out"
+                  className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all duration-1000 ease-out"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
