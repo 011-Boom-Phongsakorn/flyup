@@ -66,8 +66,10 @@ const Navbar = () => {
         if (!isDeleting && typeText === fullText) {
             timeout = setTimeout(() => setIsDeleting(true), 1600);
         } else if (isDeleting && typeText === '') {
-            setIsDeleting(false);
-            setTypeIdx(i => (i + 1) % SEARCH_PLACEHOLDERS.length);
+            timeout = setTimeout(() => {
+                setIsDeleting(false);
+                setTypeIdx(i => (i + 1) % SEARCH_PLACEHOLDERS.length);
+            }, 0);
         } else if (isDeleting) {
             timeout = setTimeout(() => setTypeText(t => t.slice(0, -1)), 40);
         } else {
@@ -194,7 +196,7 @@ const Navbar = () => {
                                         className="bg-transparent outline-none w-full text-[14px] text-foreground relative z-10"
                                         value={searchQuery}
                                         onChange={handleSearchChange}
-                                        onFocus={() => { setSearchFocused(true); searchQuery && setShowSuggestions(true); }}
+                                        onFocus={() => { setSearchFocused(true); if (searchQuery) setShowSuggestions(true); }}
                                         onBlur={() => setSearchFocused(false)}
                                         onKeyDown={handleSearch}
                                     />

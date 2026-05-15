@@ -42,8 +42,8 @@ const PhaseCard = ({ milestone, isActive, projectSuspended, onToggle, onSubmit, 
 
   useEffect(() => {
     if (!milestone.voting_open || !milestone.id) return
-    setVoters(null)
     const id = milestone.id
+    setTimeout(() => setVoters(null), 0)
     api.get(`/pioneer/investments/milestones/${id}/voters`)
       .then(res => setVoters(res.data?.data ?? []))
       .catch(() => setVoters([]))
