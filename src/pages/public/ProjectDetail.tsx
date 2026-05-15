@@ -128,7 +128,7 @@ function ProjectDetail() {
     if (!isLoggedIn) {
       toast.error("กรุณาเข้าสู่ระบบก่อนลงทุน", {
         id: "login-required",
-        position: "top-right",
+        position: "top-center",
         duration: 3000,
         style: {
           borderRadius: "10px",
@@ -189,7 +189,8 @@ function ProjectDetail() {
     <div className="min-h-screen bg-[#F8F9FA] overflow-x-hidden w-full mt-[100px] pb-[100px]">
       <Toaster
         toastOptions={{ duration: 3000 }}
-        containerStyle={{ top: 20 }}
+        position="top-center"
+        containerStyle={{ top: 80 }}
       />
 
       {/* ── Main Content ── */}
@@ -543,8 +544,19 @@ function ProjectDetail() {
                 <button
                   onClick={() => {
                     if (!isLoggedIn) {
-                      toast.error('กรุณาเข้าสู่ระบบก่อนร้องเรียน');
-                      navigate('/login');
+                      toast.error('กรุณาเข้าสู่ระบบก่อนรายงาน', {
+                        id: 'report-login',
+                        position: 'top-center',
+                        duration: 3000,
+                        style: {
+                          borderRadius: '10px',
+                          background: 'var(--color-card)',
+                          color: 'var(--color-foreground)',
+                          fontSize: '14px',
+                          border: '1px solid var(--color-border)',
+                        },
+                        iconTheme: { primary: 'var(--color-error)', secondary: 'var(--color-white-foreground)' },
+                      });
                       return;
                     }
                     setShowComplaintModal(true);
