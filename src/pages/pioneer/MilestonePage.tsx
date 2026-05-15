@@ -12,7 +12,7 @@ const MilestonePage = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
 
-  const { milestones, projectTitle, isLoading, isSubmitting, isOpeningVoting, fetchMilestones, submitEvidence, recallEvidence, openVoting } =
+  const { milestones, projectTitle, projectSuspended, isLoading, isSubmitting, isOpeningVoting, fetchMilestones, submitEvidence, recallEvidence, openVoting } =
     useMilestoneStore()
 
   const [activePhase, setActivePhase] = useState<number | null>(null)
@@ -52,7 +52,7 @@ const MilestonePage = () => {
   }
 
   const handleOpenVoting = async (milestoneId: number) => {
-    await openVoting(milestoneId)
+    await openVoting(milestoneId, projectId!)
   }
 
   const completedCount = milestones.filter(m => m.status === 'completed').length
@@ -106,6 +106,7 @@ const MilestonePage = () => {
             key={m.phase_no}
             milestone={{ ...m, meetings: m.id ? (meetingsByMilestone[m.id] ?? m.meetings ?? []) : (m.meetings ?? []) }}
             isActive={activePhase === idx}
+            projectSuspended={projectSuspended}
             onToggle={() => setActivePhase(prev => prev === idx ? null : idx)}
             onSubmit={handleSubmit}
             onRecall={handleRecall}

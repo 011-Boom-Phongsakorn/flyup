@@ -176,7 +176,7 @@ const Preview = () => {
                     <div className="w-full lg:w-[380px] flex flex-col gap-[20px]">
                         {/* Funding Card */}
                         <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-primary to-purple-300"></div>
+                            <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-pink-500 to-purple-600"></div>
 
                             <h2 className="text-[32px] font-bold text-primary tracking-tight">฿0</h2>
                             <p className="text-[13px] text-muted-foreground mt-[2px]">

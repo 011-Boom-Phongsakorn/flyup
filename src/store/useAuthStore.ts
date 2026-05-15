@@ -34,6 +34,7 @@ interface BankAccount {
     bank_name?: string;
     account_name?: string;
     account_number?: string;
+    is_default?: boolean;
 }
 
 interface DecodedUser extends Record<string, unknown> {
@@ -49,6 +50,7 @@ interface DecodedUser extends Record<string, unknown> {
     has_password?: boolean;
     student_profile?: StudentProfile;
     bank_account?: BankAccount;
+    bank_accounts?: BankAccount[];
     student_card_verification?: CardVerification;
     id_card_verification?: CardVerification;
     notification_preferences?: Record<string, boolean>;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Menu, X, LayoutDashboard, ChevronDown, Settings, LogOut } from 'lucide-react';
+import { Search, Menu, X, LayoutDashboard, ChevronDown, Settings, LogOut, Files, Flag, Banknote, Wallet, TrendingUp, RotateCcw, MailSearch, Users } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuthStore } from '../store/useAuthStore';
 import { usePublicProjectStore } from '../store/usePublicProjectStore';
@@ -23,12 +23,58 @@ function UserAvatar({ picture, firstName, lastName, className }: {
     )
 }
 
+const SEARCH_PLACEHOLDERS = [
+    'โปรเจกต์ AI...',
+    'Mobile App...',
+    'Web Development...',
+    'หมวดหมู่ที่ต้องการ...',
+    'FinTech, EdTech...',
+];
+
+const ROLE_MENU_ITEMS: Record<string, { icon: React.ReactNode; label: string; path: string }[]> = {
+    pioneer: [
+        { icon: <Files size={18} className="text-[#8B5CF6]" />, label: 'โปรเจกต์ของฉัน', path: '/pioneer/dashboard/projects' },
+        { icon: <Flag size={18} className="text-[#8B5CF6]" />, label: 'Milestone', path: '/pioneer/dashboard/milestones' },
+        { icon: <Banknote size={18} className="text-[#8B5CF6]" />, label: 'การรับเงิน', path: '/pioneer/dashboard/payouts' },
+    ],
+    booster: [
+        { icon: <Wallet size={18} className="text-[#8B5CF6]" />, label: 'การลงทุน', path: '/booster/investments' },
+        { icon: <TrendingUp size={18} className="text-[#8B5CF6]" />, label: 'กำไร', path: '/booster/profits' },
+        { icon: <RotateCcw size={18} className="text-[#8B5CF6]" />, label: 'คืนเงิน', path: '/booster/refunds' },
+    ],
+    admin: [
+        { icon: <MailSearch size={18} className="text-[#8B5CF6]" />, label: 'ตรวจสอบโปรเจกต์', path: '/admin/projects-approval' },
+        { icon: <Users size={18} className="text-[#8B5CF6]" />, label: 'จัดการผู้ใช้', path: '/admin/users' },
+    ],
+};
+
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showNotif, setShowNotif] = useState(false);
+
+    const [searchFocused, setSearchFocused] = useState(false);
+    const [typeText, setTypeText] = useState('');
+    const [typeIdx, setTypeIdx] = useState(0);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    useEffect(() => {
+        const fullText = SEARCH_PLACEHOLDERS[typeIdx];
+        let timeout: ReturnType<typeof setTimeout>;
+        if (!isDeleting && typeText === fullText) {
+            timeout = setTimeout(() => setIsDeleting(true), 1600);
+        } else if (isDeleting && typeText === '') {
+            setIsDeleting(false);
+            setTypeIdx(i => (i + 1) % SEARCH_PLACEHOLDERS.length);
+        } else if (isDeleting) {
+            timeout = setTimeout(() => setTypeText(t => t.slice(0, -1)), 40);
+        } else {
+            timeout = setTimeout(() => setTypeText(fullText.slice(0, typeText.length + 1)), 75);
+        }
+        return () => clearTimeout(timeout);
+    }, [typeText, typeIdx, isDeleting]);
 
     const handleProfileToggle = () => {
         setShowProfileMenu(prev => {
@@ -134,17 +180,25 @@ const Navbar = () => {
                     {/* Desktop Search — hidden on /projects */}
                     {!isProjectsPage && (
                         <div className="hidden md:block relative" ref={suggestionRef}>
-                            <div className="flex items-center gap-[10px] bg-background border border-border h-[40px] w-[414px] rounded-[12px] px-4 focus-within:border-primary transition-all">
-                                <Search size={20} className="text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    placeholder="ค้นหา โปรเจกต์ , หมวดหมู่ที่ต้องการ"
-                                    className="bg-transparent outline-none w-full text-[14px] text-foreground placeholder:text-muted-foreground"
-                                    value={searchQuery}
-                                    onChange={handleSearchChange}
-                                    onFocus={() => searchQuery && setShowSuggestions(true)}
-                                    onKeyDown={handleSearch}
-                                />
+                            <div className="flex items-center gap-[10px] bg-background border border-border h-[40px] w-[414px] rounded-[12px] px-4 focus-within:border-primary transition-all relative">
+                                <Search size={20} className="text-muted-foreground flex-shrink-0" />
+                                <div className="relative flex-1 overflow-hidden">
+                                    {!searchQuery && !searchFocused && (
+                                        <span className="absolute inset-0 flex items-center text-[14px] text-muted-foreground pointer-events-none whitespace-nowrap">
+                                            {typeText}
+                                            <span className="inline-block w-[1.5px] h-[14px] bg-muted-foreground ml-[1px] animate-pulse" />
+                                        </span>
+                                    )}
+                                    <input
+                                        type="text"
+                                        className="bg-transparent outline-none w-full text-[14px] text-foreground relative z-10"
+                                        value={searchQuery}
+                                        onChange={handleSearchChange}
+                                        onFocus={() => { setSearchFocused(true); searchQuery && setShowSuggestions(true); }}
+                                        onBlur={() => setSearchFocused(false)}
+                                        onKeyDown={handleSearch}
+                                    />
+                                </div>
                             </div>
 
                             {showSuggestions && (
@@ -228,6 +282,18 @@ const Navbar = () => {
                                                         : authUser.name || authUser.email}
                                                 </span>
                                             </div>
+                                            <div className="border-t border-border" />
+                                            {(ROLE_MENU_ITEMS[authUser?.role as string] ?? []).map((item) => (
+                                                <Link
+                                                    key={item.path}
+                                                    to={item.path}
+                                                    onClick={() => setShowProfileMenu(false)}
+                                                    className="flex items-center gap-3 px-5 py-3 hover:bg-muted transition-colors text-[14px] text-foreground"
+                                                >
+                                                    {item.icon}
+                                                    {item.label}
+                                                </Link>
+                                            ))}
                                             <div className="border-t border-border" />
                                             <Link
                                                 to={`/${authUser?.role}/profile`}
@@ -336,6 +402,11 @@ const Navbar = () => {
                                 <Link to={`/${authUser?.role}/dashboard`} onClick={closeMenu} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-muted transition-colors text-[14px] text-foreground">
                                     <LayoutDashboard size={18} className="text-[#8B5CF6]" /> แดชบอร์ด
                                 </Link>
+                                {(ROLE_MENU_ITEMS[authUser?.role as string] ?? []).map((item) => (
+                                    <Link key={item.path} to={item.path} onClick={closeMenu} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-muted transition-colors text-[14px] text-foreground">
+                                        {item.icon} {item.label}
+                                    </Link>
+                                ))}
                                 <Link to={`/${authUser?.role}/profile`} onClick={closeMenu} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-muted transition-colors text-[14px] text-foreground">
                                     <Settings size={18} className="text-[#8B5CF6]" /> การตั้งค่าและความเป็นส่วนตัว
                                 </Link>
