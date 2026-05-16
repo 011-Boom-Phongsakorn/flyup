@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import useCreateProjectGuard from '../../hooks/useCreateProjectGuard';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ const HERO_WORDS = ['โปรเจกต์ที่ใช่', 'นวัต�
 const Home = () => {
   const { authUser } = useAuthStore();
   const hideCreateBtn = authUser?.role === 'booster' || authUser?.role === 'admin';
+  const { createWithGuard, isCreating } = useCreateProjectGuard();
 
   const [heroWordIdx, setHeroWordIdx] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
@@ -120,6 +122,8 @@ const Home = () => {
     fetchHomeProjects();
     fetchPublicProjects(); // To get total count and sum for stats
   }, [fetchHomeProjects, fetchPublicProjects]);
+
+  const handleCreateProject = () => createWithGuard();
 
   const recommendedMain = recommendedProjects[0] || null;
   const recommendedList = recommendedProjects.slice(1, 4);
@@ -164,12 +168,29 @@ const Home = () => {
               </p>
 
               <div className="flex flex-wrap gap-4 items-center">
-                {!hideCreateBtn && (
-                  <Link to="/login" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
-                    สร้างโปรเจกต์ <ChevronRight size={18} />
+                {!hideCreateBtn ? (
+                  <button
+                    onClick={handleCreateProject}
+                    disabled={isCreating}
+                    className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        กำลังสร้าง...
+                      </>
+                    ) : (
+                      <>
+                        สร้างโปรเจกต์ <ChevronRight size={18} />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <Link to="/dashboard" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
+                    ไปที่โปรเจกต์ของฉัน <ChevronRight size={18} />
                   </Link>
-                )}
-
+                )
+                }
                 <Link to="/projects" className="bg-background hover:bg-muted text-foreground px-8 py-3 rounded-full font-medium transition-colors border border-border shadow-sm inline-block">
                   สำรวจโปรเจกต์
                 </Link>
