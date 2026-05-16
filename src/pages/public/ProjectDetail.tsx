@@ -117,7 +117,7 @@ function ProjectDetail() {
 
   const isAdmin = authUser?.role === 'admin';
   const isIdVerified = authUser?.id_card_verification?.status === 'approved';
-  const hasBank = !!authUser?.bank_account?.id;
+  const hasBank = (authUser?.bank_accounts?.length ?? 0) > 0;
   const cannotInvestReason = isAdmin
     ? 'ผู้ดูแลระบบไม่สามารถลงทุนได้'
     : isOwner
