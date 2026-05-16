@@ -49,7 +49,6 @@ interface DecodedUser extends Record<string, unknown> {
     google_sub?: string;
     has_password?: boolean;
     student_profile?: StudentProfile;
-    bank_account?: BankAccount;
     bank_accounts?: BankAccount[];
     student_card_verification?: CardVerification;
     id_card_verification?: CardVerification;
