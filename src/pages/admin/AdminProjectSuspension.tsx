@@ -144,10 +144,12 @@ const AdminProjectSuspension = () => {
         }
     }
 
-    // active tab = ยังไม่ terminal (สามารถ action ได้)
+    // active tab = ยังไม่ terminal และไม่ใช่ draft
     // terminal tab = cancelled / closed (ดูประวัติได้อย่างเดียว)
     const byTab = projects.filter((p) =>
-        tab === 'terminal' ? TERMINAL.has(p.state) : !TERMINAL.has(p.state)
+        tab === 'terminal'
+            ? TERMINAL.has(p.state)
+            : !TERMINAL.has(p.state) && p.state !== 'draft'
     )
 
     const filtered = byTab.filter((p) => {
@@ -155,7 +157,7 @@ const AdminProjectSuspension = () => {
         return p.title.toLowerCase().includes(q) || (p.category ?? '').toLowerCase().includes(q)
     })
 
-    const activeCount   = projects.filter((p) => !TERMINAL.has(p.state)).length
+    const activeCount   = projects.filter((p) => !TERMINAL.has(p.state) && p.state !== 'draft').length
     const terminalCount = projects.filter((p) => TERMINAL.has(p.state)).length
 
     const tabs: { key: Tab; label: string; count: number }[] = [
