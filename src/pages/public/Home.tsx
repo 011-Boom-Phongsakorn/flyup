@@ -142,8 +142,11 @@ const Home = () => {
 
               <div className="flex flex-wrap gap-4 items-center">
                 {!hideCreateBtn && (
-                  <Link to="/login" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
-                    สร้างโปรเจกต์ <ChevronRight size={18} />
+                  <Link
+                    to={authUser?.role === 'pioneer' ? '/pioneer/dashboard/projects' : '/login'}
+                    className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2"
+                  >
+                    {authUser?.role === 'pioneer' ? 'ไปที่โปรเจกต์ของฉัน' : 'สร้างโปรเจกต์'} <ChevronRight size={18} />
                   </Link>
                 )}
 
