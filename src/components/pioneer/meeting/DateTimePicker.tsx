@@ -124,7 +124,11 @@ export default function DateTimePicker({ date, time, onDateChange, onTimeChange,
 
   const cells = firstDay(viewYear, viewMonth)
   const total = daysInMonth(viewYear, viewMonth)
-  const years = Array.from({ length: 10 }, (_, i) => now.getFullYear() + i)
+  const maxYear = maxDate ? parseInt(maxDate.slice(0, 4)) : now.getFullYear() + 1
+  const years = Array.from(
+    { length: Math.max(1, maxYear - now.getFullYear() + 1) },
+    (_, i) => now.getFullYear() + i,
+  )
 
   // ปิดปุ่ม prevMonth ถ้าเดือนปัจจุบัน <= ปัจจุบัน
   const canGoPrev = viewYear > now.getFullYear() || (viewYear === now.getFullYear() && viewMonth > now.getMonth())

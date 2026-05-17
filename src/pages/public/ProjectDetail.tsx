@@ -31,14 +31,14 @@ const PLACEHOLDER_IMG = "https://images.unsplash.com/photo-1498050108023-c5249f4
 const NOW = Date.now();
 
 function ProjectDetail() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>("story");
   const [selectedImage, setSelectedImage] = useState(0);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [showInvestorsModal, setShowInvestorsModal] = useState(false);
 
-  const { currentPublicProject, isDetailLoading, fetchPublicProjectById } = usePublicProjectStore();
+  const { currentPublicProject, isDetailLoading, fetchPublicProjectBySlug, fetchPublicProjectById } = usePublicProjectStore();
   const { updates, threads, faqs, investorCount: actualInvestorCount, investors, fetchAll, createThread } = useProjectDetailStore();
   const { authUser } = useAuthStore();
   const { investments, fetchMyInvestments } = useBoosterStore();
@@ -48,28 +48,31 @@ function ProjectDetail() {
 
   const isLoggedIn = !!authUser;
   const project = currentPublicProject;
-  // authUser.id มาจาก /user/me, authUser.user_id มาจาก JWT decode (Google OAuth)
+  const projectId = project?.id;
   const authUserId = (authUser?.id ?? authUser?.user_id) as number | undefined;
   const isOwner = !!authUserId && !!project?.owner_user_id && authUserId === project.owner_user_id;
-  // ตรง backend HasVerifiedInvestment ต้องการ status = 'verified' เท่านั้น
   const hasInvested = isLoggedIn && investments.some(
-    inv => inv.project_id === Number(id) && inv.status === 'verified'
+    inv => inv.project_id === projectId && inv.status === 'verified'
   );
 
   useEffect(() => {
-    if (id) {
-      fetchPublicProjectById(Number(id));
-      fetchAll(Number(id));
+    if (slug) {
+      if (/^\d+$/.test(slug)) fetchPublicProjectById(Number(slug));
+      else fetchPublicProjectBySlug(slug);
       window.scrollTo(0, 0);
     }
     if (isLoggedIn) fetchMyInvestments();
-  }, [id, fetchPublicProjectById, fetchAll, fetchMyInvestments, isLoggedIn]);
+  }, [slug, fetchPublicProjectBySlug, fetchPublicProjectById, fetchMyInvestments, isLoggedIn]);
+
+  useEffect(() => {
+    if (projectId) fetchAll(projectId);
+  }, [projectId, fetchAll]);
 
   const handlePostComment = async () => {
-    if (!commentBody.trim()) return;
+    if (!commentBody.trim() || !projectId) return;
     setIsPosting(true);
     try {
-      await createThread(Number(id), commentBody.trim(), isOwner);
+      await createThread(projectId, commentBody.trim(), isOwner);
       setCommentBody('');
       toast.success('โพสต์ความคิดเห็นสำเร็จ');
     } catch {
@@ -114,7 +117,7 @@ function ProjectDetail() {
 
   const isAdmin = authUser?.role === 'admin';
   const isIdVerified = authUser?.id_card_verification?.status === 'approved';
-  const hasBank = !!authUser?.bank_account?.id;
+  const hasBank = (authUser?.bank_accounts?.length ?? 0) > 0;
   const cannotInvestReason = isAdmin
     ? 'ผู้ดูแลระบบไม่สามารถลงทุนได้'
     : isOwner
@@ -125,7 +128,7 @@ function ProjectDetail() {
     if (!isLoggedIn) {
       toast.error("กรุณาเข้าสู่ระบบก่อนลงทุน", {
         id: "login-required",
-        position: "top-right",
+        position: "top-center",
         duration: 3000,
         style: {
           borderRadius: "10px",
@@ -161,7 +164,7 @@ function ProjectDetail() {
       if (result.isConfirmed) navigate('/booster/profile?tab=verify');
       return;
     }
-    navigate(`/projects/${id}/invest`);
+    navigate(`/projects/${slug}/invest`);
   };
 
   const tabs = [
@@ -186,7 +189,8 @@ function ProjectDetail() {
     <div className="min-h-screen bg-[#F8F9FA] overflow-x-hidden w-full mt-[100px] pb-[100px]">
       <Toaster
         toastOptions={{ duration: 3000 }}
-        containerStyle={{ top: 20 }}
+        position="top-center"
+        containerStyle={{ top: 80 }}
       />
 
       {/* ── Main Content ── */}
@@ -280,50 +284,84 @@ function ProjectDetail() {
                 )}
 
                 {/* ── Milestone Content ── */}
-                {activeTab === "milestone" && (
-                  hasMilestones ? (
-                    <div className="flex flex-col gap-[24px] mt-[20px] relative w-full">
-                      <div className="absolute left-[24px] top-[24px] bottom-[24px] w-[1px] bg-border z-0 hidden md:block" />
+                {activeTab === "milestone" && (() => {
+                  const getMilestoneStatus = (status: string) => {
+                    switch (status) {
+                      case 'paid':       return { label: 'จ่ายเงินแล้ว',      cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+                      case 'approved':   return { label: 'Admin อนุมัติแล้ว', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+                      case 'active':     return { label: 'กำลังดำเนินการ',    cls: 'bg-primary/5 text-primary border-primary/20' };
+                      case 'submitted':  return { label: 'ส่งงานแล้ว',        cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+                      case 'rejected':
+                      case 'failed':     return { label: 'ถูกปฏิเสธ',         cls: 'bg-red-50 text-red-600 border-red-200' };
+                      default:           return { label: 'รอดำเนินการ',        cls: 'bg-gray-50 text-gray-500 border-gray-200' };
+                    }
+                  };
+                  const isDone    = (s: string) => s === 'paid' || s === 'approved';
+                  const isCurrent = (s: string) => s === 'active' || s === 'submitted';
+
+                  return hasMilestones ? (
+                    <div className="flex flex-col mt-[20px] w-full">
                       {milestones.map((m, index) => {
                         const phaseNumber = m.phase_no || (index + 1);
                         const criteria = (m.acceptance_criteria ?? '').split('\n').filter((c: string) => c.trim());
+                        const done = isDone(m.status);
+                        const current = isCurrent(m.status);
+                        const st = getMilestoneStatus(m.status);
+                        const isLast = index === milestones.length - 1;
                         return (
-                          <div key={m.id || index} className="flex gap-[20px] relative z-10 w-full">
-                            <div className={`hidden md:flex shrink-0 w-[48px] h-[48px] rounded-full items-center justify-center font-bold text-[20px] shadow-sm ${index === 0 ? 'bg-primary text-white' : 'bg-white border border-border text-foreground'}`}>
-                              {phaseNumber}
+                          <div key={m.id || index} className="flex gap-[16px] relative w-full">
+                            {/* Left: circle + connector */}
+                            <div className="hidden md:flex flex-col items-center shrink-0">
+                              <div className={`w-[48px] h-[48px] rounded-2xl flex items-center justify-center font-bold text-[18px] shadow-sm transition-all z-10 ${
+                                done    ? 'bg-emerald-500 text-white shadow-emerald-200' :
+                                current ? 'bg-primary text-white shadow-primary/20 ring-4 ring-primary/10' :
+                                          'bg-white border-2 border-border text-gray-400'
+                              }`}>
+                                {done ? <CheckCircle2 size={22} /> : phaseNumber}
+                              </div>
+                              {!isLast && (
+                                <div className={`w-[2px] flex-1 min-h-[32px] mt-1 rounded-full ${done ? 'bg-emerald-300' : 'bg-border'}`} />
+                              )}
                             </div>
-                            <div className="flex-1 bg-white border border-border rounded-[16px] p-[24px] shadow-sm flex flex-col gap-[20px]">
-                              <div className="flex flex-col xl:flex-row justify-between xl:items-start gap-[20px]">
-                                <div className="flex flex-col gap-[8px] flex-1 min-w-0">
-                                  <h3 className="text-[16px] font-bold text-foreground">Phase {phaseNumber}: {m.title}</h3>
-                                  {m.description && <p className="text-[14px] text-muted-foreground">{m.description}</p>}
+                            {/* Card */}
+                            <div className={`flex-1 mb-[20px] bg-white border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[16px] ${
+                              current ? 'border-primary/30 shadow-primary/5' :
+                              done    ? 'border-emerald-200' :
+                                        'border-border'
+                            }`}>
+                              <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-[12px]">
+                                <div className="flex flex-col gap-[6px] flex-1 min-w-0">
+                                  <div className="flex items-center gap-[8px] flex-wrap">
+                                    <h3 className="text-[15px] font-bold text-foreground">Phase {phaseNumber}: {m.title}</h3>
+                                    <span className={`px-[10px] py-[3px] rounded-full text-[11px] font-semibold border ${st.cls}`}>
+                                      {st.label}
+                                    </span>
+                                  </div>
+                                  {m.description && <p className="text-[13px] text-muted-foreground">{m.description}</p>}
                                   {m.duration && m.duration > 0 && (
                                     <p className="inline-flex items-center gap-[5px] text-[12px] text-muted-foreground">
-                                      <Calendar size={12} /> กำหนดส่ง: {m.duration} วัน
+                                      <Calendar size={12} /> ระยะเวลา {m.duration} วัน
                                     </p>
                                   )}
                                   {criteria.length > 0 && (
-                                    <div className="flex flex-col gap-[8px] mt-[8px]">
-                                      <span className="text-[12px] font-bold text-foreground">สิ่งที่ส่งมอบ:</span>
-                                      <div className="flex flex-wrap gap-[8px]">
+                                    <div className="flex flex-col gap-[6px] mt-[4px]">
+                                      <span className="text-[12px] font-semibold text-foreground">สิ่งที่ส่งมอบ:</span>
+                                      <div className="flex flex-wrap gap-[6px]">
                                         {criteria.map((c: string, i: number) => (
-                                          <span key={i} className="px-[12px] py-[4px] border border-border rounded-full text-[12px] text-foreground bg-white whitespace-nowrap">{c}</span>
+                                          <span key={i} className="px-[10px] py-[3px] border border-border rounded-full text-[12px] text-foreground bg-white whitespace-nowrap">{c}</span>
                                         ))}
                                       </div>
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex flex-row xl:flex-col items-center xl:items-end justify-between xl:justify-start gap-[12px] shrink-0">
-                                  <span className="text-[20px] font-bold text-primary">
+                                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-[8px] shrink-0">
+                                  <span className={`text-[18px] font-bold ${done ? 'text-emerald-600' : 'text-primary'}`}>
                                     {targetAmount > 0 ? `฿${((targetAmount * m.percent_release) / 100).toLocaleString()}` : `${m.percent_release}%`}
-                                  </span>
-                                  <span className={`px-[12px] py-[4px] rounded-full text-[12px] font-medium border ${m.status === 'completed' ? 'bg-primary text-white border-primary' : 'bg-white text-foreground border-border'}`}>
-                                    {m.status === 'completed' ? 'เสร็จสิ้น' : 'รอดำเนินการ'}
                                   </span>
                                 </div>
                               </div>
                               <div className="flex justify-end">
-                                <Link to={`/projects/${id}/milestones`} className="text-[12px] text-primary hover:text-primary/70 transition-colors font-medium">
+                                <Link to={`/projects/${slug}/milestones`} className="text-[12px] text-primary hover:text-primary/70 transition-colors font-medium">
                                   ดูรายละเอียดเพิ่มเติม →
                                 </Link>
                               </div>
@@ -331,8 +369,8 @@ function ProjectDetail() {
                           </div>
                         );
                       })}
-                      <div className="flex justify-center mt-4">
-                        <Link to={`/projects/${id}/milestones`} className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/5 text-primary rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors border border-primary/20">
+                      <div className="flex justify-center mt-2">
+                        <Link to={`/projects/${slug}/milestones`} className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/5 text-primary rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors border border-primary/20">
                           ดูแผนงาน Milestone ทั้งหมด →
                         </Link>
                       </div>
@@ -341,8 +379,8 @@ function ProjectDetail() {
                     <div className="flex flex-col items-center justify-center gap-[12px] mt-[40px] p-[40px] border border-dashed border-border rounded-[16px] bg-white">
                       <span className="text-muted-foreground text-[14px]">ยังไม่ได้กำหนด Milestone</span>
                     </div>
-                  )
-                )}
+                  );
+                })()}
 
                 {/* ── Updates ── */}
                 {activeTab === "updates" && (
@@ -350,7 +388,7 @@ function ProjectDetail() {
                     updates={updates}
                     creatorName={project?.owner_profile ? `${project.owner_profile.first_name} ${project.owner_profile.last_name}`.trim() : undefined}
                     creatorAvatar={project?.owner_profile?.picture || undefined}
-                    projectId={Number(id)}
+                    projectId={projectId ?? 0}
                     hasInvested={hasInvested}
                     isOwner={isOwner}
                   />
@@ -413,7 +451,7 @@ function ProjectDetail() {
 
             {/* ── Fund Card ── */}
             <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-primary to-purple-300" />
+              <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-pink-500 to-purple-600" />
 
               <h2 className="text-[32px] font-bold text-primary tracking-tight mt-[4px]">
                 ฿{fundedAmount.toLocaleString()}
@@ -506,8 +544,19 @@ function ProjectDetail() {
                 <button
                   onClick={() => {
                     if (!isLoggedIn) {
-                      toast.error('กรุณาเข้าสู่ระบบก่อนร้องเรียน');
-                      navigate('/login');
+                      toast.error('กรุณาเข้าสู่ระบบก่อนรายงาน', {
+                        id: 'report-login',
+                        position: 'top-center',
+                        duration: 3000,
+                        style: {
+                          borderRadius: '10px',
+                          background: 'var(--color-card)',
+                          color: 'var(--color-foreground)',
+                          fontSize: '14px',
+                          border: '1px solid var(--color-border)',
+                        },
+                        iconTheme: { primary: 'var(--color-error)', secondary: 'var(--color-white-foreground)' },
+                      });
                       return;
                     }
                     setShowComplaintModal(true);
@@ -605,7 +654,7 @@ function ProjectDetail() {
               {investors.length === 0 ? (
                 <p className="text-center text-muted-foreground text-[14px] py-[32px]">ยังไม่มีข้อมูลผู้สนับสนุน</p>
               ) : (
-                investors.map((inv, idx) => {
+                [...investors].sort((a, b) => b.principal_amount - a.principal_amount).map((inv, idx) => {
                   const name = `${inv.first_name} ${inv.last_name}`.trim();
                   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
                   const pct = fundedAmount > 0 ? ((inv.principal_amount / fundedAmount) * 100).toFixed(1) : '0.0';
@@ -623,7 +672,6 @@ function ProjectDetail() {
                       {/* Name */}
                       <div className="flex-1 min-w-0">
                         <p className="text-[14px] font-semibold text-foreground truncate">{name || 'ไม่ระบุชื่อ'}</p>
-                        <p className="text-[12px] text-muted-foreground">{inv.investment_count} ครั้ง</p>
                       </div>
                       {/* Amount + % */}
                       <div className="text-right flex-shrink-0">

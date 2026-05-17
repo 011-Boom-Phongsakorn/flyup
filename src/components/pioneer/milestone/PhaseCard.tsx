@@ -19,20 +19,23 @@ interface VoterItem {
 interface PhaseCardProps {
   milestone: MilestoneData
   isActive: boolean
+  projectSuspended: boolean
   onToggle: () => void
   onSubmit: (milestoneId: number, files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
   onRecall: (milestoneId: number) => Promise<void>
-  onOpenVoting: (milestoneId: number) => Promise<void>
+  onOpenVoting: (milestoneId: number) => Promise<void | boolean>
   isSubmitting: boolean
   isOpeningVoting: boolean
 }
 
-const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVoting, isSubmitting, isOpeningVoting }: PhaseCardProps) => {
+const PhaseCard = ({ milestone, isActive, projectSuspended, onToggle, onSubmit, onRecall, onOpenVoting, isSubmitting, isOpeningVoting }: PhaseCardProps) => {
   const navigate = useNavigate()
   const cfg = STATUS_CONFIG[milestone.status] ?? STATUS_CONFIG['pending']
-  const canSubmit = milestone.status === 'in_progress' || milestone.status === 'rejected'
+  const isFailed    = milestone.status === 'failed'
+  const isLocked    = projectSuspended || isFailed
+  const canSubmit   = !isLocked && (milestone.status === 'in_progress' || milestone.status === 'rejected')
   const isCompleted = milestone.status === 'completed'
-  const isApproved = milestone.status === 'approved'
+  const isApproved  = milestone.status === 'approved' && !isLocked
 
   const [votersOpen, setVotersOpen] = useState(false)
   const [voters, setVoters] = useState<VoterItem[] | null>(null)
@@ -40,10 +43,11 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
   useEffect(() => {
     if (!milestone.voting_open || !milestone.id) return
     const id = milestone.id
+    setTimeout(() => setVoters(null), 0)
     api.get(`/pioneer/investments/milestones/${id}/voters`)
       .then(res => setVoters(res.data?.data ?? []))
       .catch(() => setVoters([]))
-  }, [milestone.voting_open, milestone.id])
+  }, [milestone.voting_open, milestone.id, milestone.voting_opened_at])
 
   const now = new Date()
 
@@ -144,13 +148,25 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
           )}
           {isApproved && (
             <>
-              <button
-                onClick={() => navigate('/pioneer/dashboard/meetings')}
-                className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F8F9FA] transition-colors cursor-pointer"
-              >
-                <Calendar size={14} className="text-muted-foreground" />
-                นัดประชุม
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={() => !hasMeeting && navigate('/pioneer/dashboard/meetings')}
+                  disabled={hasMeeting}
+                  className={`flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border text-[13px] font-medium transition-colors ${
+                    hasMeeting
+                      ? 'border-border text-muted-foreground bg-[#F8F9FA] cursor-not-allowed opacity-60'
+                      : 'border-border text-foreground hover:bg-[#F8F9FA] cursor-pointer'
+                  }`}
+                >
+                  <Calendar size={14} className="text-muted-foreground" />
+                  {hasMeeting ? 'นัดแล้ว' : 'นัดประชุม'}
+                </button>
+                {hasMeeting && (
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 whitespace-nowrap bg-gray-800 text-white text-[11px] px-2 py-1 rounded-[6px] pointer-events-none">
+                    มีนัดประชุมอยู่แล้ว ยกเลิกนัดก่อนจึงจะนัดใหม่ได้
+                  </div>
+                )}
+              </div>
               {milestone.voting_open ? (
                 <button
                   onClick={() => setVotersOpen(v => !v)}
@@ -271,6 +287,17 @@ const PhaseCard = ({ milestone, isActive, onToggle, onSubmit, onRecall, onOpenVo
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {/* ── Suspended / Failed banner ── */}
+      {isLocked && (
+        <div className="mx-[20px] mb-[12px] p-[14px] rounded-[10px] bg-gray-100 border border-gray-300 text-[13px] text-gray-700 flex items-start gap-[10px]">
+          <span className="text-[18px] leading-none">🔒</span>
+          <div>
+            <p className="font-semibold text-gray-800">โปรเจกต์ถูกระงับ</p>
+            <p className="mt-[2px] text-[12px]">Milestone นี้ไม่ผ่านการโหวตในรอบแก้ไข ไม่สามารถดำเนินการใดๆ ในโปรเจกต์นี้ได้อีก</p>
+          </div>
         </div>
       )}
 

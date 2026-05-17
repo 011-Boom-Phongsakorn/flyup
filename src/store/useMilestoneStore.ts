@@ -14,8 +14,8 @@ const mapBackendStatus = (s: string | undefined): MilestoneStatus => {
     case 'submitted':         return 'submitted'
     case 'approved':          return 'approved'
     case 'paid':              return 'completed'
-    case 'rejected':
-    case 'failed':            return 'rejected'
+    case 'rejected':          return 'rejected'
+    case 'failed':            return 'failed'
     case 'draft':
     case 'waiting':
     default:                  return 'pending'
@@ -25,6 +25,7 @@ const mapBackendStatus = (s: string | undefined): MilestoneStatus => {
 interface MilestoneStore {
   milestones: MilestoneData[]
   projectTitle: string
+  projectSuspended: boolean
   isLoading: boolean
   isSubmitting: boolean
   fetchMilestones: (projectId: string) => Promise<number | null> // returns index of first active phase
@@ -37,12 +38,13 @@ interface MilestoneStore {
   ) => Promise<boolean>
   recallEvidence: (milestoneId: number) => Promise<boolean>
   isOpeningVoting: boolean
-  openVoting: (milestoneId: number) => Promise<boolean>
+  openVoting: (milestoneId: number, projectId: string) => Promise<boolean>
 }
 
 export const useMilestoneStore = create<MilestoneStore>((set) => ({
   milestones: [],
   projectTitle: '',
+  projectSuspended: false,
   isLoading: false,
   isSubmitting: false,
   isOpeningVoting: false,
@@ -57,7 +59,8 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
 
       const proj = projRes.data?.data ?? {}
       const fundingGoal: number = proj.funding_goal ?? 0
-      const baseDate: Date | null = proj.funded_at ? new Date(proj.funded_at) : null
+      const baseDateStr: string | null = proj.funded_at ?? proj.funding_at ?? null
+      const baseDate: Date | null = baseDateStr ? new Date(baseDateStr) : null
 
       const raw: {
         id?: number
@@ -65,12 +68,14 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
         title?: string
         description?: string
         duration?: number
+        due_date?: string | null
         funding_goal?: number
         acceptance_criteria?: string
         status?: MilestoneStatus
         progress_pct?: number
         admin_note?: string
         voting_open?: boolean
+        voting_opened_at?: string | null
         meetings?: { id: number; date: string; time: string; status: string }[]
       }[] = msRes.data?.data ?? []
 
@@ -85,7 +90,10 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
             .filter(m => (m.phase_no ?? 0) < i + 1)
             .reduce((sum, m) => sum + (m.duration ?? 0), 0)
           startDate = addDays(baseDate, prevDays)
-          endDate = addDays(startDate, duration - 1)
+          endDate = addDays(startDate, duration)
+        } else if (bm.due_date) {
+          endDate = new Date(bm.due_date)
+          if (duration > 0) startDate = addDays(endDate, -duration)
         }
 
         return {
@@ -104,11 +112,13 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
           progress_pct: mapBackendStatus(bm.status) === 'completed' ? 100 : (bm.progress_pct ?? 0),
           admin_note: bm.admin_note,
           voting_open: bm.voting_open ?? false,
+          voting_opened_at: bm.voting_opened_at ?? null,
           meetings: bm.meetings ?? [],
         }
       })
 
-      set({ projectTitle: proj.title ?? '', milestones })
+      const projectSuspended = proj.state === 'suspended' || proj.status === 'failed'
+      set({ projectTitle: proj.title ?? '', milestones, projectSuspended })
 
       const firstActive = milestones.findIndex(
         m => m.status === 'in_progress' || m.status === 'rejected'
@@ -157,24 +167,26 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
       }))
 
       return true
-    } catch {
-      toast.error('เกิดข้อผิดพลาดในการส่งหลักฐาน')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      if (msg === 'previous milestone payment has not been transferred yet') {
+        toast.error('ยังไม่สามารถส่งได้ เนื่องจาก Milestone ก่อนหน้ายังไม่ได้รับการโอนเงิน')
+      } else {
+        toast.error('เกิดข้อผิดพลาดในการส่งหลักฐาน')
+      }
       return false
     } finally {
       set({ isSubmitting: false })
     }
   },
 
-  openVoting: async (milestoneId) => {
+  openVoting: async (milestoneId, projectId) => {
     set({ isOpeningVoting: true })
     try {
       await api.patch(`/pioneer/projects/milestones/${milestoneId}/open-vote`)
       toast.success('เปิดการโหวตเรียบร้อยแล้ว')
-      set(state => ({
-        milestones: state.milestones.map(m =>
-          m.id === milestoneId ? { ...m, voting_open: true } : m
-        ),
-      }))
+      // refetch จาก server เพื่อให้ voting_opened_at อัปเดต ซึ่ง trigger re-fetch voters ใน PhaseCard
+      await useMilestoneStore.getState().fetchMilestones(projectId)
       return true
     } catch {
       toast.error('ไม่สามารถเปิดการโหวตได้')

@@ -22,6 +22,7 @@ interface NotificationStore {
     fetchNotifications: () => Promise<void>
     markAsRead: (id: number) => Promise<void>
     markAllAsRead: () => Promise<void>
+    clearUnreadCount: () => void
     addNotification: (notif: Notification) => void
 }
 
@@ -72,6 +73,10 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
         } catch {
             // ignore
         }
+    },
+
+    clearUnreadCount: () => {
+        set({ unread: 0 })
     },
 
     addNotification: (notif: Notification) => {

@@ -2,22 +2,74 @@ import axios from "axios";
 
 const baseURL = import.meta.env.VITE_BASE_URL;
 
+export const TOKEN_KEY = "auth_token";
+export const REFRESH_KEY = "refresh_token";
+
+export const getStoredToken = () => localStorage.getItem(TOKEN_KEY);
+export const setStoredToken = (t: string) => localStorage.setItem(TOKEN_KEY, t);
+export const getStoredRefresh = () => localStorage.getItem(REFRESH_KEY);
+export const setStoredRefresh = (t: string) => localStorage.setItem(REFRESH_KEY, t);
+export const clearStoredTokens = () => {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+};
+
 const instance = axios.create({
   baseURL: baseURL,
   withCredentials: true,
   timeout: 8000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
-// iOS Safari blocks cross-site cookies (ITP) — use token from localStorage instead
+// Request interceptor: ส่ง Authorization header จาก localStorage ถ้ามี
+// (รองรับ incognito ที่ cookie ถูกบล็อก)
 instance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("auth_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  const token = getStoredToken();
+  if (token) config.headers["Authorization"] = `Bearer ${token}`;
   return config;
 });
+
+let isRefreshing = false;
+let refreshQueue: Array<(ok: boolean) => void> = [];
+
+instance.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const original = error.config;
+    const status = error.response?.status;
+
+    if (status !== 401 || original._retry || original.url?.includes("/auth/refresh") || original.url?.includes("/user/signout")) {
+      return Promise.reject(error);
+    }
+
+    original._retry = true;
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        refreshQueue.push((ok) => ok ? resolve(instance(original)) : reject(error));
+      });
+    }
+
+    isRefreshing = true;
+    try {
+      const refreshToken = getStoredRefresh();
+      const res = await instance.post("/auth/refresh", null, {
+        headers: refreshToken ? { "X-Refresh-Token": refreshToken } : {},
+      });
+      // อัปเดต localStorage ถ้า backend ส่ง token ใหม่มาด้วย
+      const newToken: string | undefined = res.data?.token;
+      if (newToken) setStoredToken(newToken);
+      refreshQueue.forEach((cb) => cb(true));
+      return instance(original);
+    } catch {
+      refreshQueue.forEach((cb) => cb(false));
+      window.dispatchEvent(new Event("auth:logout"));
+      return Promise.reject(error);
+    } finally {
+      isRefreshing = false;
+      refreshQueue = [];
+    }
+  }
+);
 
 export default instance;

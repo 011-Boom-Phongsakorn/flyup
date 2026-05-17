@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import {
   ChevronRight,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import useCreateProjectGuard from '../../hooks/useCreateProjectGuard';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 
   return (
     <Link
-      to={`/projects/${project.id}`}
+      to={`/projects/${project.slug || project.id}`}
       className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group flex flex-col"
     >
       <div className="relative h-48 w-full overflow-hidden bg-gray-100">
@@ -71,7 +72,7 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
         <p className="text-xs text-gray-500 line-clamp-1 mb-4">{project.description || 'ยังไม่มีรายละเอียด'}</p>
 
         <div className="w-full h-1.5 bg-gray-100 rounded-full mb-3 overflow-hidden mt-auto">
-          <div className="h-full bg-purple-600 rounded-full" style={{ width: `${progress}%` }}></div>
+          <div className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full" style={{ width: `${progress}%` }}></div>
         </div>
 
         <div className="flex justify-between items-center pt-1">
@@ -85,9 +86,26 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 
 // ─── Home Page ──────────────────────────────────────────────────────────────
 
+const HERO_WORDS = ['โปรเจกต์ที่ใช่', 'นวัตกรรมใหม่', 'ไอเดียที่ดี', 'ความฝันของคุณ'];
+
 const Home = () => {
   const { authUser } = useAuthStore();
   const hideCreateBtn = authUser?.role === 'booster' || authUser?.role === 'admin';
+  const { createWithGuard, isCreating } = useCreateProjectGuard();
+
+  const [heroWordIdx, setHeroWordIdx] = useState(0);
+  const [heroVisible, setHeroVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroVisible(false);
+      setTimeout(() => {
+        setHeroWordIdx(i => (i + 1) % HERO_WORDS.length);
+        setHeroVisible(true);
+      }, 350);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   const {
     publicProjects, // Keep for stats
@@ -104,6 +122,8 @@ const Home = () => {
     fetchHomeProjects();
     fetchPublicProjects(); // To get total count and sum for stats
   }, [fetchHomeProjects, fetchPublicProjects]);
+
+  const handleCreateProject = () => createWithGuard();
 
   const recommendedMain = recommendedProjects[0] || null;
   const recommendedList = recommendedProjects.slice(1, 4);
@@ -131,7 +151,14 @@ const Home = () => {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 text-foreground">
-                ลงทุนโปรเจกต์ที่ใช่ <br />
+                ลงทุน
+                <span
+                  className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 inline-block transition-all duration-350"
+                  style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'translateY(0px)' : 'translateY(-10px)' }}
+                >
+                  {HERO_WORDS[heroWordIdx]}
+                </span>
+                <br />
                 กับ <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">FlyUp</span>
               </h1>
 
@@ -141,15 +168,29 @@ const Home = () => {
               </p>
 
               <div className="flex flex-wrap gap-4 items-center">
-                {!hideCreateBtn && (
-                  <Link
-                    to={authUser?.role === 'pioneer' ? '/pioneer/dashboard/projects' : '/login'}
-                    className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2"
+                {!hideCreateBtn ? (
+                  <button
+                    onClick={handleCreateProject}
+                    disabled={isCreating}
+                    className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
-                    {authUser?.role === 'pioneer' ? 'ไปที่โปรเจกต์ของฉัน' : 'สร้างโปรเจกต์'} <ChevronRight size={18} />
+                    {isCreating ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        กำลังสร้าง...
+                      </>
+                    ) : (
+                      <>
+                        สร้างโปรเจกต์ <ChevronRight size={18} />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <Link to="/dashboard" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
+                    ไปที่โปรเจกต์ของฉัน <ChevronRight size={18} />
                   </Link>
-                )}
-
+                )
+                }
                 <Link to="/projects" className="bg-background hover:bg-muted text-foreground px-8 py-3 rounded-full font-medium transition-colors border border-border shadow-sm inline-block">
                   สำรวจโปรเจกต์
                 </Link>
@@ -190,8 +231,8 @@ const Home = () => {
               <Loader2 size={32} className="animate-spin text-primary" />
             </div>
           ) : recommendedMain ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <Link to={`/projects/${recommendedMain.id}`} className="lg:col-span-2 cursor-pointer group">
+            <div className={`grid gap-8 ${recommendedList.length > 0 ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 max-w-2xl'}`}>
+              <Link to={`/projects/${recommendedMain.slug || recommendedMain.id}`} className="lg:col-span-2 cursor-pointer group">
                 <div className="bg-gray-100 rounded-3xl overflow-hidden relative h-[300px] md:h-[400px] mb-4">
                   <img src={recommendedMain.thumbnail_url || PLACEHOLDER_IMG} alt={recommendedMain.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 </div>
@@ -215,7 +256,7 @@ const Home = () => {
                 {recommendedList.map(item => (
                   <Link
                     key={item.id}
-                    to={`/projects/${item.id}`}
+                    to={`/projects/${item.slug || item.id}`}
                     className="flex gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-100"
                   >
                     <img src={item.thumbnail_url || PLACEHOLDER_IMG} alt={item.title} className="w-24 h-24 rounded-xl object-cover" />

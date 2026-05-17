@@ -192,7 +192,7 @@ const Projects = () => {
               return (
                 <Link
                   key={project.id}
-                  to={`/projects/${project.id}`}
+                  to={`/projects/${project.slug || project.id}`}
                   className="bg-card rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer group flex flex-col"
                 >
                   <div className="relative h-48 w-full overflow-hidden bg-muted">
@@ -234,7 +234,7 @@ const Projects = () => {
 
                     <div className="w-full h-1.5 bg-muted rounded-full mb-3 overflow-hidden mt-auto">
                       <div
-                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all duration-500"
                         style={{ width: `${progress}%` }}
                       ></div>
                     </div>

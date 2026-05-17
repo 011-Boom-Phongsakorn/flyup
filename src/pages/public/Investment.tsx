@@ -51,7 +51,7 @@ const ContractModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 
 const Investment = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { slug } = useParams();
 
   const [step, setStep] = useState<Step>(1);
   const [agreed, setAgreed] = useState(false);
@@ -64,16 +64,17 @@ const Investment = () => {
   const pollingRef = useRef<number | null>(null);
 
   const { authUser } = useAuthStore();
-  const { currentPublicProject, fetchPublicProjectById } = usePublicProjectStore();
+  const { currentPublicProject, fetchPublicProjectBySlug, fetchPublicProjectById } = usePublicProjectStore();
   const { createInvestment, getInvestmentById, isSubmitting, investmentData, clearInvestmentData } = useInvestmentStore();
 
   const project = currentPublicProject;
 
   useEffect(() => {
-    if (id) {
-      fetchPublicProjectById(Number(id));
+    if (slug) {
+      if (/^\d+$/.test(slug)) fetchPublicProjectById(Number(slug));
+      else fetchPublicProjectBySlug(slug);
     }
-  }, [id, fetchPublicProjectById]);
+  }, [slug, fetchPublicProjectBySlug, fetchPublicProjectById]);
 
   // Guard: ต้องยืนยันตัวตน / ไม่ใช่เจ้าของ / ไม่ใช่ admin
   useEffect(() => {
@@ -84,15 +85,15 @@ const Investment = () => {
 
     if (isAdmin) {
       toast.error('ผู้ดูแลระบบไม่สามารถลงทุนได้');
-      navigate(`/projects/${id}`, { replace: true });
+      navigate(`/projects/${slug}`, { replace: true });
     } else if (isOwner) {
       toast.error('เจ้าของโปรเจกต์ไม่สามารถลงทุนในโปรเจกต์ของตัวเองได้');
-      navigate(`/projects/${id}`, { replace: true });
+      navigate(`/projects/${slug}`, { replace: true });
     } else if (!kycApproved) {
       toast.error('กรุณายืนยันตัวตนด้วยบัตรประชาชนก่อนลงทุน', { duration: 4000 });
       navigate('/booster/profile?tab=verify', { replace: true });
     }
-  }, [project, authUser, id, navigate]);
+  }, [project, authUser, slug, navigate]);
 
   // Timer countdown
   useEffect(() => {
@@ -184,10 +185,10 @@ const Investment = () => {
   };
 
   const handleConfirmInvestment = async () => {
-    if (!authUser || !id) return;
+    if (!authUser || !project?.id) return;
 
     const success = await createInvestment({
-      project_id: Number(id),
+      project_id: project.id,
       amount: parsedAmount,
     });
 
@@ -205,7 +206,7 @@ const Investment = () => {
 
   return (
     <div className="h-full min-h-screen w-full flex-1 bg-[url('/bg-investment.png')] bg-cover bg-center bg-no-repeat bg-fixed flex flex-col pt-24 relative before:absolute before:inset-0 before:bg-white/30 before:pointer-events-none">
-      <Toaster position="top-right" />
+      <Toaster position="top-center" containerStyle={{ top: 80 }} />
       <ContractModal isOpen={showContract} onClose={() => setShowContract(false)} />
 
       {/* Confirmation Modal */}
@@ -550,7 +551,7 @@ const Investment = () => {
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-foreground mb-2 text-transparent bg-clip-text bg-[image:var(--gradient-primary)]">การลงทุนสำเร็จ!</h1>
               <p className="text-muted-foreground text-sm leading-relaxed mb-8 px-4">
-                ขอบคุณที่ร่วมสนับสนุนโปรเจกต์ของนักศึกษา ระบบได้ส่งหลักฐานการยืนยันไปยังอีเมล์ของคุณเรียบร้อยแล้ว
+                ขอบคุณที่ร่วมสนับสนุนโปรเจกต์ของนักศึกษา ระบบได้ส่งหลักฐานการยืนยันไปยังอีเมลของคุณเรียบร้อยแล้ว
               </p>
 
               <div className="bg-muted/50 rounded-2xl p-4 border border-border/50 text-left mb-8 space-y-2.5 text-sm mx-auto max-w-sm">
@@ -569,7 +570,7 @@ const Investment = () => {
               </div>
 
               <button
-                onClick={() => navigate(`/projects/${id}`)}
+                onClick={() => navigate(`/projects/${slug}`)}
                 className="w-full py-4 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/30 uppercase tracking-widest text-sm cursor-pointer"
               >
                 กลับสู่หน้าโปรเจกต์

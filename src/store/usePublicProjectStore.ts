@@ -43,6 +43,7 @@ export interface PublicMilestone {
 
 export interface PublicProject {
   id: number;
+  slug: string;
   owner_user_id: number;
   category: string | null;
   title: string;
@@ -94,6 +95,7 @@ interface PublicProjectState {
   fetchPublicProjects: () => Promise<void>;
   fetchHomeProjects: () => Promise<void>;
   fetchPublicProjectById: (id: number) => Promise<void>;
+  fetchPublicProjectBySlug: (slug: string) => Promise<void>;
   fetchProjectsByCategory: (categoryId: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
 }
@@ -163,10 +165,21 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
     set({ isDetailLoading: true, currentPublicProject: null });
     try {
       const res = await api.get(`/projects/${id}`);
-      const project: PublicProject = res.data?.data ?? null;
-      set({ currentPublicProject: project });
+      set({ currentPublicProject: res.data?.data ?? null });
     } catch (error) {
       console.error('fetchPublicProjectById:', error);
+    } finally {
+      set({ isDetailLoading: false });
+    }
+  },
+
+  fetchPublicProjectBySlug: async (slug: string) => {
+    set({ isDetailLoading: true, currentPublicProject: null });
+    try {
+      const res = await api.get(`/projects/slug/${slug}`);
+      set({ currentPublicProject: res.data?.data ?? null });
+    } catch (error) {
+      console.error('fetchPublicProjectBySlug:', error);
     } finally {
       set({ isDetailLoading: false });
     }

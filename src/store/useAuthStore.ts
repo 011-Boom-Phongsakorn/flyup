@@ -1,7 +1,6 @@
 import { create } from 'zustand'
-import api from '../services/api'
+import api, { setStoredToken, clearStoredTokens } from '../services/api'
 import toast from 'react-hot-toast'
-import { jwtDecode } from 'jwt-decode'
 import { AxiosError } from 'axios'
 
 interface University {
@@ -35,6 +34,7 @@ interface BankAccount {
     bank_name?: string;
     account_name?: string;
     account_number?: string;
+    is_default?: boolean;
 }
 
 interface DecodedUser extends Record<string, unknown> {
@@ -49,7 +49,7 @@ interface DecodedUser extends Record<string, unknown> {
     google_sub?: string;
     has_password?: boolean;
     student_profile?: StudentProfile;
-    bank_account?: BankAccount;
+    bank_accounts?: BankAccount[];
     student_card_verification?: CardVerification;
     id_card_verification?: CardVerification;
     notification_preferences?: Record<string, boolean>;
@@ -79,13 +79,20 @@ interface AuthStore {
     isSelectingRole: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
-    loginWithGoogleToken: (token: string) => void;
+    loginWithGoogleToken: (accessToken?: string) => void;
     logout: () => Promise<void>;
     selectRole: (role: 'pioneer' | 'booster') => Promise<boolean>;
     isSendingReset: boolean;
     isResetting: boolean;
     forgotPassword: (email: string) => Promise<boolean>;
     resetPassword: (token: string, new_password: string) => Promise<boolean>;
+}
+
+// เมื่อ refresh token หมดอายุ api.ts จะ dispatch event นี้
+if (typeof window !== 'undefined') {
+    window.addEventListener('auth:logout', () => {
+        useAuthStore.getState().logout()
+    })
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -101,11 +108,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
             const response = await api.get('/user/me')
             set({ authUser: response?.data?.data })
         } catch {
-            // ถ้ามี token ใน localStorage อยู่แล้ว (เช่น หลัง Google OAuth)
-            // ไม่ล้าง authUser เพื่อไม่ให้ลบ session ที่เพิ่ง set ไป
-            if (!localStorage.getItem('auth_token')) {
-                set({ authUser: null })
-            }
+            set({ authUser: null })
         } finally {
             set({ isCheckingAuth: false })
         }
@@ -133,19 +136,16 @@ export const useAuthStore = create<AuthStore>((set) => ({
             set({ isRegistering: false })
         }
     },
-    loginWithGoogleToken: (token) => {
-        localStorage.setItem('auth_token', token)
-        const decoded = jwtDecode(token) as DecodedUser
-        set({ authUser: decoded })
+    loginWithGoogleToken: (accessToken?: string) => {
+        if (accessToken) setStoredToken(accessToken);
+        api.get('/user/me').then(res => set({ authUser: res.data?.data })).catch(() => {})
     },
     login: async (data) => {
         set({ isLoggingIn: true })
         try {
-            const res = await api.post('/signin', data)
-            const token: string = res.data?.token
-            if (token) {
-                localStorage.setItem('auth_token', token)
-            }
+            const signinRes = await api.post('/signin', data)
+            const token: string | undefined = signinRes.data?.token
+            if (token) setStoredToken(token)
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
         } catch (error: unknown) {
@@ -158,11 +158,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
             } else if (apiMessage === 'your account has been suspended') {
                 toast.error('บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ')
             } else if (errorMessage === 'please verify email') {
-                toast.error('กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
+                toast.error('กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ')
             } else if (err?.response?.data?.login_method === 'google') {
                 toast.error('บัญชีผู้ใช้นี้ลงทะเบียนด้วย Google กรุณาเข้าสู่ระบบด้วย Google')
             } else {
-                toast.error('อีเมล์หรือรหัสผ่านไม่ถูกต้อง')
+                toast.error('อีเมลหรือรหัสผ่านไม่ถูกต้อง')
             }
         } finally {
             set({ isLoggingIn: false })
@@ -174,18 +174,15 @@ export const useAuthStore = create<AuthStore>((set) => ({
         } catch {
             // ignore
         } finally {
-            localStorage.removeItem('auth_token')
+            clearStoredTokens()
             set({ authUser: null })
         }
     },
     selectRole: async (role) => {
         set({ isSelectingRole: true })
         try {
-            const res = await api.patch('/user/role', { role })
-            const token: string = res.data?.token
-            if (token) {
-                localStorage.setItem('auth_token', token)
-            }
+            await api.patch('/user/role', { role })
+            // cookie with new role-embedded token set by backend
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
             return true

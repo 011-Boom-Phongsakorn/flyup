@@ -15,14 +15,14 @@ const VerifyEmail = () => {
         const verify = async () => {
             if (!token) {
                 setStatus('error')
-                setMessage('ไม่พบ Token สำหรับยืนยันอีเมล์')
+                setMessage('ไม่พบ Token สำหรับยืนยันอีเมล')
                 return
             }
 
             try {
                 await api.get(`/verify-email?token=${token}`)
                 setStatus('success')
-                setMessage('ยืนยันอีเมล์สำเร็จแล้ว!')
+                setMessage('ยืนยันอีเมลสำเร็จแล้ว!')
             } catch {
                 setStatus('error')
                 setMessage('ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว')
@@ -42,7 +42,7 @@ const VerifyEmail = () => {
                         <div className="w-[80px] h-[80px] rounded-full bg-primary-light flex items-center justify-center">
                             <Loader2 className="w-10 h-10 text-primary animate-spin" />
                         </div>
-                        <h1 className="text-[22px] font-semibold text-foreground">กำลังยืนยันอีเมล์...</h1>
+                        <h1 className="text-[22px] font-semibold text-foreground">กำลังยืนยันอีเมล...</h1>
                         <p className="text-[14px] text-muted-foreground">กรุณารอสักครู่</p>
                     </div>
                 )}
@@ -53,7 +53,7 @@ const VerifyEmail = () => {
                         <div className="w-[80px] h-[80px] rounded-full bg-emerald-50 flex items-center justify-center">
                             <CheckCircle className="w-10 h-10 text-success" />
                         </div>
-                        <h1 className="text-[22px] font-semibold text-foreground">ยืนยันอีเมล์สำเร็จ!</h1>
+                        <h1 className="text-[22px] font-semibold text-foreground">ยืนยันอีเมลสำเร็จ!</h1>
                         <p className="text-[14px] text-muted-foreground leading-relaxed">
                             {message}<br />
                             คุณสามารถเข้าสู่ระบบเพื่อเริ่มใช้งาน FlyUp ได้เลย

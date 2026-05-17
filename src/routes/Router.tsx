@@ -24,6 +24,9 @@ import Investment from '../pages/public/Investment';
 import ForgotPassword from '../pages/public/ForgotPassword';
 import ResetPassword from '../pages/public/ResetPassword';
 import MilestoneDetail from '../pages/public/MilestoneDetail';
+import AboutUs from '../pages/public/AboutUs';
+import Terms from '../pages/public/Terms';
+import HelpCenter from '../pages/public/HelpCenter';
 
 import { Loader2 } from 'lucide-react';
 
@@ -111,10 +114,13 @@ const Router = () => {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
-        const token = params.get('token')
+        const accessToken = params.get('access_token')
+        // backward compat: รองรับ ?token=1 เดิม + ?access_token=<jwt> ใหม่
+        const legacyFlag = params.get('token')
         const isVerifyPage = window.location.pathname === '/verify'
-        if (token && !isVerifyPage) {
-            loginWithGoogleToken(token)
+        if ((accessToken || legacyFlag) && !isVerifyPage) {
+            loginWithGoogleToken(accessToken ?? undefined)
+            params.delete('access_token')
             params.delete('token')
             const newSearch = params.toString()
             window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)
@@ -157,9 +163,12 @@ const Router = () => {
                         <Route path='/reset-password' element={!authUser ? <ResetPassword /> : <Navigate to='/' />} />
                         <Route path='/projects' element={<Projects />} />
                         <Route path='/verify' element={<VerifyEmail />} />
-                        <Route path='/projects/:id' element={<ProjectDetail />} />
-                        <Route path='/projects/:id/invest' element={<Investment />} />
-                        <Route path='/projects/:id/milestones' element={<MilestoneDetail />} />
+                        <Route path='/projects/:slug' element={<ProjectDetail />} />
+                        <Route path='/projects/:slug/invest' element={<Investment />} />
+                        <Route path='/projects/:slug/milestones' element={<MilestoneDetail />} />
+                        <Route path='/about/we' element={<AboutUs />} />
+                        <Route path='/legal/terms' element={<Terms />} />
+                        <Route path='/help' element={<HelpCenter />} />
                     </Route>
 
                     <Route element={<PioneerGuard />}>

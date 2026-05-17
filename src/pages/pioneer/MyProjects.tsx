@@ -79,9 +79,9 @@ const MyProjects = () => {
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PAGE_SIZE));
   const pagedProjects = filteredProjects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleView = (id: number, state: StateType) => {
+  const handleView = (id: number, state: StateType, slug?: string) => {
     const useDetail = state === 'funding' || state === 'executing' || state === 'closed';
-    if (useDetail) navigate(`/projects/${id}`);
+    if (useDetail) navigate(`/projects/${slug || id}`);
     else navigate(`/preview/${id}`, { state: { from: '/pioneer/dashboard/projects' } });
   };
   const handleEdit = (id: number) => navigate(`/project/overview/${id}`);
@@ -231,7 +231,7 @@ const MyProjects = () => {
               <div
                 key={project.id}
                 className="bg-white border border-border rounded-[16px] p-[20px] flex gap-[20px] shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => handleView(project.id, project.state)}
+                onClick={() => handleView(project.id, project.state, project.slug)}
               >
                 {/* Thumbnail */}
                 <div className="w-[64px] h-[64px] bg-[#E1E4E8] rounded-[12px] shrink-0 mt-[4px] overflow-hidden">
@@ -272,7 +272,7 @@ const MyProjects = () => {
                             <span>{progress}%</span>
                           </div>
                           <div className="h-[6px] w-full bg-[#E9D5FF] rounded-full overflow-hidden">
-                            <div className="h-full bg-[#8B5CF6] rounded-full" style={{ width: `${progress}%` }} />
+                            <div className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full" style={{ width: `${progress}%` }} />
                           </div>
                         </div>
                       )}

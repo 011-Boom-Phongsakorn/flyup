@@ -97,13 +97,13 @@ const NotificationTab = () => {
           </div>
           <button
             onClick={() => handleToggle(item.key)}
-            disabled={saving !== null}
-            className={`w-[48px] h-[26px] rounded-full transition-colors relative cursor-pointer disabled:opacity-70 ${
+            disabled={saving === item.key}
+            className={`w-[48px] h-[26px] rounded-full transition-colors duration-200 relative cursor-pointer ${
               toggles[item.key] ? "bg-primary" : "bg-[#E9ECEF]"
             }`}
           >
             <span
-              className={`absolute top-[3px] w-[20px] h-[20px] rounded-full bg-white shadow transition-all ${
+              className={`absolute top-[3px] w-[20px] h-[20px] rounded-full bg-white shadow transition-[left] duration-200 ease-in-out ${
                 toggles[item.key] ? "left-[25px]" : "left-[3px]"
               }`}
             />

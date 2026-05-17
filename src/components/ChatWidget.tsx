@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MessageCircle, X, SquarePen, Clock, Send, Loader2, Check, XCircle, Bot } from 'lucide-react'
+import { MessageCircle, X, Send, Loader2, Check, XCircle, Bot } from 'lucide-react'
 import { Link } from 'react-router'
 import { useChatStore } from '../store/useChatStore'
 import { useAuthStore } from '../store/useAuthStore'
@@ -13,7 +13,7 @@ const ACTION_LABELS: Record<string, string> = {
 }
 
 export default function ChatWidget() {
-  const { isOpen, messages, pendingAction, isSending, toggle, close, clearSession, sendMessage, confirmAction } =
+  const { isOpen, messages, pendingAction, isSending, toggle, close, sendMessage, confirmAction } =
     useChatStore()
   const { authUser } = useAuthStore()
   const [input, setInput] = useState('')
@@ -48,19 +48,6 @@ export default function ChatWidget() {
           {/* Header */}
           <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-gray-100">
             <button
-              onClick={() => { clearSession(); inputRef.current?.focus() }}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
-              title="เริ่มแชทใหม่"
-            >
-              <SquarePen size={16} />
-            </button>
-            <button
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
-              title="ประวัติ"
-            >
-              <Clock size={16} />
-            </button>
-            <button
               onClick={close}
               className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
             >
@@ -85,11 +72,10 @@ export default function ChatWidget() {
                 {messages.map(msg => (
                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                        msg.role === 'user'
+                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${msg.role === 'user'
                           ? 'bg-[#1a1a1a] text-white rounded-br-sm'
                           : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                      }`}
+                        }`}
                     >
                       {msg.content}
                     </div>

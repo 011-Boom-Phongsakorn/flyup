@@ -1,12 +1,15 @@
-import { useCallback, useEffect } from 'react'
+﻿import { useCallback, useEffect } from 'react'
+import api from '../services/api'
 import { useAuthStore } from '../store/useAuthStore'
 import { useNotificationStore, type Notification } from '../store/useNotificationStore'
 import { useBoosterStore } from '../store/useBoosterStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePublicProjectStore } from '../store/usePublicProjectStore'
+import { useAdminBadgeStore } from '../store/useAdminBadgeStore'
+import { usePioneerBadgeStore } from '../store/usePioneerBadgeStore'
+import { useBoosterBadgeStore } from '../store/useBoosterBadgeStore'
 import { useAdminStore } from '../store/useAdminStore'
 import { useMilestoneStore } from '../store/useMilestoneStore'
-import { useAdminBadgeStore } from '../store/useAdminBadgeStore'
 
 const useNotificationSSE = () => {
     const { authUser, checkAuth } = useAuthStore()
@@ -93,29 +96,48 @@ const useNotificationSSE = () => {
     useEffect(() => {
         if (!authUser) return
 
-        const token = localStorage.getItem('auth_token')
-        if (!token) return
+        let es: EventSource | null = null
+        let cancelled = false
 
-        const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`
-        const es = new EventSource(url)
+        // Fetch a short-lived one-time SSE token (60s TTL, deleted on first use)
+        // so the main JWT never appears in browser history or server logs
+        api.post('/notifications/sse-token')
+            .then((res: { data?: { token?: string } }) => {
+                if (cancelled) return
+                const sseToken: string = res.data?.token ?? ''
+                if (!sseToken) return
 
-        es.onmessage = (e: MessageEvent) => {
-            try {
-                const notif = JSON.parse(e.data) as Notification
-                if (!notif?.id) return
-                addNotification(notif)
-                handleRefresh(notif)
-                useAdminBadgeStore.getState().fetchBadges()
-            } catch {
-                // ignore ping / non-JSON events
-            }
+                const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream?sse_token=${encodeURIComponent(sseToken)}`
+                es = new EventSource(url)
+
+                es.onmessage = (e: MessageEvent) => {
+                    try {
+                        const notif = JSON.parse(e.data) as Notification
+                        if (!notif?.id) return
+                        addNotification(notif)
+                        handleRefresh(notif)
+                        if (authUser?.role === 'admin') {
+                            useAdminBadgeStore.getState().fetchBadges()
+                        } else if (authUser?.role === 'pioneer') {
+                            usePioneerBadgeStore.getState().fetchBadges()
+                        } else if (authUser?.role?.toLowerCase() === 'booster') {
+                            useBoosterBadgeStore.getState().fetchBadges()
+                        }
+                    } catch {
+                        // ignore ping / non-JSON events
+                    }
+                }
+
+                es.onerror = () => {
+                    // EventSource auto-reconnects
+                }
+            })
+            .catch(() => { /* ignore auth errors */ })
+
+        return () => {
+            cancelled = true
+            es?.close()
         }
-
-        es.onerror = () => {
-            // EventSource auto-reconnects
-        }
-
-        return () => es.close()
     }, [authUser, addNotification, handleRefresh])
 }
 

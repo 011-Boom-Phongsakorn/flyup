@@ -45,7 +45,7 @@ const Login = () => {
         if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
             newErrors.email = true;
             setErrors(newErrors);
-            toast.error('รูปแบบอีเมล์ไม่ถูกต้อง')
+            toast.error('รูปแบบอีเมลไม่ถูกต้อง')
             return false;
         }
 
@@ -63,7 +63,7 @@ const Login = () => {
         return true;
     }
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (validateForm()) {
             await login(formData)
@@ -92,8 +92,8 @@ const Login = () => {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-[27px]">
                     <div className="flex flex-col gap-[16px]">
                         <div className="flex flex-col gap-[4px]">
-                            <label className="text-[14px] text-foreground">อีมล์ <span className="text-error">*</span></label>
-                            <input name="email" onChange={handleChange} value={formData.email} type="text" className={inputStyle('email')} />
+                            <label className="text-[14px] text-foreground">อีเมล <span className="text-error">*</span></label>
+                            <input name="email" onChange={handleChange} value={formData.email} type="email" autoComplete="email" className={inputStyle('email')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
                             <label className="text-[14px] text-foreground">รหัสผ่าน <span className="text-error">*</span></label>
