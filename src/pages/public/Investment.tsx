@@ -58,6 +58,7 @@ const Investment = () => {
   const [amount, setAmount] = useState<string>("");
   const [completedInvestmentId, setCompletedInvestmentId] = useState<number | null>(null);
   const [showContract, setShowContract] = useState(false);
+  const [isPrintingPDF, setIsPrintingPDF] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15 * 60);
 
@@ -145,6 +146,34 @@ const Investment = () => {
   const platformFeeRate = (project?.platform_fee || 5) / 100;
   const vatRate = 0.07;
 
+  const presetAmounts = (() => {
+    // Palette of round numbers covering common investment scales
+    const NICE = [500, 1000, 2000, 3000, 5000, 7000, 10000, 15000, 20000, 30000, 50000, 70000, 100000, 150000, 200000, 300000, 500000];
+    const candidates = NICE.filter(v => v > minAmount && v < maxAmount);
+    const COUNT = 3; // presets after minAmount (total = 4 + สูงสุด)
+
+    let picks: number[];
+    if (candidates.length >= COUNT) {
+      // Evenly distributed by index across the candidate list
+      picks = Array.from({ length: COUNT }, (_, i) =>
+        candidates[Math.round((i + 1) * (candidates.length - 1) / COUNT)]
+      );
+      picks = [...new Set(picks)];
+    } else if (candidates.length > 0) {
+      picks = candidates;
+    } else {
+      // Range too tight — linear fallback rounded to sensible magnitude
+      const rawStep = (maxAmount - minAmount) / (COUNT + 1);
+      const mag = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1))));
+      const step = Math.max(1000, Math.round(rawStep / mag) * mag);
+      const start = Math.ceil((minAmount + 1) / step) * step;
+      picks = [];
+      for (let v = start; v < maxAmount && picks.length < COUNT; v += step) picks.push(v);
+    }
+
+    return [minAmount, ...picks];
+  })();
+
   const parsedAmount = parseInt(amount.replace(/,/g, "")) || 0;
   const fee = parsedAmount * platformFeeRate;
   const vat = fee * vatRate;
@@ -156,6 +185,26 @@ const Investment = () => {
     const ln = typeof authUser.last_name === 'string' ? authUser.last_name : '';
     return `${fn} ${ln}`.trim() || typeof authUser.name === 'string' ? authUser.name as string : '—';
   })();
+
+  const handleDownloadContract = async () => {
+    if (!completedInvestmentId) return;
+    setIsPrintingPDF(true);
+    try {
+      const res = await import('../../services/api').then(m => m.default.get(
+        `/investments/${completedInvestmentId}/contract`,
+        { responseType: 'text' }
+      ));
+      const blob = new Blob([res.data as string], { type: 'text/html; charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) { toast.error('กรุณาอนุญาต popup เพื่อดาวน์โหลด PDF'); URL.revokeObjectURL(url); return; }
+      win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url); });
+    } catch {
+      toast.error('ไม่สามารถโหลดสัญญาได้');
+    } finally {
+      setIsPrintingPDF(false);
+    }
+  };
 
   const handleNextStep1 = () => {
     if (!agreed) {
@@ -430,7 +479,7 @@ const Investment = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-3">
-                      {[1000, 5000, 10000, 50000].map(val => (
+                      {presetAmounts.map(val => (
                         <button
                           key={val}
                           onClick={() => setAmount(val.toLocaleString())}
@@ -577,13 +626,14 @@ const Investment = () => {
               </button>
 
               {completedInvestmentId && (
-                <a
-                  href={`${import.meta.env.VITE_API_URL}/investments/${completedInvestmentId}/contract`}
-                  download
-                  className="w-full mt-3 py-3.5 bg-background hover:bg-muted border border-border text-foreground rounded-xl font-semibold flex items-center justify-center gap-2 text-sm transition-colors cursor-pointer"
+                <button
+                  onClick={handleDownloadContract}
+                  disabled={isPrintingPDF}
+                  className="w-full mt-3 py-3.5 bg-background hover:bg-muted border border-border text-foreground rounded-xl font-semibold flex items-center justify-center gap-2 text-sm transition-colors cursor-pointer disabled:opacity-60"
                 >
-                  <Download size={16} /> ดาวน์โหลดสัญญา
-                </a>
+                  {isPrintingPDF ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  {isPrintingPDF ? 'กำลังเตรียม PDF...' : 'ดาวน์โหลดสัญญา (PDF)'}
+                </button>
               )}
             </div>
           </div>

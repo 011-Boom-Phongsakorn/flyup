@@ -58,13 +58,11 @@ const InvestmentDetail = () => {
         `/investments/${id}/contract`,
         { responseType: 'text' }
       ));
-      const html: string = res.data;
-      const win = window.open('', '_blank');
-      if (!win) { toast.error('กรุณาอนุญาต popup เพื่อดาวน์โหลด PDF'); return; }
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-      win.onload = () => { win.print(); };
+      const blob = new Blob([res.data as string], { type: 'text/html; charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) { toast.error('กรุณาอนุญาต popup เพื่อดาวน์โหลด PDF'); URL.revokeObjectURL(url); return; }
+      win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url); });
     } catch {
       toast.error('ไม่สามารถโหลดสัญญาได้');
     } finally {
