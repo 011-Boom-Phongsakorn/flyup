@@ -183,7 +183,7 @@ const Investment = () => {
     if (!authUser) return "—";
     const fn = typeof authUser.first_name === 'string' ? authUser.first_name : '';
     const ln = typeof authUser.last_name === 'string' ? authUser.last_name : '';
-    return `${fn} ${ln}`.trim() || typeof authUser.name === 'string' ? authUser.name as string : '—';
+    return `${fn} ${ln}`.trim() || (typeof authUser.name === 'string' ? authUser.name as string : '—');
   })();
 
   const handleDownloadContract = async () => {
