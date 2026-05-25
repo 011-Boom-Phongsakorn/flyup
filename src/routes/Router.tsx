@@ -119,13 +119,16 @@ const Router = () => {
         const legacyFlag = params.get('token')
         const isVerifyPage = window.location.pathname === '/verify'
         if ((accessToken || legacyFlag) && !isVerifyPage) {
-            loginWithGoogleToken(accessToken ?? undefined)
+            // Google OAuth flow: ใช้ loginWithGoogleToken อย่างเดียว
+            // ไม่เรียก checkAuth() พร้อมกัน เพื่อป้องกัน race condition
             params.delete('access_token')
             params.delete('token')
             const newSearch = params.toString()
             window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)
+            loginWithGoogleToken(accessToken ?? undefined)
+        } else {
+            checkAuth()
         }
-        checkAuth()
     }, [checkAuth, loginWithGoogleToken])
 
     const hasUniversityDomain = !!authUser?.student_profile?.university;

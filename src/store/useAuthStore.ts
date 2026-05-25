@@ -79,7 +79,7 @@ interface AuthStore {
     isSelectingRole: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
-    loginWithGoogleToken: (accessToken?: string) => void;
+    loginWithGoogleToken: (accessToken?: string) => Promise<void>;
     logout: () => Promise<void>;
     selectRole: (role: 'pioneer' | 'booster') => Promise<boolean>;
     isSendingReset: boolean;
@@ -136,9 +136,17 @@ export const useAuthStore = create<AuthStore>((set) => ({
             set({ isRegistering: false })
         }
     },
-    loginWithGoogleToken: (accessToken?: string) => {
+    loginWithGoogleToken: async (accessToken?: string) => {
+        set({ isCheckingAuth: true })
         if (accessToken) setStoredToken(accessToken);
-        api.get('/user/me').then(res => set({ authUser: res.data?.data })).catch(() => {})
+        try {
+            const res = await api.get('/user/me')
+            set({ authUser: res.data?.data })
+        } catch {
+            set({ authUser: null })
+        } finally {
+            set({ isCheckingAuth: false })
+        }
     },
     login: async (data) => {
         set({ isLoggingIn: true })

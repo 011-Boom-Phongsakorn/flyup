@@ -185,7 +185,7 @@ const Home = () => {
                       </>
                     )}
                   </button>
-                ) : authUser?.role !== 'booster' ? (
+                ) : authUser?.role === 'pioneer' ? (
                   <Link to="/dashboard" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
                     ไปที่โปรเจกต์ของฉัน <ChevronRight size={18} />
                   </Link>
