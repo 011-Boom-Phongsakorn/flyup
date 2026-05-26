@@ -1,6 +1,12 @@
 import { Mail, Phone, MapPin, HelpCircle } from 'lucide-react';
+import { useSEO } from '../../hooks/useSEO';
 
 const HelpCenter = () => {
+  useSEO({
+    title: 'ศูนย์ช่วยเหลือ',
+    description: 'คำถามพบบ่อย วิธีใช้งาน FlyUp และช่องทางติดต่อทีมงาน',
+    url: '/help',
+  });
     return (
         <div className="w-full min-h-screen pt-32 pb-20 px-4 bg-background">
             <div className="max-w-5xl mx-auto space-y-12">

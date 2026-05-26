@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { useSEO } from "../../hooks/useSEO";
 import Swal from "sweetalert2";
 import {
   Calendar,
@@ -54,6 +55,17 @@ function ProjectDetail() {
   const hasInvested = isLoggedIn && investments.some(
     inv => inv.project_id === projectId && inv.status === 'verified'
   );
+
+  // Dynamic SEO per project page
+  useSEO({
+    title: project?.title,
+    description: project?.description
+      ? project.description.slice(0, 160)
+      : undefined,
+    image: project?.cover_image ?? project?.thumbnail_url,
+    url: `/projects/${slug}`,
+    type: 'article',
+  });
 
   useEffect(() => {
     if (slug) {

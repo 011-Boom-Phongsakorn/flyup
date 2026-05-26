@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+# อนุญาตทุก crawler เข้าหน้า public
+Allow: /projects
+Allow: /projects/
+Allow: /about/we
+Allow: /legal/terms
+Allow: /help
+
+# ห้าม crawler เข้าหน้า dashboard / admin / auth
+Disallow: /pioneer/
+Disallow: /booster/
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot/
+Disallow: /reset-password
+Disallow: /verify
+
+Sitemap: https://www.fly-up.app/sitemap.xml

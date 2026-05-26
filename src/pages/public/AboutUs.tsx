@@ -1,6 +1,12 @@
 import { Rocket, Target, Shield, Heart } from 'lucide-react';
+import { useSEO } from '../../hooks/useSEO';
 
 const AboutUs = () => {
+  useSEO({
+    title: 'เกี่ยวกับเรา',
+    description: 'FlyUp — แพลตฟอร์มระดมทุนโปรเจกต์ซอฟต์แวร์นักศึกษาไทย เราเชื่อมนักศึกษาที่มีไอเดียกับนักลงทุนที่พร้อมสนับสนุน',
+    url: '/about/we',
+  });
     return (
         <div className="w-full min-h-screen pt-32 pb-20 px-4 bg-background">
             <div className="max-w-5xl mx-auto space-y-16">

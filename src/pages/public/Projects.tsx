@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSEO } from '../../hooks/useSEO';
 import { Link } from 'react-router';
 import type { ElementType } from 'react';
 import {
@@ -43,6 +44,12 @@ function getCategoryIcon(name: string | null): ElementType {
 const NOW = Date.now();
 
 const Projects = () => {
+  useSEO({
+    title: 'โปรเจกต์ทั้งหมด',
+    description: 'ค้นหาและลงทุนในโปรเจกต์ซอฟต์แวร์ของนักศึกษาไทยที่น่าสนใจ หลากหลายหมวดหมู่ พร้อมระบบ Milestone โปร่งใส',
+    url: '/projects',
+  });
+
   const { publicProjects, categories, isLoading, fetchPublicProjects, fetchCategories } = usePublicProjectStore();
 
   const [activeCategory, setActiveCategory] = useState(() => {

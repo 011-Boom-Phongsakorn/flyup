@@ -135,6 +135,11 @@ const Investment = () => {
   const revenueShare = project?.profit_share_pct || 0;
   const minAmount = project?.min_invest_amount || 1000;
   const remaining = Math.max(0, (project?.funding_goal || 0) - (project?.current_funding || 0));
+  // ถ้าระดมทุนถึง softcap แล้ว → ยกเว้นขั้นต่ำ เพื่อให้ลงทุน remaining ที่เหลือได้
+  const softcap = project?.softcap || 0;
+  const currentFunding = project?.current_funding || 0;
+  const isSoftcapReached = softcap > 0 && currentFunding >= softcap;
+  const effectiveMinAmount = isSoftcapReached ? 1 : minAmount;
   // เพดานต่อรายการของ payment gateway (Stripe จำกัดที่ ~999,999.99 — ตั้ง 500,000 ตามมาตรฐาน fintech ไทย)
   const MAX_PER_TRANSACTION = 500_000;
   const maxAmount = Math.min(
@@ -149,7 +154,7 @@ const Investment = () => {
   const presetAmounts = (() => {
     // Palette of round numbers covering common investment scales
     const NICE = [500, 1000, 2000, 3000, 5000, 7000, 10000, 15000, 20000, 30000, 50000, 70000, 100000, 150000, 200000, 300000, 500000];
-    const candidates = NICE.filter(v => v > minAmount && v < maxAmount);
+    const candidates = NICE.filter(v => v > effectiveMinAmount && v < maxAmount);
     const COUNT = 3; // presets after minAmount (total = 4 + สูงสุด)
 
     let picks: number[];
@@ -163,15 +168,18 @@ const Investment = () => {
       picks = candidates;
     } else {
       // Range too tight — linear fallback rounded to sensible magnitude
-      const rawStep = (maxAmount - minAmount) / (COUNT + 1);
+      const rawStep = (maxAmount - effectiveMinAmount) / (COUNT + 1);
       const mag = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1))));
       const step = Math.max(1000, Math.round(rawStep / mag) * mag);
-      const start = Math.ceil((minAmount + 1) / step) * step;
+      const start = Math.ceil((effectiveMinAmount + 1) / step) * step;
       picks = [];
       for (let v = start; v < maxAmount && picks.length < COUNT; v += step) picks.push(v);
     }
 
-    return [minAmount, ...picks];
+    // แสดง minAmount เป็น preset แรกเฉพาะเมื่อ minAmount <= maxAmount
+    // (กรณี softcap ถึงแล้วและ remaining < minAmount → ไม่แสดง minAmount)
+    const leadingPreset = minAmount <= maxAmount ? minAmount : null;
+    return leadingPreset ? [leadingPreset, ...picks] : picks;
   })();
 
   const parsedAmount = parseInt(amount.replace(/,/g, "")) || 0;
@@ -222,8 +230,12 @@ const Investment = () => {
   };
 
   const handleNextStep2 = () => {
-    if (parsedAmount < minAmount) {
-      toast.error(`จำนวนเงินขั้นต่ำคือ ฿${minAmount.toLocaleString()}`);
+    if (parsedAmount < effectiveMinAmount) {
+      toast.error(
+        isSoftcapReached
+          ? "กรุณาระบุจำนวนเงิน"
+          : `จำนวนเงินขั้นต่ำคือ ฿${minAmount.toLocaleString()}`
+      );
       return;
     }
     if (parsedAmount > maxAmount) {
@@ -472,7 +484,7 @@ const Investment = () => {
                             const val = e.target.value.replace(/[^0-9]/g, "");
                             setAmount(val ? Number(val).toLocaleString() : "");
                            }}
-                          placeholder={`ขั้นต่ำ ${minAmount.toLocaleString()}`}
+                          placeholder={isSoftcapReached ? `สูงสุด ${maxAmount.toLocaleString()}` : `ขั้นต่ำ ${minAmount.toLocaleString()}`}
                           className="w-full pl-10 pr-4 py-5 rounded-[20px] border-2 border-[#E9ECEF] focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none transition-all placeholder:text-[#ADB5BD] font-bold text-2xl text-foreground"
                         />
                       </div>

@@ -1,6 +1,12 @@
 import { FileText, Shield, AlertTriangle, Scale } from 'lucide-react';
+import { useSEO } from '../../hooks/useSEO';
 
 const Terms = () => {
+  useSEO({
+    title: 'ข้อกำหนดและเงื่อนไข',
+    description: 'ข้อกำหนดและเงื่อนไขการใช้งานแพลตฟอร์ม FlyUp สำหรับนักลงทุนและนักศึกษา',
+    url: '/legal/terms',
+  });
     return (
         <div className="w-full min-h-screen pt-32 pb-20 px-4 bg-background">
             <div className="max-w-4xl mx-auto space-y-12">
