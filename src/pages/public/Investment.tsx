@@ -551,124 +551,84 @@ const Investment = () => {
                 <div className="animate-in fade-in slide-in-from-right-8 duration-500">
                   <div className="flex flex-col items-center py-2">
 
-                    {/* PromptPay QR Card — official style */}
-                    <div className="w-full max-w-[290px] bg-white rounded-2xl overflow-hidden shadow-2xl border border-gray-200">
+                    {/* PromptPay QR Card */}
+                    <div className="w-full max-w-[300px] rounded-2xl overflow-hidden shadow-xl border border-border">
 
                       {/* ── Header: THAI QR PAYMENT ── */}
-                      <div className="bg-[#1B3B6F] px-5 py-3 flex items-center gap-3">
-                        {/* Official Thai QR icon: 4 QR-corner squares in a rounded square */}
-                        <div className="bg-white rounded-lg w-10 h-10 flex items-center justify-center flex-shrink-0 p-1.5">
-                          <svg viewBox="0 0 40 40" className="w-full h-full">
-                            {/* top-left corner marker */}
-                            <rect x="2"  y="2"  width="14" height="14" rx="2" fill="none" stroke="#1B3B6F" strokeWidth="3"/>
-                            <rect x="6"  y="6"  width="6"  height="6"  rx="1" fill="#1B3B6F"/>
-                            {/* top-right corner marker */}
-                            <rect x="24" y="2"  width="14" height="14" rx="2" fill="none" stroke="#1B3B6F" strokeWidth="3"/>
-                            <rect x="28" y="6"  width="6"  height="6"  rx="1" fill="#1B3B6F"/>
-                            {/* bottom-left corner marker */}
-                            <rect x="2"  y="24" width="14" height="14" rx="2" fill="none" stroke="#1B3B6F" strokeWidth="3"/>
-                            <rect x="6"  y="28" width="6"  height="6"  rx="1" fill="#1B3B6F"/>
-                            {/* data dots */}
-                            <rect x="24" y="24" width="4" height="4" rx="0.5" fill="#1B3B6F"/>
-                            <rect x="30" y="24" width="4" height="4" rx="0.5" fill="#1B3B6F"/>
-                            <rect x="24" y="30" width="4" height="4" rx="0.5" fill="#1B3B6F"/>
-                            <rect x="30" y="30" width="4" height="4" rx="0.5" fill="#1B3B6F"/>
-                            <rect x="27" y="27" width="4" height="4" rx="0.5" fill="#1B3B6F"/>
+                      <div className="bg-[#1a3a6b] px-4 py-3 flex items-center gap-3">
+                        <div className="bg-white rounded-full w-9 h-9 flex items-center justify-center flex-shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#1a3a6b]">
+                            <path d="M12 2L2 7h20L12 2zM4 9v9h2V9H4zm5 0v9h2V9H9zm4 0v9h2V9h-2zm5 0v9h2V9h-2zM2 20h20v2H2z"/>
                           </svg>
                         </div>
-                        <div>
-                          <p className="text-white font-black text-[13px] tracking-widest uppercase leading-tight">THAI QR</p>
-                          <p className="text-white font-black text-[13px] tracking-widest uppercase leading-tight">PAYMENT</p>
+                        <div className="flex-1">
+                          <p className="text-white font-black text-[12px] tracking-widest uppercase leading-none">THAI QR PAYMENT</p>
                         </div>
                       </div>
 
-                      {/* ── PromptPay Logo ── */}
-                      <div className="bg-white px-6 pt-5 pb-3 flex items-center justify-center">
-                        {/* Official style: border box with icon + text */}
-                        <div className="border-2 border-gray-300 rounded-lg px-4 py-2 flex items-center gap-2.5">
-                          {/* PromptPay circular arrow icon */}
-                          <svg viewBox="0 0 32 32" className="w-7 h-7 flex-shrink-0">
-                            <circle cx="16" cy="16" r="15" fill="#009EAD"/>
-                            {/* circular arrows */}
-                            <path d="M10 16 A6 6 0 0 1 22 16" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-                            <path d="M22 16 A6 6 0 0 1 10 16" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-                            {/* arrow heads */}
-                            <polygon points="22,12 26,16 22,16" fill="white"/>
-                            <polygon points="10,16 10,20 14,16" fill="white"/>
-                          </svg>
-                          {/* PromptPay text */}
-                          <div className="leading-none">
-                            <span className="text-[#1B3B6F] font-black text-[15px] tracking-tight">Prompt</span>
-                            <span className="text-[#009EAD] font-black text-[15px] tracking-tight">Pay</span>
-                          </div>
+                      {/* ── PromptPay pill ── */}
+                      <div className="bg-white pt-4 pb-3 flex items-center justify-center">
+                        <div className="flex items-center gap-2 bg-[#003f9c] px-5 py-2 rounded-full shadow-md">
+                          <span className="text-white font-black text-[14px] tracking-wide">PromptPay</span>
                         </div>
                       </div>
 
                       {/* ── QR Code ── */}
-                      <div className="bg-white px-6 pb-2">
-                        <img
-                          src={investmentData?.qr_code_image_url || '/img-payment-qr.png'}
-                          alt="PromptPay QR Code"
-                          className="w-full object-contain aspect-square"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Crect%20width%3D%2240%22%20height%3D%2240%22%20fill%3D%22%23f9fafb%22%2F%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22%231B3B6F%22%20stroke-width%3D%222%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%20fill%3D%22%231B3B6F%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%222%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22%231B3B6F%22%20stroke-width%3D%222%22%2F%3E%3Crect%20x%3D%2227%22%20y%3D%225%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%20fill%3D%22%231B3B6F%22%2F%3E%3Crect%20x%3D%222%22%20y%3D%2224%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22%231B3B6F%22%20stroke-width%3D%222%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%2227%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%20fill%3D%22%231B3B6F%22%2F%3E%3C%2Fsvg%3E';
-                          }}
-                        />
+                      <div className="bg-white px-5 pb-3">
+                        <div className="border border-[#1a3a6b]/15 rounded-xl overflow-hidden p-2 bg-white">
+                          <img
+                            src={investmentData?.qr_code_image_url || '/img-payment-qr.png'}
+                            alt="PromptPay QR Code"
+                            className="w-full object-contain aspect-square"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Crect%20width%3D%2240%22%20height%3D%2240%22%20fill%3D%22%23f9fafb%22%2F%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22%231a3a6b%22%20stroke-width%3D%222%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%20fill%3D%22%231a3a6b%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%222%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22%231a3a6b%22%20stroke-width%3D%222%22%2F%3E%3Crect%20x%3D%2227%22%20y%3D%225%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%20fill%3D%22%231a3a6b%22%2F%3E%3Crect%20x%3D%222%22%20y%3D%2224%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22%231a3a6b%22%20stroke-width%3D%222%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%2227%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%20fill%3D%22%231a3a6b%22%2F%3E%3C%2Fsvg%3E';
+                            }}
+                          />
+                        </div>
                       </div>
 
-                      {/* ── Merchant name + amount ── */}
-                      <div className="bg-white px-6 pt-1 pb-5 text-center space-y-0.5">
-                        <p className="font-black text-[#333] text-[15px] tracking-widest uppercase">FLYUP</p>
-                        <p className="font-bold text-[#111] text-[18px]">
+                      {/* ── Merchant + Amount ── */}
+                      <div className="bg-white px-5 pb-4 text-center space-y-0.5">
+                        <p className="font-black text-[#1a3a6b] text-[15px] tracking-widest uppercase">FLYUP</p>
+                        <p className="font-bold text-foreground text-[20px]">
                           {(investmentData?.total_amount || parsedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} THB
                         </p>
                       </div>
 
-                      {/* ── Divider ── */}
-                      <div className="mx-6 border-t border-dashed border-gray-200" />
-
                       {/* ── Detail rows ── */}
-                      <div className="bg-white px-6 py-3 space-y-1.5">
+                      <div className="bg-[#f5f7fa] border-t border-border px-5 py-3 space-y-1.5">
                         <div className="flex justify-between text-[11px]">
-                          <span className="text-gray-400">โปรเจกต์</span>
-                          <span className="font-semibold text-gray-700 text-right max-w-[58%] truncate">{projectTitle}</span>
+                          <span className="text-muted-foreground">โปรเจกต์</span>
+                          <span className="font-semibold text-foreground text-right max-w-[60%] truncate">{projectTitle}</span>
                         </div>
                         <div className="flex justify-between text-[11px]">
-                          <span className="text-gray-400">ผู้สนับสนุน</span>
-                          <span className="font-semibold text-gray-700 text-right max-w-[58%] truncate">{userName}</span>
+                          <span className="text-muted-foreground">ผู้สนับสนุน</span>
+                          <span className="font-semibold text-foreground text-right max-w-[60%] truncate">{userName}</span>
                         </div>
                         {investmentData?.reference_number && (
                           <div className="flex justify-between text-[11px]">
-                            <span className="text-gray-400">Ref</span>
-                            <span className="font-mono text-gray-500">{investmentData.reference_number}</span>
+                            <span className="text-muted-foreground">Ref</span>
+                            <span className="font-mono text-muted-foreground">{investmentData.reference_number}</span>
                           </div>
                         )}
                       </div>
 
-                      {/* ── How to pay ── */}
-                      <div className="bg-[#f7f9fb] border-t border-gray-100 px-5 py-3 space-y-1">
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">How to pay with QR PromptPay</p>
-                        {[
-                          'Open the Mobile Banking application, then press "Scan"',
-                          'After Scanning, please review the payment amount',
-                          'Press confirm payment',
-                        ].map((s, i) => (
-                          <p key={i} className="text-[10px] text-gray-500 flex gap-1">
-                            <span className="font-bold text-gray-600">{i + 1}.</span> {s}
-                          </p>
-                        ))}
+                      {/* ── Status bar ── */}
+                      <div className="bg-[#1a3a6b] px-4 py-2.5 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Loader2 size={12} className="animate-spin text-blue-200" />
+                          <span className="text-blue-200 text-[10px]">รอการชำระเงิน...</span>
+                        </div>
+                        <div>
+                          <span className="text-blue-200 text-[10px]">หมดอายุใน </span>
+                          <span className="text-white font-bold text-[12px]">{formatTime(timeLeft)}</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Status + Escrow */}
-                    <div className="mt-4 flex flex-col items-center gap-2">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Loader2 size={14} className="animate-spin text-primary" />
-                        <span>กำลังรอการชำระเงิน... หมดอายุใน <span className="font-bold text-error">{formatTime(timeLeft)}</span></span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-3 py-1.5 rounded-full font-semibold">
-                        <ShieldCheck size={14} /> ปลอดภัยด้วยระบบ Escrow
-                      </div>
+                    {/* Escrow badge */}
+                    <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-3 py-1.5 rounded-full font-semibold mt-4">
+                      <ShieldCheck size={14} /> ปลอดภัยด้วยระบบ Escrow
                     </div>
 
                   </div>
