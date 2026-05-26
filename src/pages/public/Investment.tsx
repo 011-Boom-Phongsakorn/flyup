@@ -549,55 +549,117 @@ const Investment = () => {
               {/* Step 3: Payment UI */}
               {step === 3 && (
                 <div className="animate-in fade-in slide-in-from-right-8 duration-500">
-                  <div className="flex flex-col items-center py-4">
-                    <div className="w-full max-w-sm border-2 border-dashed border-primary/20 rounded-3xl p-6 sm:p-8 bg-background flex flex-col items-center shadow-sm text-center">
-                      <div className="mb-4 text-center w-full">
-                        <img
-                          src={investmentData?.qr_code_image_url || '/img-payment-qr.png'}
-                          alt="QR Code"
-                          className="w-[80%] mx-auto object-contain rounded-lg aspect-square mb-2 bg-white"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237C4DDB%22%20stroke-width%3D%221%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%2218%22%20height%3D%2218%22%20rx%3D%222%22%20ry%3D%222%22%3E%3C%2Frect%3E%3Crect%20x%3D%227%22%20y%3D%227%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%2214%22%20y%3D%227%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%227%22%20y%3D%2214%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%2214%22%20y%3D%2214%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3C%2Fsvg%3E';
-                          }}
-                        />
-                        <h3 className="font-bold text-sm text-foreground mb-1">สแกน QR Code เพื่อชำระเงิน</h3>
-                        <p className="font-black text-2xl text-primary font-mono tracking-tight">
-                          ฿{(investmentData?.total_amount || parsedAmount).toLocaleString()}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2 font-medium">
-                          ใช้งานได้ภายใน <span className="text-error">{formatTime(timeLeft)}</span> นาที
-                        </p>
-                        {investmentData?.reference_number && (
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            Ref: {investmentData.reference_number}
+                  <div className="flex flex-col items-center py-2">
+
+                    {/* PromptPay QR Card */}
+                    <div className="w-full max-w-[300px] rounded-2xl overflow-hidden shadow-xl border border-border">
+
+                      {/* Header — THAI QR PAYMENT */}
+                      <div className="bg-[#1a3a6b] px-4 py-3 flex items-center gap-3">
+                        {/* Bank icon */}
+                        <div className="bg-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#1a3a6b]">
+                            <path d="M12 2L2 7h20L12 2zM4 9v9h2V9H4zm5 0v9h2V9H9zm4 0v9h2V9h-2zm5 0v9h2V9h-2zM2 20h20v2H2z"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-white font-black text-[11px] tracking-widest uppercase leading-none">Thai QR Payment</p>
+                          <p className="text-blue-200 text-[9px] tracking-wider mt-0.5">ระบบชำระเงินแห่งชาติ</p>
+                        </div>
+                        {/* Thai flag stripe */}
+                        <div className="ml-auto flex gap-0.5">
+                          <div className="w-2 h-6 bg-red-500 rounded-sm" />
+                          <div className="w-2 h-6 bg-white rounded-sm" />
+                          <div className="w-2 h-6 bg-blue-600 rounded-sm" />
+                          <div className="w-2 h-6 bg-white rounded-sm" />
+                          <div className="w-2 h-6 bg-red-500 rounded-sm" />
+                        </div>
+                      </div>
+
+                      {/* PromptPay logo bar */}
+                      <div className="bg-white pt-3 pb-2 flex items-center justify-center">
+                        {/* PromptPay logo recreation */}
+                        <div className="flex items-center gap-1.5 bg-[#003f9c] px-4 py-1.5 rounded-full">
+                          {/* Lightning bolt icon */}
+                          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-[#f90]">
+                            <path d="M13 2L4.5 13.5H11L10 22l9.5-12H13.5L13 2z"/>
+                          </svg>
+                          <span className="text-white font-black text-sm tracking-wide">PromptPay</span>
+                        </div>
+                      </div>
+
+                      {/* QR Code area */}
+                      <div className="bg-white px-6 pb-4">
+                        <div className="border-2 border-[#1a3a6b]/20 rounded-xl overflow-hidden p-2 bg-white">
+                          <img
+                            src={investmentData?.qr_code_image_url || '/img-payment-qr.png'}
+                            alt="PromptPay QR Code"
+                            className="w-full object-contain aspect-square"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%231a3a6b%22%20stroke-width%3D%221%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%3E%3C%2Frect%3E%3Crect%20x%3D%2213%22%20y%3D%223%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%3E%3C%2Frect%3E%3Crect%20x%3D%223%22%20y%3D%2213%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%3E%3C%2Frect%3E%3Crect%20x%3D%2213%22%20y%3D%2213%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%2218%22%20y%3D%2218%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3C%2Fsvg%3E';
+                            }}
+                          />
+                        </div>
+
+                        {/* Merchant info */}
+                        <div className="text-center mt-3 space-y-0.5">
+                          <p className="font-black text-[#1a3a6b] text-base tracking-wide uppercase">FLYUP</p>
+                          <p className="font-bold text-foreground text-lg">
+                            {(investmentData?.total_amount || parsedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} THB
                           </p>
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="bg-[#f5f7fa] border-t border-border px-4 py-3 space-y-1">
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-muted-foreground">โปรเจกต์</span>
+                          <span className="font-semibold text-foreground text-right max-w-[60%] truncate">{projectTitle}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-muted-foreground">ผู้สนับสนุน</span>
+                          <span className="font-semibold text-foreground text-right max-w-[60%] truncate">{userName}</span>
+                        </div>
+                        {investmentData?.reference_number && (
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-muted-foreground">Ref</span>
+                            <span className="font-mono text-muted-foreground">{investmentData.reference_number}</span>
+                          </div>
                         )}
                       </div>
 
-                      <div className="w-full bg-muted/50 rounded-xl p-4 text-xs space-y-2.5 mb-4 text-left border border-border/50">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">ชื่อโปรเจกต์</span>
-                          <span className="font-semibold text-foreground">{projectTitle}</span>
+                      {/* Expiry bar */}
+                      <div className="bg-[#1a3a6b] px-4 py-2 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Loader2 size={12} className="animate-spin text-blue-200" />
+                          <span className="text-blue-200 text-[10px]">รอการชำระเงิน...</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">ผู้สนับสนุน</span>
-                          <span className="font-semibold text-foreground">{userName}</span>
+                        <div className="text-right">
+                          <span className="text-[10px] text-blue-200">หมดอายุใน </span>
+                          <span className="text-white font-bold text-[11px]">{formatTime(timeLeft)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">รับเงินโดย</span>
-                          <span className="font-semibold text-foreground text-right leading-tight">FlyUp<br /><span className="text-[10px] text-muted-foreground font-normal">ธนาคารกสิกรไทย</span></span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-3 py-1.5 rounded-full font-semibold mb-6">
-                        <ShieldCheck size={14} /> ปลอดภัยด้วยระบบ Escrow
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Loader2 size={14} className="animate-spin text-primary" />
-                        <span>กำลังรอการชำระเงิน...</span>
                       </div>
                     </div>
+
+                    {/* Escrow badge */}
+                    <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-3 py-1.5 rounded-full font-semibold mt-4">
+                      <ShieldCheck size={14} /> ปลอดภัยด้วยระบบ Escrow
+                    </div>
+
+                    {/* How to pay */}
+                    <div className="mt-4 w-full max-w-[300px] text-left space-y-1">
+                      <p className="text-[11px] font-bold text-foreground">วิธีชำระเงินด้วย QR PromptPay</p>
+                      {[
+                        'เปิดแอปธนาคาร กด "สแกน" หรือ "จ่ายบิล"',
+                        'สแกน QR Code และตรวจสอบยอดเงิน',
+                        'กดยืนยันการชำระเงิน',
+                      ].map((step, i) => (
+                        <p key={i} className="text-[11px] text-muted-foreground flex gap-1.5">
+                          <span className="text-primary font-bold">{i + 1}.</span> {step}
+                        </p>
+                      ))}
+                    </div>
+
                   </div>
                 </div>
               )}
