@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { Cookie } from "lucide-react";
-import { useCookieConsent } from "./CookieConsent";
+import { useCookieConsent } from "../hooks/useCookieConsent";
 
 const Footer = () => {
     const { reopen } = useCookieConsent();

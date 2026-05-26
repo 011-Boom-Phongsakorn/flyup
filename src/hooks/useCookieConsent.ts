@@ -15,35 +15,42 @@ export interface CookieConsentState {
   reopen: () => void;
 }
 
+/** อ่าน localStorage และ validate version — คืน null ถ้ายังไม่มีหรือ version ไม่ตรง */
+function readStoredConsent(): ConsentStatus | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as { status: ConsentStatus; version: string };
+    if (saved.version !== CONSENT_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return saved.status;
+  } catch {
+    return null;
+  }
+}
+
 export function useCookieConsent(): CookieConsentState {
-  const [status, setStatus] = useState<ConsentStatus>(null);
+  // Lazy initializer: อ่าน localStorage ตอน mount ครั้งแรกเลย ไม่ต้องผ่าน useEffect
+  const [status, setStatus] = useState<ConsentStatus>(() => readStoredConsent());
   const [isPending, setIsPending] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        // ยังไม่เคยเลือก → แสดง banner หลังจาก delay เล็กน้อย
-        const t = setTimeout(() => setIsPending(true), 800);
-        return () => clearTimeout(t);
-      }
-      const saved = JSON.parse(raw) as { status: ConsentStatus; version: string };
-      if (saved.version !== CONSENT_VERSION) {
-        // policy เปลี่ยน → ขอ consent ใหม่
-        localStorage.removeItem(STORAGE_KEY);
-        const t = setTimeout(() => setIsPending(true), 800);
-        return () => clearTimeout(t);
-      }
-      setStatus(saved.status);
-      setIsPending(false);
-    } catch {
-      setIsPending(true);
+    // ถ้าอ่านแล้วยังไม่มี consent → แสดง banner หลัง delay 800ms
+    if (status === null) {
+      const t = setTimeout(() => setIsPending(true), 800);
+      return () => clearTimeout(t);
     }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount เท่านั้น
 
   const save = (choice: ConsentStatus) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ status: choice, version: CONSENT_VERSION }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ status: choice, version: CONSENT_VERSION }),
+      );
     } catch { /* storage full — ignore */ }
     setStatus(choice);
     setIsPending(false);

@@ -3,9 +3,6 @@ import { Cookie, ChevronDown, ChevronUp, ShieldCheck, BarChart2, Megaphone } fro
 import { Link } from 'react-router';
 import { useCookieConsent } from '../hooks/useCookieConsent';
 
-// ─── Context export สำหรับ components อื่นที่ต้องการ reopen banner ───────────
-export { useCookieConsent };
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const CookieConsent = () => {
