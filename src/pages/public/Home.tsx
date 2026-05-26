@@ -95,6 +95,7 @@ const Home = () => {
 
   const [heroWordIdx, setHeroWordIdx] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
+  const [howItWorksModal, setHowItWorksModal] = useState<{ role: string; howTo: string[]; benefits: string[]; why: string } | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -379,42 +380,146 @@ const Home = () => {
               <h2 className="text-4xl md:text-6xl font-black leading-tight text-foreground">
                 FLYUP<br />ทำงานอย่างไร
               </h2>
+              <p className="text-muted-foreground mt-4 text-base">กดที่แต่ละขั้นตอนเพื่อดูรายละเอียดเพิ่มเติม</p>
             </div>
 
             <div className="flex flex-col gap-10">
-              <div className="flex gap-6 items-start group cursor-pointer">
-                <div className="text-foreground bg-background p-4 rounded-2xl transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:bg-primary-light group-hover:shadow-md">
-                  <SquarePen size={28} strokeWidth={1.5} className="transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
-                </div>
-                <div className="transition-transform duration-300 ease-out group-hover:translate-x-2 pt-1">
-                  <h4 className="text-xl font-bold mb-2 text-foreground">สร้างโปรเจกต์</h4>
-                  <p className="text-muted-foreground text-base leading-relaxed">นักศึกษาโปรเจกต์ซอฟต์แวร์พร้อม Milestone และเป้าหมายระดมทุน</p>
-                </div>
-              </div>
-
-              <div className="flex gap-6 items-start group cursor-pointer">
-                <div className="text-foreground bg-background p-4 rounded-2xl transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:bg-primary-light group-hover:shadow-md">
-                  <Heart size={28} strokeWidth={1.5} className="transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
-                </div>
-                <div className="transition-transform duration-300 ease-out group-hover:translate-x-2 pt-1">
-                  <h4 className="text-xl font-bold mb-2 text-foreground">ร่วมสนับสนุน</h4>
-                  <p className="text-muted-foreground text-base leading-relaxed">ผู้สนับสนุนเลือกตกลงทุนในโปรเจกต์ที่สนใจ เงินถูกเก็บอย่างปลอดภัย</p>
-                </div>
-              </div>
-
-              <div className="flex gap-6 items-start group cursor-pointer">
-                <div className="text-foreground bg-background p-4 rounded-2xl transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:bg-primary-light group-hover:shadow-md">
-                  <ListChecks size={28} strokeWidth={1.5} className="transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
-                </div>
-                <div className="transition-transform duration-300 ease-out group-hover:translate-x-2 pt-1">
-                  <h4 className="text-xl font-bold mb-2 text-foreground">ติดตาม & โหวต</h4>
-                  <p className="text-muted-foreground text-base leading-relaxed">ตรวจสอบความคืบหน้าผ่านการประชุมและโหวตก่อนปล่อยเงินทุน</p>
-                </div>
-              </div>
+              {[
+                {
+                  icon: SquarePen,
+                  title: 'สร้างโปรเจกต์',
+                  desc: 'นักศึกษาโปรเจกต์ซอฟต์แวร์พร้อม Milestone และเป้าหมายระดมทุน',
+                  detail: {
+                    role: 'Pioneer (นักศึกษาเจ้าของโปรเจกต์)',
+                    howTo: [
+                      'สมัครสมาชิกด้วยอีเมลมหาวิทยาลัย และเลือก Role เป็น "Pioneer"',
+                      'ยืนยันตัวตนด้วยบัตรนักศึกษา',
+                      'คลิก "สร้างโปรเจกต์" → กรอกข้อมูลพื้นฐาน, เรื่องราว, Milestone, เงื่อนไขการลงทุน',
+                      'ส่งโปรเจกต์เพื่อรอ Admin ตรวจสอบและอนุมัติ',
+                      'เมื่ออนุมัติแล้ว โปรเจกต์จะเปิดรับระดมทุนทันที',
+                    ],
+                    benefits: ['เปิดรับเงินทุนจากผู้สนับสนุนโดยตรง', 'มีระบบ Milestone ช่วยวางแผนการพัฒนา', 'ได้รับฟีดแบ็กจากนักลงทุนจริง'],
+                    why: 'เปิดโอกาสให้นักศึกษาเรียนรู้การระดมทุนและพัฒนาผลงานจริง ไม่ใช่แค่งานส่งอาจารย์',
+                  },
+                },
+                {
+                  icon: Heart,
+                  title: 'ร่วมสนับสนุน',
+                  desc: 'ผู้สนับสนุนเลือกตกลงทุนในโปรเจกต์ที่สนใจ เงินถูกเก็บอย่างปลอดภัย',
+                  detail: {
+                    role: 'Booster (ผู้สนับสนุน / นักลงทุน)',
+                    howTo: [
+                      'สมัครสมาชิกและเลือก Role เป็น "Booster"',
+                      'ยืนยันตัวตนด้วยบัตรประชาชน',
+                      'เลือกโปรเจกต์ที่สนใจ → กดลงทุน → กำหนดจำนวนเงิน',
+                      'ชำระเงินผ่านระบบ และรอยืนยันจาก Admin',
+                      'เงินจะถูกปล่อยให้ Pioneer ตาม Milestone ที่กำหนดไว้',
+                    ],
+                    benefits: ['ได้ส่วนแบ่งกำไรตามที่ Pioneer กำหนด', 'สิทธิ์โหวตอนุมัติ Milestone ก่อนปล่อยเงิน', 'เข้าร่วมประชุมติดตามความคืบหน้า'],
+                    why: 'เงินของคุณปลอดภัย ปล่อยเป็นงวดตาม Milestone เท่านั้น ไม่ใช่ส่งหมดตั้งแต่แรก',
+                  },
+                },
+                {
+                  icon: ListChecks,
+                  title: 'ติดตาม & โหวต',
+                  desc: 'ตรวจสอบความคืบหน้าผ่านการประชุมและโหวตก่อนปล่อยเงินทุน',
+                  detail: {
+                    role: 'ทั้ง Pioneer และ Booster',
+                    howTo: [
+                      'Pioneer ส่งงาน Milestone พร้อมหลักฐานผ่านแดชบอร์ด',
+                      'Admin ตรวจสอบและอนุมัติ Milestone',
+                      'ระบบเปิดให้ Booster ทุกคนที่ลงทุนโหวต "อนุมัติ" หรือ "ปฏิเสธ"',
+                      'เมื่อผ่านโหวต เงินงวดนั้นจะถูกปล่อยให้ Pioneer',
+                      'Pioneer นัดประชุมกับ Booster เพื่ออัปเดตความคืบหน้าได้',
+                    ],
+                    benefits: ['ความโปร่งใส ทุกฝ่ายเห็นความคืบหน้า', 'Booster มีสิทธิ์ตัดสินใจก่อนปล่อยเงิน', 'ลดความเสี่ยง เพราะเงินปล่อยเป็นงวด ๆ'],
+                    why: 'ระบบนี้ทำให้การระดมทุนมีความรับผิดชอบ — เงินไม่หายไปไหน ทุกบาทมีหลักฐาน',
+                  },
+                },
+              ].map((item, i) => {
+                const Icon = item.icon;
+                return (
+                  <div key={i}>
+                    <button
+                      onClick={() => setHowItWorksModal(item.detail)}
+                      className="flex gap-6 items-start group cursor-pointer text-left w-full"
+                    >
+                      <div className="text-foreground bg-background p-4 rounded-2xl transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:bg-primary-light group-hover:shadow-md">
+                        <Icon size={28} strokeWidth={1.5} className="transition-all duration-300 group-hover:scale-110 group-hover:text-primary" />
+                      </div>
+                      <div className="transition-transform duration-300 ease-out group-hover:translate-x-2 pt-1 flex-1">
+                        <h4 className="text-xl font-bold mb-2 text-foreground flex items-center gap-2">
+                          {item.title}
+                          <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                        </h4>
+                        <p className="text-muted-foreground text-base leading-relaxed">{item.desc}</p>
+                      </div>
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </section>
+
+      {/* ── How It Works Modal ── */}
+      {howItWorksModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setHowItWorksModal(null)}>
+          <div
+            className="bg-white rounded-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6 md:p-8 space-y-5">
+              {/* Role */}
+              <div>
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full mb-3">
+                  <Users size={14} /> {howItWorksModal.role}
+                </span>
+              </div>
+
+              {/* How to */}
+              <div>
+                <h3 className="text-lg font-bold text-foreground mb-3">ทำงานอย่างไร</h3>
+                <ol className="space-y-2">
+                  {howItWorksModal.howTo.map((step: string, i: number) => (
+                    <li key={i} className="flex gap-3 items-start text-sm text-muted-foreground">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</span>
+                      <span className="leading-relaxed">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              {/* Benefits */}
+              <div>
+                <h3 className="text-lg font-bold text-foreground mb-3">ประโยชน์ที่ได้รับ</h3>
+                <ul className="space-y-2">
+                  {howItWorksModal.benefits.map((b: string, i: number) => (
+                    <li key={i} className="flex gap-2 items-start text-sm text-muted-foreground">
+                      <ShieldCheck size={16} className="flex-shrink-0 text-green-500 mt-0.5" />
+                      <span className="leading-relaxed">{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Why */}
+              <div className="bg-primary/5 rounded-xl p-4 border border-primary/10">
+                <h3 className="text-sm font-bold text-primary mb-1">ทำไมถึงสำคัญ?</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{howItWorksModal.why}</p>
+              </div>
+
+              <button
+                onClick={() => setHowItWorksModal(null)}
+                className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-xl font-medium transition-colors cursor-pointer"
+              >
+                เข้าใจแล้ว
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
