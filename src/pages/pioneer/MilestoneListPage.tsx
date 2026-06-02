@@ -14,6 +14,8 @@ const STATE_LABEL: Record<string, string> = {
   pending_review: 'รอตรวจสอบ',
   draft:          'แบบร่าง',
   cancelled:      'ถูกยกเลิก',
+  suspended:      'ถูกระงับ',
+  pending_cancel: 'รอยืนยันยกเลิก',
 }
 
 const STATE_BADGE: Record<string, string> = {
@@ -21,11 +23,13 @@ const STATE_BADGE: Record<string, string> = {
   executing:      'bg-[#3B82F6] text-white',
   closed:         'bg-[#2BA88E] text-white',
   pending_review: 'bg-[#F5A623] text-white',
-  draft:          'bg-[#F1F3F5] text-[#6C757D]',
+  draft:          'bg-slate-100 text-slate-500',
   cancelled:      'bg-[#EF4444] text-white',
+  suspended:      'bg-orange-100 text-orange-700',
+  pending_cancel: 'bg-[#F5A623] text-white',
 }
 
-const MILESTONE_ELIGIBLE = ['funding', 'executing', 'closed']
+const MILESTONE_NAVIGABLE = ['funding', 'executing', 'closed', 'suspended', 'pending_review', 'pending_cancel']
 
 const TABS: { key: string; label: string }[] = [
   { key: 'all',           label: 'ทั้งหมด' },
@@ -41,7 +45,7 @@ const TABS: { key: string; label: string }[] = [
 
 const ProjectRow = ({ project }: { project: ProjectSummary }) => {
   const navigate = useNavigate()
-  const eligible = MILESTONE_ELIGIBLE.includes(project.state)
+  const navigable = MILESTONE_NAVIGABLE.includes(project.state)
   const badge = STATE_BADGE[project.state] ?? 'bg-[#F1F3F5] text-[#6C757D]'
   const label = STATE_LABEL[project.state] ?? project.state
   const progress = project.funding_goal > 0
@@ -51,11 +55,11 @@ const ProjectRow = ({ project }: { project: ProjectSummary }) => {
   return (
     <div
       className={`bg-white rounded-[14px] border border-border p-[18px] flex items-center gap-[14px] transition-all ${
-        eligible ? 'hover:border-primary/50 hover:shadow-md cursor-pointer' : 'opacity-60'
+        navigable ? 'hover:border-primary/50 hover:shadow-md cursor-pointer' : 'opacity-50 cursor-not-allowed'
       }`}
-      onClick={() => eligible && navigate(`/pioneer/dashboard/projects/${project.id}/milestones`)}
+      onClick={() => navigable && navigate(`/pioneer/dashboard/projects/${project.id}/milestones`)}
     >
-      <div className="shrink-0 w-[52px] h-[52px] rounded-[10px] bg-[#F1F3F5] overflow-hidden">
+      <div className="shrink-0 w-14 h-14 rounded-[10px] bg-[#F1F3F5] overflow-hidden">
         {project.thumbnail_url
           ? <img src={project.thumbnail_url} alt={project.title} className="w-full h-full object-cover" />
           : <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Flag size={20} /></div>
@@ -63,19 +67,32 @@ const ProjectRow = ({ project }: { project: ProjectSummary }) => {
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span className="font-semibold text-[14px] text-foreground truncate">{project.title}</span>
           <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${badge}`}>{label}</span>
+          {project.category && (
+            <span className="shrink-0 text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{project.category.name}</span>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-[5px] rounded-full bg-[#F1F3F5] overflow-hidden">
-            <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+        {project.description && (
+          <p className="text-[12px] text-muted-foreground truncate mb-1.5">{project.description}</p>
+        )}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="flex-1 h-1.5 rounded-full bg-[#F1F3F5] overflow-hidden">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="text-[11px] text-muted-foreground shrink-0">{progress}%</span>
           </div>
-          <span className="text-[11px] text-muted-foreground shrink-0">{progress}%</span>
+          {project.funding_goal > 0 && (
+            <span className="text-[11px] text-muted-foreground shrink-0">
+              ฿{project.current_funding.toLocaleString()} / ฿{project.funding_goal.toLocaleString()}
+            </span>
+          )}
         </div>
       </div>
 
-      {eligible && <ChevronRight size={16} className="text-muted-foreground shrink-0" />}
+      <ChevronRight size={16} className={`shrink-0 ${navigable ? 'text-muted-foreground' : 'opacity-30'}`} />
     </div>
   )
 }

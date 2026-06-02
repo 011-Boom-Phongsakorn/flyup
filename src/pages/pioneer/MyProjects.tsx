@@ -33,11 +33,11 @@ const stateBadgeClass: Record<StateType, string> = {
   funding: "bg-[#8B5CF6] text-white",
   closed: "bg-[#8B5CF6] text-white",
   pending_review: "bg-[#F1F3F5] text-[#495057]",
-  draft: "bg-white border border-border text-[#495057]",
+  draft: "bg-slate-100 text-slate-500",
   cancelled: "bg-[#EF4444] text-white",
   executing: "bg-[#3B82F6] text-white",
   pending_cancel: "bg-[#F59E0B] text-white",
-  suspended: "bg-[#6B7280] text-white",
+  suspended: "bg-orange-100 text-orange-700",
 };
 
 const MyProjects = () => {

@@ -566,11 +566,9 @@ const Investment = () => {
                         </div>
                       </div>
 
-                      {/* ── PromptPay pill ── */}
+                      {/* ── PromptPay label ── */}
                       <div className="bg-white pt-4 pb-3 flex items-center justify-center">
-                        <div className="flex items-center gap-2 bg-[#003f9c] px-5 py-2 rounded-full shadow-md">
-                          <span className="text-white font-black text-[14px] tracking-wide">PromptPay</span>
-                        </div>
+                        <p className="text-[#003f9c] font-black text-[14px] tracking-wide">ชำระผ่าน PromptPay</p>
                       </div>
 
                       {/* ── QR Code ── */}
