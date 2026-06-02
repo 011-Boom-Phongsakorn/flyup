@@ -195,6 +195,21 @@ function ProjectDetail() {
     );
   }
 
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center mt-25 gap-4 text-center px-4">
+        <div className="text-6xl">🔍</div>
+        <h1 className="text-2xl font-bold text-foreground">ไม่พบโปรเจกต์นี้</h1>
+        <p className="text-muted-foreground text-sm max-w-sm">
+          โปรเจกต์นี้อาจถูกปิด ยกเลิก หรือไม่มีอยู่ในระบบแล้ว
+        </p>
+        <Link to="/projects" className="mt-2 px-6 py-2.5 bg-primary text-white rounded-xl font-semibold hover:opacity-90 transition-opacity">
+          สำรวจโปรเจกต์อื่น
+        </Link>
+      </div>
+    );
+  }
+
   const investorCount = actualInvestorCount;
 
   return (

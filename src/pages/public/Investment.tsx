@@ -139,7 +139,8 @@ const Investment = () => {
   const softcap = project?.softcap || 0;
   const currentFunding = project?.current_funding || 0;
   const isSoftcapReached = softcap > 0 && currentFunding >= softcap;
-  const effectiveMinAmount = isSoftcapReached ? 1 : minAmount;
+  const MIN_PAYMENT_GATEWAY = 20; // PromptPay QR ต้องการขั้นต่ำ 20 บาท
+  const effectiveMinAmount = Math.max(isSoftcapReached ? 1 : minAmount, MIN_PAYMENT_GATEWAY);
   // เพดานต่อรายการของ payment gateway (Stripe จำกัดที่ ~999,999.99 — ตั้ง 500,000 ตามมาตรฐาน fintech ไทย)
   const MAX_PER_TRANSACTION = 500_000;
   const maxAmount = Math.min(
@@ -231,11 +232,7 @@ const Investment = () => {
 
   const handleNextStep2 = () => {
     if (parsedAmount < effectiveMinAmount) {
-      toast.error(
-        isSoftcapReached
-          ? "กรุณาระบุจำนวนเงิน"
-          : `จำนวนเงินขั้นต่ำคือ ฿${minAmount.toLocaleString()}`
-      );
+      toast.error(`จำนวนเงินขั้นต่ำคือ ฿${effectiveMinAmount.toLocaleString()}`);
       return;
     }
     if (parsedAmount > maxAmount) {
