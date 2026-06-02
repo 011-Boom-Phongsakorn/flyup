@@ -32,6 +32,7 @@ import { Loader2 } from 'lucide-react';
 
 // Pioneer Pages
 import ProjectOverview from '../pages/pioneer/ProjectOverview';
+import ProjectGuide from '../pages/pioneer/ProjectGuide';
 import Dashboard from '../pages/pioneer/Dashboard';
 import PioneerLayout from '../layouts/PioneerLayout';
 import MyProjects from '../pages/pioneer/MyProjects';
@@ -190,6 +191,7 @@ const Router = () => {
                             <Route path='/preview/:projectId' element={<Preview />} />
                             <Route path='/preview/:projectId/milestones' element={<PreviewMilestoneDetail />} />
                             <Route path='/project/overview/:projectId' element={<ProjectOverview />} />
+                            <Route path='/project/guide' element={<ProjectGuide />} />
                             <Route path='/project/overview/:projectId/step' element={<ProjectStageLayout />}>
                                 <Route index element={<Navigate to="1" replace />} />
                                 <Route path='1' element={<Step1Basics />} />
