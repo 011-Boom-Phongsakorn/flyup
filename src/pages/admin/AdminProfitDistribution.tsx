@@ -7,6 +7,7 @@ import { useAdminProfitPoolStore, type ProfitPoolDetail, type InvestorPayoutDeta
 import PageHeader from '../../components/admin/PageHeader'
 import StatusBadge from '../../components/admin/StatusBadge'
 import SearchBar from '../../components/admin/SearchBar'
+import FilterTabs from '../../components/admin/FilterTabs'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -419,26 +420,15 @@ const AdminProfitDistribution = () => {
 
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาโปรเจกต์หรือ Pioneer..." resultCount={filtered.length} />
-                <div className="inline-flex bg-muted rounded-[10px] p-1 gap-1 shrink-0">
-                    {FILTER_TABS.map(t => (
-                        <button
-                            key={t.value}
-                            onClick={() => setFilterTab(t.value)}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                                filterTab === t.value
-                                    ? 'bg-white text-primary shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                        >
-                            {t.label}
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                                filterTab === t.value ? 'bg-primary/10 text-primary' : 'bg-muted-foreground/10'
-                            }`}>
-                                {t.value === 'all' ? pools.length : pools.filter(p => p.status === t.value).length}
-                            </span>
-                        </button>
-                    ))}
-                </div>
+                <FilterTabs
+                    active={filterTab}
+                    onChange={(k) => setFilterTab(k as FilterTab)}
+                    tabs={FILTER_TABS.map(t => ({
+                        key: t.value,
+                        label: t.label,
+                        count: t.value === 'all' ? pools.length : pools.filter(p => p.status === t.value).length,
+                    }))}
+                />
             </div>
 
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">

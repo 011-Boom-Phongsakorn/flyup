@@ -101,7 +101,7 @@ function StatCard({ title, value, subtitle, trend, spark, icon, href }: StatCard
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
-const TABS = ['ภาพรวม', 'การเงิน', 'กิจกรรม'] as const
+const TABS = ['ภาพรวม', 'การเงิน'] as const
 type Tab = typeof TABS[number]
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -286,13 +286,6 @@ const AdminDashboard = () => {
         />
       )}
 
-      {tab === 'กิจกรรม' && (
-        <Card>
-          <CardContent className="flex items-center justify-center h-48 text-muted-foreground text-[13px]">
-            ยังไม่มีข้อมูลกิจกรรมในขณะนี้
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { Loader2, ShieldBan, ShieldCheck, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import SearchBar from '../../components/admin/SearchBar'
+import FilterTabs from '../../components/admin/FilterTabs'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
 
@@ -169,22 +170,10 @@ const AdminProjectSuspension = () => {
         <div className="flex flex-col gap-[16px]">
             <PageHeader title="ระงับโปรเจกต์" subtitle="จัดการสถานะและระงับโปรเจกต์ที่เข้าข่ายผิดเงื่อนไข" />
 
-            {/* Tabs */}
-            <div className="flex gap-2 px-2.5">
-                {tabs.map((t) => (
-                    <button key={t.key} onClick={() => setTab(t.key)}
-                        className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors ${
-                            tab === t.key ? 'bg-primary text-white' : 'bg-white border border-border text-foreground hover:bg-gray-50'
-                        }`}>
-                        {t.label}
-                        <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${tab === t.key ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>
-                            {t.count}
-                        </span>
-                    </button>
-                ))}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+                <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาชื่อโปรเจกต์..." resultCount={filtered.length} />
+                <FilterTabs active={tab} onChange={(k) => setTab(k as Tab)} tabs={tabs} />
             </div>
-
-            <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาชื่อโปรเจกต์..." resultCount={filtered.length} />
 
             {tab === 'terminal' && (
                 <p className="text-[12px] text-muted-foreground px-2.5">
