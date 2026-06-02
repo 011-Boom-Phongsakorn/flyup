@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Loader2, Wallet, CheckCircle, Clock, X } from 'lucide-react'
 import { useDisbursementStore, type Disbursement } from '../../store/useDisbursementStore'
 import SearchBar from '../../components/admin/SearchBar'
+import FilterTabs from '../../components/admin/FilterTabs'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
 
@@ -120,21 +121,17 @@ const AdminDisbursements = () => {
         <div className="flex flex-col gap-[16px]">
             <PageHeader title="การปล่อยเงิน" subtitle="ยืนยันการโอนเงินทุนให้ pioneer ตามแต่ละ milestone" />
 
-            <div className="flex gap-2 px-2.5">
-                {(['pending', 'all'] as const).map((t) => (
-                    <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors ${
-                            tab === t ? 'bg-primary text-white' : 'bg-white border border-border text-foreground hover:bg-gray-50'
-                        }`}
-                    >
-                        {t === 'pending' ? 'รอโอนเงิน' : 'ทั้งหมด'}
-                    </button>
-                ))}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+                <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาโปรเจกต์หรือ Pioneer..." resultCount={filtered.length} />
+                <FilterTabs
+                    active={tab}
+                    onChange={(k) => setTab(k as 'pending' | 'all')}
+                    tabs={[
+                        { key: 'pending', label: 'รอโอนเงิน' },
+                        { key: 'all',     label: 'ทั้งหมด' },
+                    ]}
+                />
             </div>
-
-            <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาโปรเจกต์หรือ Pioneer..." resultCount={filtered.length} />
 
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
                 <div className="grid grid-cols-7 bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">

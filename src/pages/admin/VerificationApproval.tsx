@@ -6,6 +6,8 @@ import { useVerificationStore } from "../../store/useVerificationStore"
 import PageHeader from "../../components/admin/PageHeader"
 import ApproveRejectButtons from "../../components/admin/ApproveRejectButtons"
 import ImagePreviewModal from "../../components/admin/ImagePreviewModal"
+import FilterTabs from "../../components/admin/FilterTabs"
+import SearchBar from "../../components/admin/SearchBar"
 
 type Tab = "student" | "idcard"
 
@@ -27,6 +29,7 @@ const VerificationApproval = () => {
     } = useVerificationStore()
 
     const [tab, setTab] = useState<Tab>("student")
+    const [search, setSearch] = useState("")
     const [actionLoading, setActionLoading] = useState<number | null>(null)
     const [preview, setPreview] = useState<{ url: string; label: string } | null>(null)
 
@@ -60,37 +63,33 @@ const VerificationApproval = () => {
         }
     }
 
-    const students = studentVerifications
-    const idCards = idCardVerifications
+    const q = search.toLowerCase()
+    const students = studentVerifications.filter(s =>
+        String(s.user_id).includes(q) || (s.User?.email ?? '').toLowerCase().includes(q)
+    )
+    const idCards = idCardVerifications.filter(c =>
+        String(c.user_id).includes(q) || (c.User?.email ?? '').toLowerCase().includes(q)
+    )
 
     return (
         <div className="flex flex-col gap-[16px]">
             <PageHeader title="ตรวจสอบใบสมัคร Pioneer" subtitle="อนุมัติหรือปฏิเสธการยืนยันตัวตนของ Pioneer" />
 
-            {/* Tabs */}
-            <div className="flex gap-[8px]">
-                <button
-                    onClick={() => setTab("student")}
-                    className={`flex items-center gap-[8px] px-[16px] py-[8px] rounded-[10px] text-[14px] font-medium transition-colors ${tab === "student" ? "bg-primary text-white" : "bg-white border border-border text-foreground hover:bg-muted"}`}
-                >
-                    บัตรนักศึกษา
-                    {students.length > 0 && (
-                        <span className={`text-[11px] px-[6px] py-[1px] rounded-full font-semibold ${tab === "student" ? "bg-white text-primary" : "bg-primary text-white"}`}>
-                            {students.length}
-                        </span>
-                    )}
-                </button>
-                <button
-                    onClick={() => setTab("idcard")}
-                    className={`flex items-center gap-[8px] px-[16px] py-[8px] rounded-[10px] text-[14px] font-medium transition-colors ${tab === "idcard" ? "bg-primary text-white" : "bg-white border border-border text-foreground hover:bg-muted"}`}
-                >
-                    บัตรประชาชน
-                    {idCards.length > 0 && (
-                        <span className={`text-[11px] px-[6px] py-[1px] rounded-full font-semibold ${tab === "idcard" ? "bg-white text-primary" : "bg-primary text-white"}`}>
-                            {idCards.length}
-                        </span>
-                    )}
-                </button>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+                <SearchBar
+                    value={search}
+                    onChange={setSearch}
+                    placeholder="ค้นหา User ID หรือ Email..."
+                    resultCount={tab === "student" ? students.length : idCards.length}
+                />
+                <FilterTabs
+                    active={tab}
+                    onChange={(k) => setTab(k as Tab)}
+                    tabs={[
+                        { key: "student", label: "บัตรนักศึกษา", count: studentVerifications.length },
+                        { key: "idcard",  label: "บัตรประชาชน",  count: idCardVerifications.length },
+                    ]}
+                />
             </div>
 
             {/* Content */}
