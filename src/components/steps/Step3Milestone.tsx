@@ -33,7 +33,7 @@ const Step3Milestone = () => {
   const markTouched = (idx: number) => {
     setTouchedPhases(prev => {
       const next = new Set(prev).add(idx)
-      try { sessionStorage.setItem(storageKey, JSON.stringify([...next])) } catch {}
+      try { sessionStorage.setItem(storageKey, JSON.stringify([...next])) } catch (_) { /* ignore */ }
       return next
     })
   }
