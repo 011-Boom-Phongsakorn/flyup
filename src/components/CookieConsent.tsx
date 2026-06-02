@@ -21,10 +21,10 @@ const CookieConsent = () => {
         role="dialog"
         aria-modal="false"
         aria-label="การตั้งค่า Cookie"
-        className="fixed bottom-0 left-0 right-0 z-[999] animate-in slide-in-from-bottom-4 duration-500"
+        className="fixed bottom-0 left-0 right-0 z-[999] md:bottom-6 animate-in slide-in-from-bottom-4 duration-500"
       >
         {/* Card */}
-        <div className="bg-card border-t border-border shadow-2xl rounded-t-3xl md:rounded-3xl md:bottom-4 md:left-4 md:right-4 md:max-w-lg md:mx-auto overflow-hidden">
+        <div className="bg-card border-t border-border shadow-2xl rounded-t-3xl md:rounded-3xl md:max-w-lg md:mx-auto overflow-hidden">
 
           {/* Top accent bar */}
           <div className="h-1 bg-gradient-to-r from-primary via-purple-400 to-pink-400" />
