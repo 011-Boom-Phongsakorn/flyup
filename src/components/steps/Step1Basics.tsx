@@ -553,7 +553,7 @@ const Step1Basics = () => {
 
           {/* รูปภาพประกอบ */}
           <div className="space-y-3">
-            <label className="text-foreground text-[14px] flex items-center gap-[10px]"><FileImage size={16} />รูปภาพประกอบ <span className="text-error">*</span></label>
+            <label className="text-foreground text-[14px] flex items-center gap-[10px]"><FileImage size={16} />รูปภาพประกอบ (สูงสุด 5 รูป) <span className="text-error">*</span></label>
             <div
               onClick={() => additionalImagesRef.current?.click()}
               className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer group"
@@ -573,7 +573,6 @@ const Step1Basics = () => {
               </div>
             </div>
 
-            <p className="flex items-center gap-[10px] text-[14px] text-foreground"><ImageIcon size={14} /> รูปภาพเพิ่มเติม (สูงสุด 5 รูป)</p>
             {/* Chip แสดงไฟล์ */}
             <div className="flex flex-wrap gap-2">
               {currentProject?.files?.map((f, i) => {

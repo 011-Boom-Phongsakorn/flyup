@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { type LucideIcon, CircleCheckBig, Send } from 'lucide-react';
+import { type LucideIcon, CircleCheckBig, Send, BookOpen } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router'
 import { useProjectStore, type Project } from '../../store/useProjectStore';
 import api from '../../services/api';
@@ -80,7 +80,16 @@ const ProjectOverview = () => {
   return (
     <>
       <div className='w-full mx-auto max-w-[937px] py-[100px]'>
-        <h1 className='text-[24px] font-semibold text-foreground p-[10px]'>ภาพรวมของโปรเจกต์</h1>
+        <div className='flex items-center justify-between p-2.5'>
+          <h1 className='text-[24px] font-semibold text-foreground'>ภาพรวมของโปรเจกต์</h1>
+          <Link
+            to='/project/guide'
+            className='flex items-center gap-2 px-4 py-2 rounded-xl border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors text-[13px] font-medium'
+          >
+            <BookOpen size={15} />
+            อ่านคู่มือการสร้างโปรเจกต์
+          </Link>
+        </div>
         <div className='flex flex-col p-[10px] gap-[10px]'>
           <p className='text-[12px] text-primary'>กำลังสร้างโปรเจกต์</p>
           {step.map((s, idx) => {
