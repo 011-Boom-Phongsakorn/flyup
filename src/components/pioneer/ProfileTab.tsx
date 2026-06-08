@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Pencil, Camera, Phone, Briefcase, Link, FileBraces, Mail, MapPin, GraduationCap, X, Loader2, Save } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 
@@ -18,25 +18,24 @@ const ProfileTab = () => {
   });
   const [snapshot, setSnapshot] = useState({ ...form });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const initialized = useRef(false);
 
-  // sync form ครั้งแรกที่ authUser โหลด ไม่ reset ซ้ำเมื่อ tab อื่น trigger checkAuth
-  useEffect(() => {
-    if (!initialized.current && authUser) {
-      setForm({
-        first_name: (authUser?.first_name as string) ?? "",
-        last_name: (authUser?.last_name as string) ?? "",
-        phone: (authUser?.phone as string) ?? "",
-        address: (authUser?.address as string) ?? "",
-        bio: authUser?.student_profile?.bio ?? "",
-        portfolio: authUser?.student_profile?.portfolio ?? "",
-        skills: authUser?.student_profile?.skills ?? "",
-        faculty: authUser?.student_profile?.faculty ?? "",
-        major: authUser?.student_profile?.major ?? "",
-      });
-      initialized.current = true;
-    }
-  }, [authUser]);
+  // sync ฟอร์มจาก authUser ครั้งแรกที่โหลดเสร็จ ไม่ reset ซ้ำเมื่อ tab อื่น trigger checkAuth
+  // ตั้งค่า state ระหว่าง render ตามแนวทางของ React แทนการใช้ useEffect + setState
+  const [hasSyncedForm, setHasSyncedForm] = useState(false);
+  if (!hasSyncedForm && authUser) {
+    setHasSyncedForm(true);
+    setForm({
+      first_name: (authUser.first_name as string) ?? "",
+      last_name: (authUser.last_name as string) ?? "",
+      phone: (authUser.phone as string) ?? "",
+      address: (authUser.address as string) ?? "",
+      bio: authUser.student_profile?.bio ?? "",
+      portfolio: authUser.student_profile?.portfolio ?? "",
+      skills: authUser.student_profile?.skills ?? "",
+      faculty: authUser.student_profile?.faculty ?? "",
+      major: authUser.student_profile?.major ?? "",
+    });
+  }
 
   const initials = `${form.first_name[0] ?? ""}${form.last_name[0] ?? ""}`.toUpperCase() || "?";
 
@@ -57,13 +56,11 @@ const ProfileTab = () => {
   const handlePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    initialized.current = false;
     await uploadAvatar(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSave = async () => {
-    initialized.current = false;
     const ok = await updateProfile({
       first_name: form.first_name,
       last_name: form.last_name,

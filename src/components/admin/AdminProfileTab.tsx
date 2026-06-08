@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { ShieldCheck, Camera, Phone, Mail } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 
@@ -10,18 +10,18 @@ const AdminProfileTab = () => {
     phone: (authUser?.phone as string) ?? "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const initialized = useRef(false);
 
-  useEffect(() => {
-    if (!initialized.current && authUser) {
-      setForm({
-        first_name: (authUser?.first_name as string) ?? "",
-        last_name: (authUser?.last_name as string) ?? "",
-        phone: (authUser?.phone as string) ?? "",
-      });
-      initialized.current = true;
-    }
-  }, [authUser]);
+  // sync ฟอร์มจาก authUser ครั้งแรกที่โหลดเสร็จ (เผื่อ mount ตอน authUser ยังเป็น null)
+  // ตั้งค่า state ระหว่าง render ตามแนวทางของ React แทนการใช้ useEffect + setState
+  const [hasSyncedForm, setHasSyncedForm] = useState(false);
+  if (!hasSyncedForm && authUser) {
+    setHasSyncedForm(true);
+    setForm({
+      first_name: (authUser.first_name as string) ?? "",
+      last_name: (authUser.last_name as string) ?? "",
+      phone: (authUser.phone as string) ?? "",
+    });
+  }
 
   const initials = `${form.first_name[0] ?? ""}${form.last_name[0] ?? ""}`.toUpperCase() || "?";
 
@@ -32,13 +32,11 @@ const AdminProfileTab = () => {
   const handlePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    initialized.current = false;
     await uploadAvatar(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSave = async () => {
-    initialized.current = false;
     await updateProfile({
       first_name: form.first_name,
       last_name: form.last_name,
