@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { CheckSquare, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
 import { useBoosterStore } from '../../store/useBoosterStore';
-import api from '../../services/api';
+import { useMilestoneStore, type ProjectMilestoneRaw } from '../../store/useMilestoneStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -133,6 +133,7 @@ function Pagination({
 
 const Votes = () => {
   const { investments, fetchMyInvestments, isLoading: investLoading } = useBoosterStore();
+  const { fetchProjectMilestones } = useMilestoneStore();
   const [milestones, setMilestones] = useState<VoteMilestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('all');
@@ -152,9 +153,12 @@ const Votes = () => {
         const results = await Promise.all(
           projectIds.map(async (pid) => {
             try {
-              const res = await api.get(`/projects/${pid}/milestones`);
-              return (res.data?.data ?? []).map((m: Omit<VoteMilestone, 'project_id' | 'projectTitle'>) => ({
+              const data = await fetchProjectMilestones(pid);
+              return data.map((m: ProjectMilestoneRaw) => ({
                 ...m,
+                voting_open: m.voting_open ?? false,
+                voting_opened_at: m.voting_opened_at ?? null,
+                voting_closed_at: m.voting_closed_at ?? null,
                 project_id: pid,
                 projectTitle: investments.find(inv => inv.project_id === pid)?.project?.title ?? `โปรเจกต์ #${pid}`,
               })) as VoteMilestone[];
@@ -166,7 +170,7 @@ const Votes = () => {
     };
 
     fetchAll();
-  }, [investments, investLoading]);
+  }, [investments, investLoading, fetchProjectMilestones]);
 
   const openVotes   = useMemo(() => milestones.filter(m => m.voting_open === true), [milestones]);
   const closedVotes = useMemo(() => milestones.filter(m => m.voting_open === false && m.voting_closed_at), [milestones]);

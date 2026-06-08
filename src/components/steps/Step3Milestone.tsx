@@ -4,7 +4,6 @@ import { Plus, Trash2, Upload, Video, X, Loader2, ChevronRight, ChevronLeft } fr
 import StepNavigation from "../StepNavigation"
 import toast from 'react-hot-toast'
 import { useParams, useSearchParams } from 'react-router'
-import api from '../../services/api'
 
 const Step3Milestone = () => {
   const { projectId } = useParams()
@@ -33,7 +32,7 @@ const Step3Milestone = () => {
   const markTouched = (idx: number) => {
     setTouchedPhases(prev => {
       const next = new Set(prev).add(idx)
-      try { sessionStorage.setItem(storageKey, JSON.stringify([...next])) } catch (_) { /* ignore */ }
+      try { sessionStorage.setItem(storageKey, JSON.stringify([...next])) } catch { /* ignore */ }
       return next
     })
   }
@@ -52,7 +51,7 @@ const Step3Milestone = () => {
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
   const criteriaRefs = useRef<(HTMLInputElement | null)[]>([])
   // ✅ ดึง currentProject มาก่อน แล้วค่อยเข้าถึง milestones
-  const { currentProject, updateMilestone, saveMilestonePhase, setSaveStatus } = useProjectStore()
+  const { currentProject, updateMilestone, saveMilestonePhase, setSaveStatus, uploadFile } = useProjectStore()
 
   const triggerSaved = () => {
     setSaveStatus('saved');
@@ -125,17 +124,8 @@ const Step3Milestone = () => {
 
   // อัปโหลดไฟล์เดียวผ่าน /upload (key: file) — คืน server URL
   const uploadOneFile = async (file: File): Promise<string | null> => {
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000,
-      })
-      return res.data?.data?.url ?? null
-    } catch {
-      return null
-    }
+    const uploaded = await uploadFile(file)
+    return uploaded?.url ?? null
   }
 
   // แทนที่ blob URL ด้วย server URL ใน milestone files

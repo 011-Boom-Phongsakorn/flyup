@@ -22,6 +22,43 @@ const mapBackendStatus = (s: string | undefined): MilestoneStatus => {
   }
 }
 
+export interface VoterItem {
+  user_id: number
+  first_name: string
+  last_name: string
+  picture?: string | null
+  voted: boolean
+  choice: string
+}
+
+export interface MeetingBrief {
+  id: number
+  milestone_id: number
+  date: string
+  time: string
+  status: string
+}
+
+export interface ProjectMilestoneRaw {
+  id: number
+  project_id?: number
+  phase_no: number
+  title: string
+  description?: string | null
+  acceptance_criteria?: string | null
+  percent_release: number
+  status: string
+  submission_summary?: string | null
+  submission_criteria?: string[]
+  submission_attachments?: string[]
+  submission_links?: string[]
+  submitted_at?: string | null
+  voting_open?: boolean
+  voting_opened_at?: string | null
+  voting_closed_at?: string | null
+  due_date?: string | null
+}
+
 interface MilestoneStore {
   milestones: MilestoneData[]
   projectTitle: string
@@ -29,6 +66,9 @@ interface MilestoneStore {
   isLoading: boolean
   isSubmitting: boolean
   fetchMilestones: (projectId: string) => Promise<number | null> // returns index of first active phase
+  fetchProjectMilestones: (projectId: number | string) => Promise<ProjectMilestoneRaw[]>
+  fetchProjectMeetings: (projectId: number | string) => Promise<MeetingBrief[]>
+  fetchMilestoneVoters: (milestoneId: number) => Promise<VoterItem[]>
   submitEvidence: (
     milestoneId: number,
     projectId: string,
@@ -129,6 +169,33 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
       return null
     } finally {
       set({ isLoading: false })
+    }
+  },
+
+  fetchProjectMilestones: async (projectId) => {
+    try {
+      const res = await api.get(`/projects/${projectId}/milestones`)
+      return res.data?.data ?? []
+    } catch {
+      return []
+    }
+  },
+
+  fetchProjectMeetings: async (projectId) => {
+    try {
+      const res = await api.get(`/me/projects/${projectId}/meetings`, { params: { filter: 'all' } })
+      return res.data?.data ?? []
+    } catch {
+      return []
+    }
+  },
+
+  fetchMilestoneVoters: async (milestoneId) => {
+    try {
+      const res = await api.get(`/pioneer/investments/milestones/${milestoneId}/voters`)
+      return res.data?.data ?? []
+    } catch {
+      return []
     }
   },
 

@@ -58,18 +58,35 @@ export interface BoosterInvestment {
   }[];
 }
 
+export interface ProfitPayout {
+  id: number;
+  project_id: number;
+  project_title: string;
+  cover_image?: string | null;
+  quarter_no: number;
+  amount: number;
+  share_pct: number;
+  status: 'pending' | 'confirmed';
+  transfer_ref: string;
+  confirmed_at?: string;
+  created_at: string;
+}
+
 // ─── Store Interface ─────────────────────────────────────────────────────────
 
 interface BoosterStoreState {
   investments: BoosterInvestment[];
   currentInvestment: BoosterInvestment | null;
   boosterMeetings: BoosterMeeting[];
+  profitPayouts: ProfitPayout[];
   isLoading: boolean;
   isDetailLoading: boolean;
+  isLoadingProfitPayouts: boolean;
 
   fetchMyInvestments: () => Promise<void>;
   fetchBoosterMeetings: () => Promise<void>;
   fetchInvestmentById: (id: number) => Promise<void>;
+  fetchProfitPayouts: () => Promise<void>;
   requestRefund: (investmentId: number, reason: string) => Promise<boolean>;
   voteOnMilestone: (milestoneId: number, payload: { choice: 'approve' | 'reject', comment?: string }) => Promise<boolean | 'already_voted'>;
   getMyVote: (milestoneId: number) => Promise<{ choice: string; comment?: string } | null>;
@@ -81,8 +98,10 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
   investments: [],
   currentInvestment: null,
   boosterMeetings: [],
+  profitPayouts: [],
   isLoading: false,
   isDetailLoading: false,
+  isLoadingProfitPayouts: false,
 
   fetchBoosterMeetings: async () => {
     try {
@@ -158,6 +177,19 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
       set({ currentInvestment: null });
     } finally {
       set({ isDetailLoading: false });
+    }
+  },
+
+  fetchProfitPayouts: async () => {
+    set({ isLoadingProfitPayouts: true });
+    try {
+      const res = await api.get('/me/profit-payouts');
+      set({ profitPayouts: res.data?.data ?? [] });
+    } catch (error) {
+      console.error('fetchProfitPayouts:', error);
+      set({ profitPayouts: [] });
+    } finally {
+      set({ isLoadingProfitPayouts: false });
     }
   },
 

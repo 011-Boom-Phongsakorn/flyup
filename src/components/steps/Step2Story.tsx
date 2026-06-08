@@ -10,15 +10,7 @@ import { SquarePlay, List, ImageIcon, Plus, ChevronDown, Check, X, Link as LinkI
 import StepNavigation from "../StepNavigation"
 import { useProjectStore } from '../../store/useProjectStore'
 import { useParams } from 'react-router'
-import api from '../../services/api'
 import toast from 'react-hot-toast'
-
-interface FAQ {
-  id: number
-  question: string
-  answer: string
-  sort_order: number
-}
 
 // ✅ Custom Image Extension ที่รองรับการแนบลิงก์ (href) และจับรูปภาพจัด Align
 const CustomImage = Image.extend({
@@ -70,7 +62,10 @@ const CustomImage = Image.extend({
 
 const Step2Story = () => {
   const { projectId } = useParams()
-  const { currentProject, updateProjectInfo, updateProject, saveStory, setSaveStatus } = useProjectStore()
+  const {
+    currentProject, updateProjectInfo, updateProject, saveStory, setSaveStatus,
+    faqs, isSavingFaq, fetchFaqs, addFaq, editFaq, deleteFaq, uploadFile,
+  } = useProjectStore()
 
   const showFaqSection = ['draft', 'funding', 'executing'].includes(currentProject.state ?? '')
 
@@ -87,68 +82,29 @@ const Step2Story = () => {
   const hasInitializedRef = useRef(false)
 
   // FAQ state
-  const [faqs, setFaqs] = useState<FAQ[]>([])
   const [faqForm, setFaqForm] = useState({ question: '', answer: '' })
-  const [isSavingFaq, setIsSavingFaq] = useState(false)
   const [editingFaqId, setEditingFaqId] = useState<number | null>(null)
   const [editFaqForm, setEditFaqForm] = useState({ question: '', answer: '' })
 
   useEffect(() => {
     if (showFaqSection && projectId) {
-      api.get(`/projects/${projectId}/faqs`)
-        .then(res => setFaqs(res.data?.data ?? []))
-        .catch(() => {})
+      fetchFaqs(projectId)
     }
-  }, [showFaqSection, projectId])
+  }, [showFaqSection, projectId, fetchFaqs])
 
   const handleAddFaq = async () => {
-    if (!faqForm.question.trim() || !faqForm.answer.trim()) {
-      toast.error('กรุณากรอกคำถามและคำตอบ')
-      return
-    }
-    setIsSavingFaq(true)
-    try {
-      const res = await api.post(`/pioneer/projects/${projectId}/faqs`, {
-        question: faqForm.question,
-        answer: faqForm.answer,
-        sort_order: faqs.length + 1,
-      })
-      setFaqs(prev => [...prev, res.data?.data])
-      setFaqForm({ question: '', answer: '' })
-      toast.success('เพิ่ม FAQ สำเร็จ')
-    } catch {
-      toast.error('เพิ่ม FAQ ไม่สำเร็จ')
-    } finally {
-      setIsSavingFaq(false)
-    }
+    if (!projectId) return
+    const ok = await addFaq(projectId, faqForm)
+    if (ok) setFaqForm({ question: '', answer: '' })
   }
 
   const handleUpdateFaq = async (id: number) => {
-    if (!editFaqForm.question.trim() || !editFaqForm.answer.trim()) {
-      toast.error('กรุณากรอกคำถามและคำตอบ')
-      return
-    }
-    try {
-      await api.patch(`/pioneer/projects/faqs/${id}`, {
-        question: editFaqForm.question,
-        answer: editFaqForm.answer,
-      })
-      setFaqs(prev => prev.map(f => f.id === id ? { ...f, ...editFaqForm } : f))
-      setEditingFaqId(null)
-      toast.success('แก้ไข FAQ สำเร็จ')
-    } catch {
-      toast.error('แก้ไข FAQ ไม่สำเร็จ')
-    }
+    const ok = await editFaq(id, editFaqForm)
+    if (ok) setEditingFaqId(null)
   }
 
   const handleDeleteFaq = async (id: number) => {
-    try {
-      await api.delete(`/pioneer/projects/faqs/${id}`)
-      setFaqs(prev => prev.filter(f => f.id !== id))
-      toast.success('ลบ FAQ สำเร็จ')
-    } catch {
-      toast.error('ลบ FAQ ไม่สำเร็จ')
-    }
+    await deleteFaq(id)
   }
 
   // ✅ State สำหรับลิงก์บนรูปภาพ
@@ -326,18 +282,15 @@ const Step2Story = () => {
 
     // Upload ขึ้น server แล้วแทนที่ blob URL ด้วย URL จริง
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000,
-      })
-      const { url: serverUrl } = res.data?.data ?? {}
+      const uploaded = await uploadFile(file)
+      const serverUrl = uploaded?.url
       if (serverUrl) {
         const updatedHtml = editor.getHTML().replace(blobUrl, serverUrl)
         editor.commands.setContent(updatedHtml, { emitUpdate: false })
         updateProjectInfo({ story: updatedHtml })
         if (projectId) await saveStory(Number(projectId), updatedHtml)
+      } else {
+        throw new Error('upload failed')
       }
     } catch {
       toast.error('อัปโหลดรูปไม่สำเร็จ')
@@ -347,7 +300,7 @@ const Step2Story = () => {
     } finally {
       URL.revokeObjectURL(blobUrl)
     }
-  }, [editor, projectId, updateProjectInfo, saveStory])
+  }, [editor, projectId, updateProjectInfo, saveStory, uploadFile])
 
   // ✅ ฟังก์ชันเพิ่ม media จาก URL
   const handleAddMediaUrl = useCallback(() => {
@@ -700,12 +653,14 @@ const Step2Story = () => {
                       />
                       <div className='flex gap-[8px]'>
                         <button
+                          data-testid={`faq-edit-save-btn-${faq.id}`}
                           onClick={() => handleUpdateFaq(faq.id)}
                           className='flex items-center gap-[4px] text-[13px] text-green-600 hover:text-green-700 font-medium'
                         >
                           <Check size={14} /> บันทึก
                         </button>
                         <button
+                          data-testid={`faq-edit-cancel-btn-${faq.id}`}
                           onClick={() => setEditingFaqId(null)}
                           className='flex items-center gap-[4px] text-[13px] text-muted-foreground hover:text-foreground'
                         >
@@ -719,12 +674,14 @@ const Step2Story = () => {
                         <p className='font-semibold text-foreground text-[14px]'>Q: {faq.question}</p>
                         <div className='flex gap-[8px] shrink-0'>
                           <button
+                            data-testid={`faq-edit-open-btn-${faq.id}`}
                             onClick={() => { setEditingFaqId(faq.id); setEditFaqForm({ question: faq.question, answer: faq.answer }) }}
                             className='text-muted-foreground hover:text-primary transition-colors'
                           >
                             <Edit2 size={14} />
                           </button>
                           <button
+                            data-testid={`faq-delete-btn-${faq.id}`}
                             onClick={() => handleDeleteFaq(faq.id)}
                             className='text-muted-foreground hover:text-error transition-colors'
                           >
@@ -744,12 +701,14 @@ const Step2Story = () => {
           <div className='flex flex-col gap-[10px] border border-dashed border-border rounded-[10px] p-[16px]'>
             <p className='text-[13px] font-medium text-foreground'>เพิ่มคำถามใหม่</p>
             <input
+              data-testid="faq-question-input"
               value={faqForm.question}
               onChange={e => setFaqForm(p => ({ ...p, question: e.target.value }))}
               placeholder='คำถาม เช่น "โปรเจกต์จะเสร็จเมื่อไหร่?"'
               className='border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors bg-background'
             />
             <textarea
+              data-testid="faq-answer-input"
               value={faqForm.answer}
               onChange={e => setFaqForm(p => ({ ...p, answer: e.target.value }))}
               onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }}
@@ -758,6 +717,7 @@ const Step2Story = () => {
               className='border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors bg-background resize-none overflow-hidden'
             />
             <button
+              data-testid="faq-add-btn"
               onClick={handleAddFaq}
               disabled={isSavingFaq}
               className='self-start flex items-center gap-[6px] bg-primary hover:bg-primary-hover text-white px-[16px] py-[8px] rounded-[8px] text-[14px] font-medium transition-colors disabled:opacity-50'

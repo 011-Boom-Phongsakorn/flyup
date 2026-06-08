@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle2, ChevronRight, FileText, Image as ImageIcon, Li
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'react-hot-toast';
 import { useBoosterStore } from '../../store/useBoosterStore';
-import api from '../../services/api';
+import { useMilestoneStore } from '../../store/useMilestoneStore';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -34,6 +34,7 @@ const VoteDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { voteOnMilestone, getMyVote, investments, fetchMyInvestments } = useBoosterStore();
+  const { fetchProjectMilestones } = useMilestoneStore();
 
   const [milestone, setMilestone] = useState<MilestoneDetail | null>(null);
   const [projectTitle, setProjectTitle] = useState('');
@@ -61,8 +62,7 @@ const VoteDetail = () => {
         let found: MilestoneDetail | null = null;
         for (const pid of projectIds) {
           try {
-            const res = await api.get(`/projects/${pid}/milestones`);
-            const milestones: MilestoneDetail[] = res.data?.data ?? [];
+            const milestones = await fetchProjectMilestones(pid) as MilestoneDetail[];
             const m = milestones.find(m => m.id === Number(id));
             if (m) {
               found = { ...m, project_id: pid };
@@ -91,7 +91,7 @@ const VoteDetail = () => {
     if (investments.length > 0) {
       fetchMilestone();
     }
-  }, [id, investments, getMyVote]);
+  }, [id, investments, getMyVote, fetchProjectMilestones]);
 
   const handleVoteSubmit = async () => {
     if (!voteValue || !milestone) return;

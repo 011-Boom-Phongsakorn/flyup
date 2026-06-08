@@ -15,12 +15,20 @@ export interface PioneerProfitItem {
     created_at: string
 }
 
+export interface PioneerProjectBrief {
+    id: number
+    title: string
+    state: string
+}
+
 interface PioneerProfitStore {
     pools: PioneerProfitItem[]
     isLoading: boolean
     isSubmitting: boolean
     fetchPools: () => Promise<void>
     submitProfit: (projectId: number, quarterNo: number, totalAmount: number, transferRef: string, slipImage?: string) => Promise<boolean>
+    fetchPioneerProjects: () => Promise<PioneerProjectBrief[]>
+    uploadFile: (file: File) => Promise<{ url: string; type?: string } | null>
 }
 
 export const usePioneerProfitStore = create<PioneerProfitStore>((set) => ({
@@ -57,6 +65,29 @@ export const usePioneerProfitStore = create<PioneerProfitStore>((set) => ({
             return false
         } finally {
             set({ isSubmitting: false })
+        }
+    },
+
+    fetchPioneerProjects: async () => {
+        try {
+            const res = await api.get('/pioneer/projects')
+            return res.data?.data ?? []
+        } catch {
+            return []
+        }
+    },
+
+    uploadFile: async (file) => {
+        try {
+            const formData = new FormData()
+            formData.append('file', file)
+            const res = await api.post('/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            })
+            const { url, type } = res.data?.data ?? {}
+            return url ? { url, type } : null
+        } catch {
+            return null
         }
     },
 }))

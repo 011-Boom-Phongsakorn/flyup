@@ -16,8 +16,8 @@ const THAI_BANKS = [
   "ธนาคารยูโอบี (UOB)",
 ];
 import { useAuthStore } from "../../store/useAuthStore";
+import { useSelfVerificationStore } from "../../store/useSelfVerificationStore";
 import toast from "react-hot-toast";
-import api from "../../services/api";
 
 const SELECT_STYLE = "border border-border rounded-[8px] px-[12px] py-[10px] pr-[32px] text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_10px_center]";
 const INPUT_STYLE = "border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors";
@@ -45,7 +45,8 @@ const BankFormFields = ({ form, setForm }: { form: BankFormState; setForm: React
 );
 
 const VerifyTab = () => {
-  const { authUser, checkAuth } = useAuthStore();
+  const { authUser, checkAuth, updateProfile } = useAuthStore();
+  const { uploadVerificationDocument, submitIdVerify, submitStudentVerify, addBankAccount, updateBankAccount, setDefaultBankAccount } = useSelfVerificationStore();
 
   const derivedStudentCode =
     authUser?.student_profile?.student_code ??
@@ -149,61 +150,49 @@ const VerifyTab = () => {
     try {
       let studentCardUrl = storedStudentCardUrl;
       if (studentFile) {
-        const fd = new FormData();
-        fd.append("file", studentFile);
-        const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        studentCardUrl = res.data.data.url;
+        const url = await uploadVerificationDocument(studentFile);
+        if (!url) return;
+        studentCardUrl = url;
       }
 
       let idCardUrl = storedIdCardUrl;
       if (idCardFile) {
-        const fd = new FormData();
-        fd.append("file", idCardFile);
-        const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        idCardUrl = res.data.data.url;
+        const url = await uploadVerificationDocument(idCardFile);
+        if (!url) return;
+        idCardUrl = url;
       }
 
       let selfieUrl = storedSelfieUrl;
       if (selfieFile) {
-        const fd = new FormData();
-        fd.append("file", selfieFile);
-        const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        selfieUrl = res.data.data.url;
+        const url = await uploadVerificationDocument(selfieFile);
+        if (!url) return;
+        selfieUrl = url;
       }
 
-      await api.patch("/user/profile", {
-        student_code: studentForm.student_code || undefined,
-      });
+      await updateProfile({ student_code: studentForm.student_code || undefined });
 
       if (!studentCardLocked) {
-        await api.post("/user/student-verify", {
+        const ok = await submitStudentVerify({
           student_card_url: studentCardUrl,
           declare_truth: acceptAccuracy,
           accept_pioneer_terms: acceptTerms,
         });
+        if (!ok) return;
       }
 
       if (!idCardLocked) {
-        await api.post("/user/id-verify", {
+        const status = await submitIdVerify({
           id_card_url: idCardUrl,
           selfie_url: selfieUrl,
           declare_truth: acceptAccuracy,
         });
+        if (!status) return;
       }
 
-      await checkAuth();
       toast.success("ส่งข้อมูลยืนยันตัวตนแล้ว รอ admin อนุมัติ");
-    } catch {
-      toast.error("เกิดข้อผิดพลาด");
     } finally {
       setIsSavingStudent(false);
     }
-  };
-
-  const bankApiError = (err: unknown) => {
-    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-    if (msg === "account number already exists") toast.error("เลขบัญชีนี้มีในระบบแล้ว");
-    else toast.error("เกิดข้อผิดพลาด");
   };
 
   const handleAddBank = async () => {
@@ -212,13 +201,12 @@ const VerifyTab = () => {
     }
     setIsSavingAdd(true);
     try {
-      await api.post("/user/add-bank", addForm);
-      await checkAuth();
-      setAddForm(emptyBankForm);
-      setShowAddForm(false);
-      toast.success("เพิ่มบัญชีสำเร็จ");
-    } catch (err) { bankApiError(err); }
-    finally { setIsSavingAdd(false); }
+      const ok = await addBankAccount(addForm);
+      if (ok) {
+        setAddForm(emptyBankForm);
+        setShowAddForm(false);
+      }
+    } finally { setIsSavingAdd(false); }
   };
 
   const handleEditBank = async (id: number) => {
@@ -227,22 +215,16 @@ const VerifyTab = () => {
     }
     setIsSavingEdit(true);
     try {
-      await api.patch(`/user/update-bank/${id}`, editForm);
-      await checkAuth();
-      setEditingBankId(null);
-      toast.success("แก้ไขบัญชีสำเร็จ");
-    } catch (err) { bankApiError(err); }
-    finally { setIsSavingEdit(false); }
+      const ok = await updateBankAccount(id, editForm);
+      if (ok) setEditingBankId(null);
+    } finally { setIsSavingEdit(false); }
   };
 
   const handleSetDefault = async (id: number) => {
     setSettingDefaultId(id);
     try {
-      await api.patch(`/user/set-default-bank/${id}`);
-      await checkAuth();
-      toast.success("ตั้งบัญชีหลักสำเร็จ");
-    } catch { toast.error("เกิดข้อผิดพลาด"); }
-    finally { setSettingDefaultId(null); }
+      await setDefaultBankAccount(id);
+    } finally { setSettingDefaultId(null); }
   };
 
   const studentCardPreview = studentFile
@@ -325,6 +307,7 @@ const VerifyTab = () => {
                 </div>
               )}
               <input
+                data-testid="verify-studentcard-input"
                 type="file"
                 accept="image/*,.pdf"
                 className="hidden"
@@ -370,6 +353,7 @@ const VerifyTab = () => {
                 </div>
               )}
               <input
+                data-testid="verify-idcard-input"
                 type="file"
                 accept="image/*,.pdf"
                 className="hidden"
@@ -416,6 +400,7 @@ const VerifyTab = () => {
                 </div>
               )}
               <input
+                data-testid="verify-selfie-input"
                 type="file"
                 accept="image/*"
                 className="hidden"
@@ -465,6 +450,7 @@ const VerifyTab = () => {
 
         {!bothLocked && (
           <button
+            data-testid="verify-submit-btn"
             onClick={handleStudentSubmit}
             disabled={isSavingStudent}
             className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50 cursor-pointer"
@@ -486,6 +472,7 @@ const VerifyTab = () => {
           <Lock size={18} className="text-foreground" />
           <h2 className="font-semibold text-foreground">ยืนยันบัญชี</h2>
           <button
+            data-testid="bank-add-open-btn"
             onClick={() => { setShowAddForm(true); setEditingBankId(null); }}
             className="ml-auto flex items-center gap-[6px] px-[12px] py-[6px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors cursor-pointer"
           >
@@ -504,10 +491,10 @@ const VerifyTab = () => {
               <>
                 <BankFormFields form={editForm} setForm={setEditForm} />
                 <div className="flex gap-[8px] justify-end">
-                  <button onClick={() => setEditingBankId(null)} disabled={isSavingEdit} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] border border-border text-[13px] font-medium hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer">
+                  <button data-testid="bank-edit-cancel-btn" onClick={() => setEditingBankId(null)} disabled={isSavingEdit} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] border border-border text-[13px] font-medium hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer">
                     <X size={13} /> ยกเลิก
                   </button>
-                  <button onClick={() => handleEditBank(acc.id!)} disabled={isSavingEdit} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors disabled:opacity-50 cursor-pointer">
+                  <button data-testid="bank-edit-save-btn" onClick={() => handleEditBank(acc.id!)} disabled={isSavingEdit} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors disabled:opacity-50 cursor-pointer">
                     {isSavingEdit ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                     {isSavingEdit ? "กำลังบันทึก..." : "บันทึก"}
                   </button>
@@ -530,6 +517,7 @@ const VerifyTab = () => {
                 <div className="flex items-center gap-[6px] flex-shrink-0">
                   {!acc.is_default && (
                     <button
+                      data-testid={`bank-set-default-btn-${acc.id}`}
                       onClick={() => handleSetDefault(acc.id!)}
                       disabled={settingDefaultId === acc.id}
                       className="flex items-center gap-[5px] px-[10px] py-[6px] rounded-[8px] border border-border text-[12px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer"
@@ -539,6 +527,7 @@ const VerifyTab = () => {
                     </button>
                   )}
                   <button
+                    data-testid={`bank-edit-open-btn-${acc.id}`}
                     onClick={() => { setEditingBankId(acc.id!); setEditForm({ bank_name: acc.bank_name ?? "", account_name: acc.account_name ?? "", account_number: acc.account_number ?? "" }); setShowAddForm(false); }}
                     className="flex items-center gap-[5px] px-[10px] py-[6px] rounded-[8px] border border-border text-[12px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors cursor-pointer"
                   >
@@ -556,10 +545,10 @@ const VerifyTab = () => {
             <p className="text-[13px] font-semibold text-foreground">บัญชีใหม่</p>
             <BankFormFields form={addForm} setForm={setAddForm} />
             <div className="flex gap-[8px] justify-end">
-              <button onClick={() => { setShowAddForm(false); setAddForm(emptyBankForm); }} disabled={isSavingAdd} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] border border-border text-[13px] font-medium hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer">
+              <button data-testid="bank-add-cancel-btn" onClick={() => { setShowAddForm(false); setAddForm(emptyBankForm); }} disabled={isSavingAdd} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] border border-border text-[13px] font-medium hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer">
                 <X size={13} /> ยกเลิก
               </button>
-              <button onClick={handleAddBank} disabled={isSavingAdd} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors disabled:opacity-50 cursor-pointer">
+              <button data-testid="bank-add-save-btn" onClick={handleAddBank} disabled={isSavingAdd} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors disabled:opacity-50 cursor-pointer">
                 {isSavingAdd ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                 {isSavingAdd ? "กำลังเพิ่ม..." : "เพิ่มบัญชี"}
               </button>

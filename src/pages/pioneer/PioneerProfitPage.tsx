@@ -5,8 +5,8 @@ import {
     ImagePlus, XCircle,
 } from 'lucide-react'
 import { usePioneerProfitStore, type PioneerProfitItem } from '../../store/usePioneerProfitStore'
+import { useMilestoneStore } from '../../store/useMilestoneStore'
 import toast from 'react-hot-toast'
-import api from '../../services/api'
 
 const PLATFORM_BANK_NAME     = import.meta.env.VITE_PLATFORM_BANK_NAME     ?? 'ธนาคารกสิกรไทย (KBANK)'
 const PLATFORM_ACCOUNT_NAME  = import.meta.env.VITE_PLATFORM_ACCOUNT_NAME  ?? 'บริษัท ฟลายอัพ จำกัด'
@@ -79,7 +79,7 @@ function SubmitProfitModal({
     onClose: () => void
     onSubmitted: () => void
 }) {
-    const { isSubmitting, submitProfit } = usePioneerProfitStore()
+    const { isSubmitting, submitProfit, uploadFile } = usePioneerProfitStore()
     const eligible = projects.filter(p =>
         (p.state === 'executing' || p.state === 'closed') && p.allMilestonesPaid === true
     )
@@ -102,10 +102,9 @@ function SubmitProfitModal({
         setSlipPreview(URL.createObjectURL(file))
         setIsUploading(true)
         try {
-            const fd = new FormData()
-            fd.append('file', file)
-            const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-            setSlipImage(res.data?.data?.url ?? '')
+            const uploaded = await uploadFile(file)
+            if (!uploaded?.url) throw new Error('upload failed')
+            setSlipImage(uploaded.url)
         } catch {
             toast.error('อัปโหลดสลิปไม่สำเร็จ')
             setSlipPreview('')
@@ -356,30 +355,27 @@ function ProjectDetail({
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const PioneerProfitPage = () => {
-    const { pools, isLoading, fetchPools } = usePioneerProfitStore()
+    const { pools, isLoading, fetchPools, fetchPioneerProjects } = usePioneerProfitStore()
+    const { fetchProjectMilestones } = useMilestoneStore()
     const [showModal, setShowModal]   = useState(false)
     const [myProjects, setMyProjects] = useState<MyProject[]>([])
     const [selectedId, setSelectedId] = useState<number | null>(null)
 
     useEffect(() => {
         fetchPools()
-        api.get('/pioneer/projects')
-            .then(async res => {
-                const data: { id: number; title: string; state: string }[] = res.data?.data ?? []
-                const active = data.filter(p => p.state === 'executing' || p.state === 'closed')
-                const withMilestones = await Promise.all(
-                    active.map(async p => {
-                        try {
-                            const msRes = await api.get(`/projects/${p.id}/milestones`)
-                            const ms: { status: string }[] = msRes.data?.data ?? []
-                            return { ...p, allMilestonesPaid: ms.length >= 4 && ms.every(m => m.status === 'paid') }
-                        } catch { return { ...p, allMilestonesPaid: false } }
-                    })
-                )
-                setMyProjects(withMilestones)
-            })
-            .catch(() => {})
-    }, [fetchPools])
+        fetchPioneerProjects().then(async data => {
+            const active = data.filter(p => p.state === 'executing' || p.state === 'closed')
+            const withMilestones = await Promise.all(
+                active.map(async p => {
+                    try {
+                        const ms = await fetchProjectMilestones(p.id)
+                        return { ...p, allMilestonesPaid: ms.length >= 4 && ms.every(m => m.status === 'paid') }
+                    } catch { return { ...p, allMilestonesPaid: false } }
+                })
+            )
+            setMyProjects(withMilestones)
+        })
+    }, [fetchPools, fetchPioneerProjects, fetchProjectMilestones])
 
     const grouped = useMemo(() => {
         const map = new Map<number, { title: string; items: PioneerProfitItem[] }>()
