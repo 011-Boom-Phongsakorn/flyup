@@ -9,32 +9,24 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useBoosterStore } from '../../store/useBoosterStore'
-import api from '../../services/api'
 
 const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
 
 const PIE_COLORS = ['#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6']
 
-interface ProfitItem { status: string; amount: number; project_id: number; project_title: string }
-
 function fmtBaht(v: number) {
   return `฿${v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 const BoosterDashboard = () => {
-  const { investments, isLoading, fetchMyInvestments } = useBoosterStore()
-  const [profitItems, setProfitItems] = useState<ProfitItem[]>([])
+  const { investments, isLoading, fetchMyInvestments, profitPayouts, fetchProfitPayouts } = useBoosterStore()
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
   const [invTab, setInvTab] = useState('recent')
 
   useEffect(() => { fetchMyInvestments() }, [fetchMyInvestments])
 
-  useEffect(() => {
-    api.get('/me/profit-payouts')
-      .then(res => setProfitItems(res.data?.data ?? []))
-      .catch(() => {})
-  }, [])
+  useEffect(() => { fetchProfitPayouts() }, [fetchProfitPayouts])
 
   const active = useMemo(
     () => investments.filter(inv => inv.status === 'verified'),
@@ -64,9 +56,9 @@ const BoosterDashboard = () => {
 
   const filteredProfit = useMemo(() =>
     selectedProject
-      ? profitItems.filter(p => p.project_title === selectedProject)
-      : profitItems,
-    [profitItems, selectedProject]
+      ? profitPayouts.filter(p => p.project_title === selectedProject)
+      : profitPayouts,
+    [profitPayouts, selectedProject]
   )
 
   // stats

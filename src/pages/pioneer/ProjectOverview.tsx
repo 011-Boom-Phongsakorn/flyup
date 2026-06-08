@@ -2,9 +2,6 @@ import { useEffect, useState } from 'react';
 import { type LucideIcon, CircleCheckBig, Send, BookOpen } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router'
 import { useProjectStore, type Project } from '../../store/useProjectStore';
-import api from '../../services/api';
-import { AxiosError } from 'axios';
-import toast from 'react-hot-toast';
 
 interface StageItems {
   icon: LucideIcon;
@@ -49,7 +46,7 @@ const step: StageItems[] = [
 const ProjectOverview = () => {
   const { projectId } = useParams()
   const navigate = useNavigate()
-  const { currentProject, loadCurrentProject } = useProjectStore()
+  const { currentProject, loadCurrentProject, submitProject } = useProjectStore()
   const [showModal, setShowModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -61,20 +58,14 @@ const ProjectOverview = () => {
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    try {
-      await api.patch(`/pioneer/projects/${projectId}/submit`)
+    const ok = await submitProject(projectId!)
+    if (ok) {
       navigate('/pioneer/dashboard/projects')
-    } catch (error) {
-      const msg = error instanceof AxiosError ? error.response?.data?.message : null;
-      if (msg === 'you already have an active project') {
-        toast.error('คุณมีโปรเจกต์ที่กำลังดำเนินอยู่แล้ว ไม่สามารถส่งโปรเจกต์ใหม่ได้ในขณะนี้');
-      } else {
-        toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
-      }
-    } finally {
-      setIsSubmitting(false)
       setShowModal(false)
     }
+    // ถ้าส่งไม่สำเร็จ (เช่น มีโปรเจกต์ที่ดำเนินอยู่แล้ว) ให้เปิด Modal ค้างไว้
+    // เพื่อให้ผู้ใช้เห็น toast แจ้งเตือนข้อผิดพลาดชัดเจน ไม่ใช่ Modal หายไปเฉยๆ
+    setIsSubmitting(false)
   }
 
   return (
@@ -135,6 +126,7 @@ const ProjectOverview = () => {
                 ยกเลิก
               </button>
               <button
+                data-testid="project-overview-submit-btn"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="h-[48px] rounded-[12px] bg-primary text-white font-medium hover:bg-primary-hover flex items-center justify-center gap-[8px] transition-colors disabled:opacity-50"

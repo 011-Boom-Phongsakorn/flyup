@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { Lock, Eye, EyeOff, CheckCircle, Circle } from "lucide-react";
 import toast from "react-hot-toast";
-import api from "../../services/api";
-import { AxiosError } from "axios";
 import { useAuthStore } from "../../store/useAuthStore";
 
 const PasswordTab = () => {
-  const { authUser, checkAuth } = useAuthStore();
+  const { authUser, addPassword, changePassword, isSavingPassword } = useAuthStore();
   // Fallback when backend doesn't send has_password: assume Google-only users
   // (google_sub set, no has_password field) still need to set a password.
   const hasPassword = authUser?.has_password ?? !authUser?.google_sub;
@@ -15,7 +13,6 @@ const PasswordTab = () => {
 
   const [form, setForm] = useState({ current: "", newPass: "", confirm: "" });
   const [show, setShow] = useState({ current: false, newPass: false, confirm: false });
-  const [isSaving, setIsSaving] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -40,32 +37,10 @@ const PasswordTab = () => {
       toast.error("รหัสผ่านใหม่ไม่ตรงกัน");
       return;
     }
-    setIsSaving(true);
-    try {
-      if (isSettingPassword) {
-        await api.put("/user/add-password", { new_password: form.newPass });
-        toast.success("ตั้งรหัสผ่านสำเร็จ");
-        await checkAuth();
-      } else {
-        await api.put("/user/change-password", {
-          old_password: form.current,
-          new_password: form.newPass,
-        });
-        toast.success("เปลี่ยนรหัสผ่านสำเร็จ");
-      }
-      setForm({ current: "", newPass: "", confirm: "" });
-    } catch (error) {
-      const msg = error instanceof AxiosError ? error.response?.data?.message : null;
-      if (msg === "can't not use old password as new password") {
-        toast.error("ไม่สามารถใช้รหัสผ่านเดิมได้");
-      } else if (msg === "password is incorrect") {
-        toast.error("รหัสผ่านปัจจุบันไม่ถูกต้อง");
-      } else {
-        toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่");
-      }
-    } finally {
-      setIsSaving(false);
-    }
+    const ok = isSettingPassword
+      ? await addPassword(form.newPass)
+      : await changePassword(form.current, form.newPass);
+    if (ok) setForm({ current: "", newPass: "", confirm: "" });
   };
 
   const fields: { key: keyof typeof form; label: string }[] = isSettingPassword
@@ -99,6 +74,7 @@ const PasswordTab = () => {
           <label className="text-[13px] font-medium text-foreground">{label}</label>
           <div className="relative">
             <input
+              data-testid={`password-input-${key}`}
               name={key}
               type={show[key] ? "text" : "password"}
               value={form[key]}
@@ -137,12 +113,13 @@ const PasswordTab = () => {
       ))}
 
       <button
+        data-testid="password-submit-btn"
         onClick={handleSubmit}
-        disabled={isSaving}
+        disabled={isSavingPassword}
         className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-[8px]"
       >
         <Lock size={16} />
-        {isSaving ? "กำลังบันทึก..." : title}
+        {isSavingPassword ? "กำลังบันทึก..." : title}
       </button>
     </div>
   );

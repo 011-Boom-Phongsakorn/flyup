@@ -3,14 +3,11 @@ import { Eye, Send } from "lucide-react";
 import StepNavigation from "../StepNavigation";
 import { useProjectStore } from "../../store/useProjectStore";
 import { useNavigate, useParams } from "react-router";
-import api from "../../services/api";
-import { AxiosError } from "axios";
-import toast from "react-hot-toast";
 
 const Step4Agreement = () => {
   const navigate = useNavigate()
   const { projectId } = useParams();
-  const { currentProject } = useProjectStore();
+  const { currentProject, submitProject } = useProjectStore();
 
   const allMilestonesComplete = currentProject.milestones?.length === 4 &&
     currentProject.milestones.every(m => !!m.title && !!m.description && m.duration > 0);
@@ -48,19 +45,13 @@ const Step4Agreement = () => {
   const handleSubmitProject = async () => {
     setIsSubmitting(true);
     if (projectId) {
-      try {
-        await api.patch(`/pioneer/projects/${projectId}/submit`);
+      const ok = await submitProject(projectId);
+      if (ok) {
         setShowModal(false);
         navigate(`/pioneer/dashboard/projects`);
-      } catch (error) {
-        const msg = error instanceof AxiosError ? error.response?.data?.message : null;
-        if (msg === 'you already have an active project') {
-          toast.error('คุณมีโปรเจกต์ที่กำลังดำเนินอยู่แล้ว ไม่สามารถส่งโปรเจกต์ใหม่ได้ในขณะนี้');
-        } else {
-          toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
-        }
-        setShowModal(false);
       }
+      // ถ้าส่งไม่สำเร็จ (เช่น มีโปรเจกต์ที่ดำเนินอยู่แล้ว) ให้เปิด Modal ค้างไว้
+      // เพื่อให้ผู้ใช้เห็น toast แจ้งเตือนข้อผิดพลาดชัดเจน ไม่ใช่ Modal หายไปเฉยๆ
     }
     setIsSubmitting(false);
   };
@@ -183,6 +174,7 @@ const Step4Agreement = () => {
 
               {/* ปุ่มส่งคำขออนุมัติจริง */}
               <button
+                data-testid="step4-submit-btn"
                 onClick={handleSubmitProject}
                 disabled={isSubmitting}
                 className="col-span-1 h-[48px] rounded-[12px] bg-primary text-white font-medium hover:bg-primary-hover flex items-center justify-center gap-[8px] transition-colors disabled:opacity-50 cursor-pointer"

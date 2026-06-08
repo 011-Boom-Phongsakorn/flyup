@@ -1,18 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { ChevronLeft, Loader2 } from 'lucide-react'
-import { useMilestoneStore } from '../../store/useMilestoneStore'
+import { useMilestoneStore, type MeetingBrief } from '../../store/useMilestoneStore'
 import PhaseCard from '../../components/pioneer/milestone/PhaseCard'
 import type { EvidenceLink } from '../../components/pioneer/milestone/types'
-import api from '../../services/api'
-
-interface MeetingBrief { id: number; milestone_id: number; date: string; time: string; status: string }
 
 const MilestonePage = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
 
-  const { milestones, projectTitle, projectSuspended, isLoading, isSubmitting, isOpeningVoting, fetchMilestones, submitEvidence, recallEvidence, openVoting } =
+  const { milestones, projectTitle, projectSuspended, isLoading, isSubmitting, isOpeningVoting, fetchMilestones, fetchProjectMeetings, submitEvidence, recallEvidence, openVoting } =
     useMilestoneStore()
 
   const [activePhase, setActivePhase] = useState<number | null>(null)
@@ -24,18 +21,15 @@ const MilestonePage = () => {
       if (firstActive !== null) setActivePhase(firstActive)
     })
     // ดึง meetings ของ project นี้ เพื่อเช็คว่า milestone ไหนนัดแล้ว
-    api.get(`/me/projects/${projectId}/meetings`, { params: { filter: 'all' } })
-      .then(res => {
-        const meetings: MeetingBrief[] = res.data?.data ?? []
-        const byMilestone: Record<number, MeetingBrief[]> = {}
-        meetings.forEach(m => {
-          if (!byMilestone[m.milestone_id]) byMilestone[m.milestone_id] = []
-          byMilestone[m.milestone_id].push(m)
-        })
-        setMeetingsByMilestone(byMilestone)
+    fetchProjectMeetings(projectId).then(meetings => {
+      const byMilestone: Record<number, MeetingBrief[]> = {}
+      meetings.forEach(m => {
+        if (!byMilestone[m.milestone_id]) byMilestone[m.milestone_id] = []
+        byMilestone[m.milestone_id].push(m)
       })
-      .catch(() => {})
-  }, [projectId, fetchMilestones])
+      setMeetingsByMilestone(byMilestone)
+    })
+  }, [projectId, fetchMilestones, fetchProjectMeetings])
 
   const handleSubmit = async (
     milestoneId: number,

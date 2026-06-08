@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft, AlertTriangle, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../../services/api';
-import { AxiosError } from 'axios';
+import { useProjectStore } from '../../store/useProjectStore';
 
 const CANCEL_REASONS = [
   'เปลี่ยนแปลงแผนธุรกิจ',
@@ -17,6 +16,7 @@ const CANCEL_REASONS = [
 const CancelProjectRequest = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
+  const submitCancelRequest = useProjectStore((s) => s.submitCancelRequest);
 
   const [selectedReason, setSelectedReason] = useState('');
   const [details, setDetails] = useState('');
@@ -40,22 +40,14 @@ const CancelProjectRequest = () => {
 
     setIsSubmitting(true);
     try {
-      await api.patch(`/pioneer/projects/${projectId}/submit-cancel`, {
+      const result = await submitCancelRequest(projectId!, {
         reason: selectedReason,
         description: details.trim(),
       });
-      toast.success('ส่งคำขอยกเลิกเรียบร้อยแล้ว รอ Admin พิจารณา');
-      navigate('/pioneer/dashboard/projects');
-    } catch (error) {
-      const msg = error instanceof AxiosError ? error.response?.data?.message : null;
-      if (msg === 'cancel request is already pending') {
-        toast.error('คุณได้ส่งคำขอยกเลิกไปแล้ว กรุณารอ Admin พิจารณา');
-      } else if (msg === 'project is already cancelled or state is draft') {
-        toast.error('ไม่สามารถส่งคำขอได้ เนื่องจากโปรเจกต์ถูกยกเลิกแล้ว หรืออยู่ในสถานะแบบร่าง');
-      } else if (msg === 'description is required') {
+      if (result === true) {
+        navigate('/pioneer/dashboard/projects');
+      } else if (result === 'description_required') {
         setDetailsError('กรุณาระบุรายละเอียดเพิ่มเติม');
-      } else {
-        toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
       }
     } finally {
       setIsSubmitting(false);
@@ -66,6 +58,7 @@ const CancelProjectRequest = () => {
     <div className="max-w-2xl mx-auto">
       {/* Back */}
       <button
+        data-testid="cancel-request-back-btn"
         onClick={() => navigate('/pioneer/dashboard/projects')}
         className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6 cursor-pointer"
       >
@@ -105,6 +98,7 @@ const CancelProjectRequest = () => {
             {CANCEL_REASONS.map(reason => (
               <label key={reason} className="flex items-center gap-3 cursor-pointer">
                 <div
+                  data-testid={`cancel-request-reason-option-${reason}`}
                   onClick={() => setSelectedReason(reason)}
                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors cursor-pointer shrink-0 ${selectedReason === reason ? 'border-red-500' : 'border-border'}`}
                 >
@@ -124,6 +118,7 @@ const CancelProjectRequest = () => {
             รายละเอียดเพิ่มเติม <span className="text-error">*</span>
           </label>
           <textarea
+            data-testid="cancel-request-details-input"
             value={details}
             onChange={e => { setDetails(e.target.value); setDetailsError(''); }}
             placeholder="อธิบายสถานการณ์และเหตุผลโดยละเอียด เพื่อให้ Admin พิจารณาได้อย่างถูกต้อง..."
@@ -141,6 +136,7 @@ const CancelProjectRequest = () => {
 
         {/* Submit */}
         <button
+          data-testid="cancel-request-submit-btn"
           onClick={handleSubmit}
           disabled={isSubmitting}
           className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-semibold text-sm py-3.5 rounded-xl transition-colors cursor-pointer"

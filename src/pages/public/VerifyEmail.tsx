@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
-import api from '../../services/api'
+import { useAuthStore } from '../../store/useAuthStore'
 
 type VerifyStatus = 'loading' | 'success' | 'error'
 
 const VerifyEmail = () => {
     const [searchParams] = useSearchParams()
+    const verifyEmail = useAuthStore((s) => s.verifyEmail)
     const [status, setStatus] = useState<VerifyStatus>('loading')
     const [message, setMessage] = useState('')
     const token = searchParams.get('token')
@@ -19,18 +20,18 @@ const VerifyEmail = () => {
                 return
             }
 
-            try {
-                await api.get(`/verify-email?token=${token}`)
+            const ok = await verifyEmail(token)
+            if (ok) {
                 setStatus('success')
                 setMessage('ยืนยันอีเมลสำเร็จแล้ว!')
-            } catch {
+            } else {
                 setStatus('error')
                 setMessage('ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุแล้ว')
             }
         }
 
         verify()
-    }, [token])
+    }, [token, verifyEmail])
 
     return (
         <div className="flex items-center justify-center min-h-[70vh] px-4">
@@ -59,6 +60,7 @@ const VerifyEmail = () => {
                             คุณสามารถเข้าสู่ระบบเพื่อเริ่มใช้งาน FlyUp ได้เลย
                         </p>
                         <Link
+                            data-testid="verify-email-login-link"
                             to="/login"
                             className="mt-[8px] w-full bg-primary hover:bg-primary-hover text-white text-[14px] font-medium h-[44px] rounded-[10px] flex items-center justify-center transition-all duration-300"
                         >
@@ -79,12 +81,14 @@ const VerifyEmail = () => {
                         </p>
                         <div className="flex flex-col gap-[10px] w-full mt-[8px]">
                             <Link
+                                data-testid="verify-email-register-link"
                                 to="/register"
                                 className="w-full bg-primary hover:bg-primary-hover text-white text-[14px] font-medium h-[44px] rounded-[10px] flex items-center justify-center transition-all duration-300"
                             >
                                 สมัครสมาชิกใหม่
                             </Link>
                             <Link
+                                data-testid="verify-email-home-link"
                                 to="/"
                                 className="w-full bg-background border border-border text-foreground text-[14px] font-medium h-[44px] rounded-[10px] flex items-center justify-center hover:bg-muted transition-all duration-300"
                             >

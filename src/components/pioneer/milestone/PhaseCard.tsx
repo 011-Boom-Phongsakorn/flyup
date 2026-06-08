@@ -5,16 +5,7 @@ import Swal from 'sweetalert2'
 import { STATUS_CONFIG, fmtDateRange, fmtBaht } from './types'
 import type { MilestoneData, EvidenceLink } from './types'
 import EvidenceForm from './EvidenceForm'
-import api from '../../../services/api'
-
-interface VoterItem {
-  user_id: number
-  first_name: string
-  last_name: string
-  picture?: string | null
-  voted: boolean
-  choice: string
-}
+import { useMilestoneStore, type VoterItem } from '../../../store/useMilestoneStore'
 
 interface PhaseCardProps {
   milestone: MilestoneData
@@ -30,6 +21,7 @@ interface PhaseCardProps {
 
 const PhaseCard = ({ milestone, isActive, projectSuspended, onToggle, onSubmit, onRecall, onOpenVoting, isSubmitting, isOpeningVoting }: PhaseCardProps) => {
   const navigate = useNavigate()
+  const fetchMilestoneVoters = useMilestoneStore((s) => s.fetchMilestoneVoters)
   const cfg = STATUS_CONFIG[milestone.status] ?? STATUS_CONFIG['pending']
   const isFailed    = milestone.status === 'failed'
   const isLocked    = projectSuspended || isFailed
@@ -44,10 +36,8 @@ const PhaseCard = ({ milestone, isActive, projectSuspended, onToggle, onSubmit, 
     if (!milestone.voting_open || !milestone.id) return
     const id = milestone.id
     setTimeout(() => setVoters(null), 0)
-    api.get(`/pioneer/investments/milestones/${id}/voters`)
-      .then(res => setVoters(res.data?.data ?? []))
-      .catch(() => setVoters([]))
-  }, [milestone.voting_open, milestone.id, milestone.voting_opened_at])
+    fetchMilestoneVoters(id).then(setVoters)
+  }, [milestone.voting_open, milestone.id, milestone.voting_opened_at, fetchMilestoneVoters])
 
   const now = new Date()
 

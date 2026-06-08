@@ -1,21 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Loader2, ShieldBan, ShieldCheck, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import api from '../../services/api'
 import SearchBar from '../../components/admin/SearchBar'
 import FilterTabs from '../../components/admin/FilterTabs'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
-
-interface ProjectRow {
-    id: number
-    title: string
-    state: string
-    status: string
-    funding_goal: number
-    current_funding: number
-    category?: string | null
-}
+import { useAdminStore, type AdminProjectRow as ProjectRow } from '../../store/useAdminStore'
 
 const STATE_LABEL: Record<string, string> = {
     funding:        'กำลังระดมทุน',
@@ -59,7 +49,7 @@ const UnsuspendModal = ({
             <p className="text-[12px] text-muted-foreground mb-5">สถานะจะเปลี่ยนกลับเป็น "กำลังดำเนินการ" และโปรเจกต์จะกลับมาทำงานตามปกติ</p>
             <div className="flex gap-2 justify-end">
                 <button onClick={onClose} className="px-4 py-2 text-[13px] rounded-lg border border-border hover:bg-gray-50">ยกเลิก</button>
-                <button onClick={onConfirm} disabled={isSubmitting}
+                <button data-testid="project-unsuspend-confirm-btn" onClick={onConfirm} disabled={isSubmitting}
                     className="px-4 py-2 text-[13px] rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 flex items-center gap-2">
                     {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
                     ยกเลิกระงับ
@@ -82,7 +72,7 @@ const SuspendModal = ({
             <p className="text-[12px] text-muted-foreground mb-5">การระงับจะเปลี่ยนสถานะเป็น "ถูกระงับ" และผู้ใช้ทั่วไปจะไม่สามารถลงทุนเพิ่มได้</p>
             <div className="flex gap-2 justify-end">
                 <button onClick={onClose} className="px-4 py-2 text-[13px] rounded-lg border border-border hover:bg-gray-50">ยกเลิก</button>
-                <button onClick={onConfirm} disabled={isSubmitting}
+                <button data-testid="project-suspend-confirm-btn" onClick={onConfirm} disabled={isSubmitting}
                     className="px-4 py-2 text-[13px] rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 flex items-center gap-2">
                     {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <ShieldBan size={14} />}
                     ระงับ
@@ -93,36 +83,25 @@ const SuspendModal = ({
 )
 
 const AdminProjectSuspension = () => {
-    const [projects, setProjects] = useState<ProjectRow[]>([])
-    const [isLoading, setIsLoading] = useState(false)
+    const { allProjects: projects, isAllProjectsLoading: isLoading, fetchAllProjects, updateProjectStatus } = useAdminStore()
     const [search, setSearch] = useState('')
     const [tab, setTab] = useState<Tab>('active')
     const [selected, setSelected] = useState<ProjectRow | null>(null)
     const [unsuspendTarget, setUnsuspendTarget] = useState<ProjectRow | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
-    const fetchProjects = async () => {
-        setIsLoading(true)
-        try {
-            const res = await api.get('/admin/projects')
-            setProjects(res.data?.data ?? [])
-        } catch {
-            toast.error('โหลดข้อมูลโปรเจกต์ไม่สำเร็จ')
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    useEffect(() => { fetchProjects() }, [])
+    useEffect(() => {
+        fetchAllProjects().catch(() => toast.error('โหลดข้อมูลโปรเจกต์ไม่สำเร็จ'))
+    }, [fetchAllProjects])
 
     const handleUnsuspend = async () => {
         if (!unsuspendTarget) return
         setIsSubmitting(true)
         try {
-            await api.patch(`/admin/projects/${unsuspendTarget.id}/status`, { state: 'executing', status: 'active' })
+            await updateProjectStatus(unsuspendTarget.id, 'executing', 'active')
             toast.success('ยกเลิกการระงับสำเร็จ')
-            setProjects((prev) => prev.map((p) => p.id === unsuspendTarget.id ? { ...p, state: 'executing', status: 'active' } : p))
             setUnsuspendTarget(null)
+            fetchAllProjects()
         } catch {
             toast.error('ยกเลิกการระงับไม่สำเร็จ')
         } finally {
@@ -134,10 +113,10 @@ const AdminProjectSuspension = () => {
         if (!selected) return
         setIsSubmitting(true)
         try {
-            await api.patch(`/admin/projects/${selected.id}/status`, { state: 'suspended', status: 'suspended' })
+            await updateProjectStatus(selected.id, 'suspended', 'suspended')
             toast.success('ระงับโปรเจกต์สำเร็จ')
-            setProjects((prev) => prev.map((p) => p.id === selected.id ? { ...p, state: 'suspended', status: 'suspended' } : p))
             setSelected(null)
+            fetchAllProjects()
         } catch {
             toast.error('ระงับไม่สำเร็จ')
         } finally {
@@ -225,12 +204,12 @@ const AdminProjectSuspension = () => {
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
                                     {isSuspended ? (
-                                        <button onClick={() => setUnsuspendTarget(p)}
+                                        <button data-testid={`project-unsuspend-open-btn-${p.id}`} onClick={() => setUnsuspendTarget(p)}
                                             className="flex items-center gap-[5px] px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 text-[12px] font-medium">
                                             <ShieldCheck size={13} /> ยกเลิกระงับ
                                         </button>
                                     ) : canSuspend ? (
-                                        <button onClick={() => setSelected(p)}
+                                        <button data-testid={`project-suspend-open-btn-${p.id}`} onClick={() => setSelected(p)}
                                             className="flex items-center gap-[5px] px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[12px] font-medium">
                                             <ShieldBan size={13} /> ระงับ
                                         </button>

@@ -1,20 +1,6 @@
 import { useEffect, useState } from 'react'
 import { TrendingUp, LayoutGrid, Loader2, CheckCircle2, Clock, ChevronDown } from 'lucide-react'
-import api from '../../services/api'
-
-interface ProfitItem {
-    id: number
-    project_id: number
-    project_title: string
-    cover_image?: string | null
-    quarter_no: number
-    amount: number
-    share_pct: number
-    status: 'pending' | 'confirmed'
-    transfer_ref: string
-    confirmed_at?: string
-    created_at: string
-}
+import { useBoosterStore, type ProfitPayout } from '../../store/useBoosterStore'
 
 const fmtBaht = (v: number) =>
     `฿${v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -23,30 +9,16 @@ const fmtDate = (d?: string | null) =>
     d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'
 
 const Profits = () => {
-    const [items, setItems] = useState<ProfitItem[]>([])
-    const [isLoading, setIsLoading] = useState(false)
+    const { profitPayouts: items, isLoadingProfitPayouts: isLoading, fetchProfitPayouts } = useBoosterStore()
     const [expanded, setExpanded] = useState<Record<number, boolean>>({})
 
-    useEffect(() => {
-        let cancelled = false
-        async function load() {
-            setIsLoading(true)
-            try {
-                const res = await api.get('/me/profit-payouts')
-                if (!cancelled) setItems(res.data?.data ?? [])
-            } catch { /* ignore */ } finally {
-                if (!cancelled) setIsLoading(false)
-            }
-        }
-        load()
-        return () => { cancelled = true }
-    }, [])
+    useEffect(() => { fetchProfitPayouts() }, [fetchProfitPayouts])
 
     const totalProfit = items
         .filter(i => i.status === 'confirmed')
         .reduce((s, i) => s + i.amount, 0)
 
-    const grouped = items.reduce<Record<number, { title: string; items: ProfitItem[] }>>((acc, i) => {
+    const grouped = items.reduce<Record<number, { title: string; items: ProfitPayout[] }>>((acc, i) => {
         if (!acc[i.project_id]) acc[i.project_id] = { title: i.project_title, items: [] }
         acc[i.project_id].items.push(i)
         return acc
@@ -113,6 +85,7 @@ const Profits = () => {
                             <div key={pid} className="bg-white border border-border rounded-2xl overflow-hidden shadow-sm transition-all">
                                 {/* Header row — คลิกเพื่อ expand */}
                                 <button
+                                    data-testid={`profit-group-toggle-${pid}`}
                                     onClick={() => setExpanded(prev => ({ ...prev, [pid]: !prev[pid] }))}
                                     className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50/60 transition-colors cursor-pointer text-left"
                                 >

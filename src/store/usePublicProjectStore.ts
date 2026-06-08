@@ -79,6 +79,13 @@ export interface Category {
   name: string;
 }
 
+export interface PlatformStats {
+  funded_projects: number;
+  total_funding: number;
+  unique_boosters: number;
+  passed_milestones: number;
+}
+
 // ─── Store Interface ─────────────────────────────────────────────────────────
 
 interface PublicProjectState {
@@ -89,6 +96,7 @@ interface PublicProjectState {
   executingProjects: PublicProject[];
   currentPublicProject: PublicProject | null;
   categories: Category[];
+  platformStats: PlatformStats | null;
   isLoading: boolean;
   isDetailLoading: boolean;
 
@@ -98,6 +106,7 @@ interface PublicProjectState {
   fetchPublicProjectBySlug: (slug: string) => Promise<void>;
   fetchProjectsByCategory: (categoryId: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
+  fetchPlatformStats: () => Promise<void>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -110,6 +119,7 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
   executingProjects: [],
   currentPublicProject: null,
   categories: [],
+  platformStats: null,
   isLoading: false,
   isDetailLoading: false,
 
@@ -206,6 +216,15 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
       set({ categories });
     } catch (error) {
       console.error('fetchCategories:', error);
+    }
+  },
+
+  fetchPlatformStats: async () => {
+    try {
+      const res = await api.get('/stats');
+      set({ platformStats: res.data?.data ?? null });
+    } catch (error) {
+      console.error('fetchPlatformStats:', error);
     }
   },
 }));

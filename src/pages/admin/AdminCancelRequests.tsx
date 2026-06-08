@@ -1,51 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Loader2, FolderX, CheckCircle, XCircle, Clock, X, ExternalLink, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { AxiosError } from 'axios'
 import toast from 'react-hot-toast'
-import api from '../../services/api'
 import SearchBar from '../../components/admin/SearchBar'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
 import { useAdminBadgeStore } from '../../store/useAdminBadgeStore'
-
-type CancelProject = {
-    id: number
-    title: string
-    cancel_reason: string
-    cancel_description: string
-    state: string
-    owner_user_id: number
-    owner?: { first_name: string; last_name: string }
-    UpdatedAt: string
-}
-
-type PreviewMilestone = {
-    phase_no: number
-    title: string
-    percent_release: number
-    disbursed_amount: number
-    is_confirmed: boolean
-}
-
-type PreviewInvestor = {
-    user_id: number
-    first_name: string
-    last_name: string
-    email: string
-    total_amount: number
-    refund_amount: number
-}
-
-type CancelPreview = {
-    project_id: number
-    title: string
-    total_funding: number
-    total_disbursed: number
-    refundable_amount: number
-    milestones: PreviewMilestone[]
-    investors: PreviewInvestor[]
-}
+import { useAdminStore, type CancelProjectRequest as CancelProject, type CancelPreview } from '../../store/useAdminStore'
 
 const STATE_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
     pending_cancel:  { label: 'รอดำเนินการ', className: 'bg-amber-50 text-amber-600 border border-amber-200', icon: <Clock size={12} /> },
@@ -216,12 +178,14 @@ const DetailModal = ({
                 {isPending && (
                     <div className="flex gap-2 justify-end pt-2 border-t border-border">
                         <button
+                            data-testid="cancel-request-reject-open-btn"
                             onClick={onReject}
                             className="px-4 py-2 text-[13px] rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 cursor-pointer"
                         >
                             <XCircle size={14} /> ปฏิเสธ
                         </button>
                         <button
+                            data-testid="cancel-request-approve-open-btn"
                             onClick={onApprove}
                             className="px-4 py-2 text-[13px] rounded-lg bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 cursor-pointer"
                         >
@@ -277,6 +241,7 @@ const ConfirmModal = ({
                         หมายเหตุจาก Admin <span className="text-error">*</span>
                     </label>
                     <textarea
+                        data-testid="cancel-request-note-input"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         rows={4}
@@ -289,6 +254,7 @@ const ConfirmModal = ({
                         ยกเลิก
                     </button>
                     <button
+                        data-testid="cancel-request-confirm-btn"
                         onClick={() => onConfirm(note)}
                         disabled={isSubmitting}
                         className={`px-4 py-2 text-[13px] rounded-lg text-white disabled:opacity-50 flex items-center gap-2 cursor-pointer ${
@@ -305,8 +271,7 @@ const ConfirmModal = ({
 }
 
 const AdminCancelRequests = () => {
-    const [projects, setProjects] = useState<CancelProject[]>([])
-    const [isLoading, setIsLoading] = useState(false)
+    const { cancelRequests: projects, isCancelRequestsLoading: isLoading, fetchCancelRequests, fetchCancelPreview, resolveCancelRequest } = useAdminStore()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [search, setSearch] = useState('')
     const [selected, setSelected] = useState<CancelProject | null>(null)
@@ -316,34 +281,17 @@ const AdminCancelRequests = () => {
 
     const fetchBadges = useAdminBadgeStore((s) => s.fetchBadges)
 
-    const fetchRequests = useCallback(async () => {
-        setIsLoading(true)
-        try {
-            const res = await api.get('/admin/projects/cancel-request')
-            setProjects(res.data?.data ?? [])
-        } catch {
-            toast.error('โหลดข้อมูลไม่สำเร็จ')
-        } finally {
-            setIsLoading(false)
-        }
-    }, [])
-
     useEffect(() => {
-        fetchRequests()
-    }, [fetchRequests])
+        fetchCancelRequests().catch(() => toast.error('โหลดข้อมูลไม่สำเร็จ'))
+    }, [fetchCancelRequests])
 
     const openDetail = async (project: CancelProject) => {
         setSelected(project)
         setPreview(null)
         setIsLoadingPreview(true)
-        try {
-            const res = await api.get(`/admin/projects/${project.id}/cancel-preview`)
-            setPreview(res.data?.data ?? null)
-        } catch {
-            // preview fails gracefully — modal still opens without it
-        } finally {
-            setIsLoadingPreview(false)
-        }
+        const data = await fetchCancelPreview(project.id)
+        setPreview(data)
+        setIsLoadingPreview(false)
     }
 
     const handleConfirm = async (note: string) => {
@@ -351,12 +299,12 @@ const AdminCancelRequests = () => {
         setIsSubmitting(true)
         try {
             const action = modalMode === 'approve' ? 'approve-cancel' : 'reject-cancel'
-            await api.patch(`/admin/projects/${selected.id}/${action}`, { admin_note: note })
+            await resolveCancelRequest(selected.id, action, note)
             toast.success(modalMode === 'approve' ? 'อนุมัติการยกเลิกและคืนเงินนักลงทุนแล้ว' : 'ปฏิเสธคำขอยกเลิกแล้ว')
             setModalMode(null)
             setSelected(null)
             setPreview(null)
-            fetchRequests()
+            fetchCancelRequests()
             fetchBadges()
         } catch (err) {
             const msg = err instanceof AxiosError ? err.response?.data?.message : null
@@ -434,6 +382,7 @@ const AdminCancelRequests = () => {
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
                                     <button
+                                        data-testid={`cancel-request-detail-btn-${r.id}`}
                                         onClick={(e) => { e.stopPropagation(); openDetail(r) }}
                                         className="px-3 py-1.5 rounded-lg bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[12px] font-medium text-foreground cursor-pointer"
                                     >

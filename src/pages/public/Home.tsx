@@ -109,20 +109,23 @@ const Home = () => {
   }, []);
 
   const {
-    publicProjects, // Keep for stats
+    publicProjects, // Fallback for stats while platformStats is loading
     recommendedProjects,
     newProjects,
     endingProjects,
     executingProjects,
+    platformStats,
     isLoading,
     fetchHomeProjects,
-    fetchPublicProjects
+    fetchPublicProjects,
+    fetchPlatformStats
   } = usePublicProjectStore();
 
   useEffect(() => {
     fetchHomeProjects();
-    fetchPublicProjects(); // To get total count and sum for stats
-  }, [fetchHomeProjects, fetchPublicProjects]);
+    fetchPublicProjects(); // Fallback for stats while platformStats is loading
+    fetchPlatformStats();
+  }, [fetchHomeProjects, fetchPublicProjects, fetchPlatformStats]);
 
   const handleCreateProject = () => createWithGuard();
 
@@ -352,10 +355,10 @@ const Home = () => {
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { icon: Rocket, label: 'โปรเจกต์ที่ได้รับทุน', value: `${publicProjects.length}+` },
-              { icon: TrendingUp, label: 'ยอดระดมทุนรวม', value: `฿${publicProjects.reduce((sum, p) => sum + p.current_funding, 0).toLocaleString()}` },
-              { icon: Users, label: 'ผู้สนับสนุนที่ใช้งาน', value: '—' },
-              { icon: ShieldCheck, label: 'Milestone ที่ผ่าน', value: '—' },
+              { icon: Rocket, label: 'โปรเจกต์ที่ได้รับทุน', value: platformStats ? `${platformStats.funded_projects}+` : `${publicProjects.length}+` },
+              { icon: TrendingUp, label: 'ยอดระดมทุนรวม', value: `฿${(platformStats?.total_funding ?? publicProjects.reduce((sum, p) => sum + p.current_funding, 0)).toLocaleString()}` },
+              { icon: Users, label: 'ผู้สนับสนุนที่ใช้งาน', value: platformStats ? `${platformStats.unique_boosters}+` : '—' },
+              { icon: ShieldCheck, label: 'Milestone ที่ผ่าน', value: platformStats ? `${platformStats.passed_milestones}+` : '—' },
             ].map((stat, i) => {
               const Icon = stat.icon;
               return (
