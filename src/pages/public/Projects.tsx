@@ -6,7 +6,7 @@ import {
   Search, ChevronDown, Flame, Sparkles,
   LayoutGrid, Laptop, Smartphone, Bot, Briefcase,
   Rocket, BookOpen, ShieldCheck, Wifi, Gamepad2, Loader2,
-  SlidersHorizontal, X, TrendingUp, Star, Zap
+  SlidersHorizontal, X, Star, Zap
 } from 'lucide-react';
 import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
 
