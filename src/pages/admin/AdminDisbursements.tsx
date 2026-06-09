@@ -164,7 +164,6 @@ const AdminDisbursements = () => {
                                 </div>
                                 <div className="h-14 flex flex-col justify-center items-center gap-[2px]">
                                     <span className="text-[13px]">{d.pioneer_name}</span>
-                                    <span className="text-[11px] text-muted-foreground truncate max-w-[110px]">{d.pioneer_email}</span>
                                 </div>
                                 <div className="h-14 flex justify-center items-center text-[13px]">
                                     Phase {d.phase_no} ({d.percent_release}%)

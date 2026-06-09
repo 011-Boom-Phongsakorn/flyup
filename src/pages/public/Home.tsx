@@ -225,7 +225,7 @@ const Home = () => {
               <h2 className="text-2xl font-bold mb-1">โปรเจกต์แนะนำ</h2>
               <p className="text-sm text-gray-500">ค้นพบโปรเจกต์ที่กำลังระดมทุน</p>
             </div>
-            <Link to="/projects" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
+            <Link to="/projects?sort=popular&section=recommended" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
               ดูทั้งหมด <ChevronRight size={16} />
             </Link>
           </div>
@@ -300,7 +300,7 @@ const Home = () => {
                 <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">ใกล้สำเร็จแล้ว! <Flame className="text-orange-500" /></h2>
                 <p className="text-sm text-gray-500">โปรเจกต์เหล่านี้เกือบถึงเป้าหมายระดมทุนแล้ว อย่าพลาด!</p>
               </div>
-              <Link to="/projects" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
+              <Link to="/projects?sort=ending_soon&section=hot" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
                 ดูทั้งหมด <ChevronRight size={16} />
               </Link>
             </div>
@@ -316,7 +316,7 @@ const Home = () => {
         <div className="container mx-auto px-4 md:px-8 max-w-7xl">
           <div className="flex justify-between items-end mb-8">
             <h2 className="text-2xl font-bold mb-1">โปรเจกต์มาใหม่</h2>
-            <Link to="/projects" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
+            <Link to="/projects?sort=latest&section=new" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
               ดูทั้งหมด <ChevronRight size={16} />
             </Link>
           </div>
@@ -339,7 +339,7 @@ const Home = () => {
                 <h2 className="text-2xl font-bold mb-1">โปรเจกต์กำลังดำเนินการ</h2>
                 <p className="text-sm text-muted-foreground">โปรเจกต์ที่ระดมทุนสำเร็จและอยู่ในระหว่างพัฒนา</p>
               </div>
-              <Link to="/projects" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
+              <Link to="/projects?sort=popular&section=executing" className="text-purple-600 text-sm font-medium hover:underline flex items-center">
                 ดูทั้งหมด <ChevronRight size={16} />
               </Link>
             </div>

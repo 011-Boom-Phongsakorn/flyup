@@ -6,7 +6,7 @@ import {
   Search, ChevronDown, Flame, Sparkles,
   LayoutGrid, Laptop, Smartphone, Bot, Briefcase,
   Rocket, BookOpen, ShieldCheck, Wifi, Gamepad2, Loader2,
-  SlidersHorizontal, X
+  SlidersHorizontal, X, TrendingUp, Star, Zap
 } from 'lucide-react';
 import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
 
@@ -50,7 +50,10 @@ const Projects = () => {
     url: '/projects',
   });
 
-  const { publicProjects, categories, isLoading, fetchPublicProjects, fetchCategories } = usePublicProjectStore();
+  const {
+    publicProjects, endingProjects, newProjects, executingProjects, recommendedProjects,
+    categories, isLoading, fetchPublicProjects, fetchHomeProjects, fetchCategories,
+  } = usePublicProjectStore();
 
   const [activeCategory, setActiveCategory] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -60,16 +63,48 @@ const Projects = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('q') || '';
   });
-  const [sortOrder, setSortOrder] = useState<'latest' | 'oldest' | 'ending_soon' | 'popular'>('latest');
+  const [sortOrder, setSortOrder] = useState<'latest' | 'oldest' | 'ending_soon' | 'popular'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sort = params.get('sort');
+    if (sort === 'oldest' || sort === 'ending_soon' || sort === 'popular') return sort;
+    return 'latest';
+  });
+  const [section, setSection] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('section') || '';
+  });
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [minGoal, setMinGoal] = useState('');
   const [maxGoal, setMaxGoal] = useState('');
 
   useEffect(() => {
-    fetchPublicProjects();
     fetchCategories();
-  }, [fetchPublicProjects, fetchCategories]);
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    if (section) fetchHomeProjects();
+    else fetchPublicProjects();
+  }, [section, fetchPublicProjects, fetchHomeProjects]);
+
+  const SECTION_OPTIONS = [
+    { key: 'hot',         label: 'ใกล้สำเร็จแล้ว!',       icon: Flame,     color: 'text-red-500' },
+    { key: 'new',         label: 'โปรเจกต์มาใหม่',         icon: Sparkles,  color: 'text-purple-500' },
+    { key: 'executing',   label: 'กำลังดำเนินการ',          icon: Zap,       color: 'text-green-500' },
+    { key: 'recommended', label: 'แนะนำ',                   icon: Star,      color: 'text-amber-500' },
+  ] as const;
+
+  const SORT_OPTIONS = [
+    { key: 'latest',      label: 'ล่าสุด' },
+    { key: 'oldest',      label: 'เก่าสุด' },
+    { key: 'ending_soon', label: 'ใกล้หมดเวลา' },
+    { key: 'popular',     label: 'ยอดนิยม' },
+  ] as const;
+
+  const activeSectionOption = SECTION_OPTIONS.find(s => s.key === section) ?? null;
+  const dropdownLabel = activeSectionOption
+    ? activeSectionOption.label
+    : ({ latest: 'ล่าสุด', oldest: 'เก่าสุด', ending_soon: 'ใกล้หมดเวลา', popular: 'ยอดนิยม' } as const)[sortOrder];
 
   const categoryList = useMemo(() => {
     const allOption = { name: 'ทั้งหมด', icon: LayoutGrid };
@@ -93,8 +128,16 @@ const Projects = () => {
 
   const activeFilterCount = [minGoal, maxGoal].filter(v => v !== '').length;
 
+  const sourceProjects = useMemo(() => {
+    if (section === 'hot') return endingProjects;
+    if (section === 'new') return newProjects;
+    if (section === 'executing') return executingProjects;
+    if (section === 'recommended') return recommendedProjects;
+    return publicProjects;
+  }, [section, publicProjects, endingProjects, newProjects, executingProjects, recommendedProjects]);
+
   const filteredProjects = useMemo(() => {
-    let result = [...publicProjects];
+    let result = [...sourceProjects];
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -121,7 +164,7 @@ const Projects = () => {
     });
 
     return result;
-  }, [publicProjects, activeCategory, searchQuery, sortOrder, minGoal, maxGoal]);
+  }, [sourceProjects, activeCategory, searchQuery, sortOrder, minGoal, maxGoal]);
 
   return (
     <div className="bg-background min-h-screen pb-20 font-sans text-foreground mt-[100px]">
@@ -129,7 +172,27 @@ const Projects = () => {
 
         <div className="mb-5 md:mb-6">
           <h1 className="text-2xl md:text-3xl font-bold mb-1">สำรวจโปรเจกต์</h1>
-          <p className="text-sm text-muted-foreground">ค้นพบโปรเจกต์ซอฟต์แวร์จากนักศึกษาที่กำลังระดมทุน</p>
+          {section === 'hot' && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-semibold">
+              <Flame size={13} fill="currentColor" /> ใกล้สำเร็จแล้ว! — เรียงตามใกล้หมดเวลา
+            </div>
+          )}
+          {section === 'new' && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-600 text-xs font-semibold">
+              <Sparkles size={13} fill="currentColor" /> โปรเจกต์มาใหม่ — เรียงตามล่าสุด
+            </div>
+          )}
+          {section === 'executing' && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-green-50 border border-green-200 text-green-600 text-xs font-semibold">
+              <Zap size={13} fill="currentColor" /> โปรเจกต์กำลังดำเนินการ — เรียงตามยอดนิยม
+            </div>
+          )}
+          {section === 'recommended' && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-600 text-xs font-semibold">
+              <Star size={13} fill="currentColor" /> โปรเจกต์แนะนำ — เรียงตามยอดนิยม
+            </div>
+          )}
+          {!section && <p className="text-sm text-muted-foreground">ค้นพบโปรเจกต์ซอฟต์แวร์จากนักศึกษาที่กำลังระดมทุน</p>}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-3 md:gap-4 mb-4">
@@ -145,28 +208,45 @@ const Projects = () => {
           </div>
 
           <div className="flex gap-3 w-full lg:w-auto">
-            {/* Sort dropdown */}
-            <div className="relative flex-1 lg:flex-none lg:w-[160px]">
+            {/* Sort / Section dropdown */}
+            <div className="relative flex-1 lg:flex-none lg:w-47.5">
               <div
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
                 className="flex items-center justify-between bg-card border border-border h-12 md:h-11 rounded-lg px-4 cursor-pointer hover:bg-muted/30 transition-all shadow-sm select-none w-full"
               >
-                <span className="text-sm font-medium whitespace-nowrap">
-                  {{ latest: 'ล่าสุด', oldest: 'เก่าสุด', ending_soon: 'ใกล้หมดเวลา', popular: 'ยอดนิยม' }[sortOrder]}
+                <span className="text-sm font-medium whitespace-nowrap flex items-center gap-1.5">
+                  {activeSectionOption && <activeSectionOption.icon size={13} className={activeSectionOption.color} />}
+                  {dropdownLabel}
                 </span>
                 <ChevronDown size={16} className={`text-muted-foreground transition-transform ml-2 flex-shrink-0 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
               </div>
               {isSortDropdownOpen && (
                 <div className="absolute top-13 md:top-12 left-0 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden z-20">
-                  {(['latest', 'oldest', 'ending_soon', 'popular'] as const).map(opt => (
+                  <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">เรียงตาม</div>
+                  {SORT_OPTIONS.map(opt => (
                     <div
-                      key={opt}
-                      onClick={() => { setSortOrder(opt); setIsSortDropdownOpen(false); }}
-                      className={`px-4 py-3 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap ${sortOrder === opt ? 'text-primary font-medium bg-primary-light' : ''}`}
+                      key={opt.key}
+                      onClick={() => { setSortOrder(opt.key); setSection(''); setIsSortDropdownOpen(false); }}
+                      className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap ${!section && sortOrder === opt.key ? 'text-primary font-medium bg-primary-light' : ''}`}
                     >
-                      {{ latest: 'ล่าสุด', oldest: 'เก่าสุด', ending_soon: 'ใกล้หมดเวลา', popular: 'ยอดนิยม' }[opt]}
+                      {opt.label}
                     </div>
                   ))}
+                  <div className="mx-3 my-1 border-t border-border" />
+                  <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">หมวดหมู่พิเศษ</div>
+                  {SECTION_OPTIONS.map(opt => {
+                    const Icon = opt.icon;
+                    return (
+                      <div
+                        key={opt.key}
+                        onClick={() => { setSection(opt.key); setIsSortDropdownOpen(false); }}
+                        className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap flex items-center gap-2 ${section === opt.key ? 'text-primary font-medium bg-primary-light' : ''}`}
+                      >
+                        <Icon size={13} className={opt.color} />
+                        {opt.label}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -243,7 +323,7 @@ const Projects = () => {
               <button
                 key={category.name}
                 onClick={() => setActiveCategory(category.name)}
-                className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all border shadow-sm flex-shrink-0 ${isActive
+                className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all border shadow-sm flex-shrink-0 cursor-pointer ${isActive
                     ? 'bg-primary-light text-primary border-primary'
                     : 'bg-card text-muted-foreground border-border hover:border-primary hover:text-foreground'
                   }`}
