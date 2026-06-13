@@ -113,11 +113,18 @@ const Investment = () => {
       pollingRef.current = window.setInterval(async () => {
         try {
           const response = await getInvestmentById(investmentData.investment_id);
-          if (response?.data?.investment?.status === 'verified' || response?.data?.status === 'verified') {
+          const status = response?.data?.investment?.status || response?.data?.status;
+          if (status === 'verified') {
             if (pollingRef.current) clearInterval(pollingRef.current);
             setCompletedInvestmentId(investmentData.investment_id);
             setStep(4);
             clearInvestmentData();
+          } else if (status === 'rejected') {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+            toast.error('การชำระเงินไม่สำเร็จ หรือ QR Code หมดอายุ กรุณาทำรายการใหม่');
+            clearInvestmentData();
+            setTimeLeft(15 * 60);
+            setStep(2);
           }
         } catch (error) {
           console.error("Polling error:", error);
