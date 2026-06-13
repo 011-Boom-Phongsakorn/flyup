@@ -42,6 +42,11 @@ instance.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // ไม่มี token เก็บไว้เลย = ยังไม่เคย login มาก่อน ไม่ต้องพยายาม refresh/signout
+    if (!getStoredToken() && !getStoredRefresh()) {
+      return Promise.reject(error);
+    }
+
     original._retry = true;
 
     if (isRefreshing) {
