@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Loader2, RotateCcw, CheckCircle, Clock } from 'lucide-react'
 import { AxiosError } from 'axios'
 import toast from 'react-hot-toast'
-import { useRefundStore } from '../../store/useRefundStore'
+import Swal from 'sweetalert2'
+import { useRefundStore, type RefundRequest } from '../../store/useRefundStore'
 import { useAdminBadgeStore } from '../../store/useAdminBadgeStore'
 import SearchBar from '../../components/admin/SearchBar'
 import StatusBadge from '../../components/admin/StatusBadge'
@@ -26,10 +27,23 @@ const AdminRefunds = () => {
         fetchRefunds()
     }, [fetchRefunds])
 
-    const handleApprove = async (id: number) => {
-        setApprovingId(id)
+    const handleApprove = async (r: RefundRequest) => {
+        const result = await Swal.fire({
+            title: 'ยืนยันการอนุมัติคืนเงิน?',
+            html: `อนุมัติคืนเงินให้ <b>${r.booster_name || '-'}</b><br/>โปรเจกต์ <b>${r.project_title || '-'}</b> จำนวน <b>฿${(r.refund_amount ?? 0).toLocaleString('th-TH')}</b><br/><span style="font-size:13px;color:#6b7280">การดำเนินการนี้ไม่สามารถยกเลิกได้</span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยัน อนุมัติ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#16A34A',
+            cancelButtonColor: '#6B7280',
+            reverseButtons: true,
+        })
+        if (!result.isConfirmed) return
+
+        setApprovingId(r.investment_id)
         try {
-            await approveRefund(id)
+            await approveRefund(r.investment_id)
             fetchBadges()
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
@@ -114,7 +128,7 @@ const AdminRefunds = () => {
                                 <div className="h-14 flex justify-center items-center">
                                     {isPending ? (
                                         <button
-                                            onClick={() => handleApprove(r.investment_id)}
+                                            onClick={() => handleApprove(r)}
                                             disabled={isApproving}
                                             className="flex items-center gap-[5px] px-[12px] py-[6px] rounded-[8px] bg-green-600 hover:bg-green-700 text-white text-[12px] font-medium transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                                         >

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { useParams, useNavigate, Link } from 'react-router';
-import { ArrowLeft, Download, Loader2, Calendar, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Calendar, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useBoosterStore } from '../../store/useBoosterStore';
 import { useProjectDetailStore } from '../../store/useProjectDetailStore';
@@ -366,7 +366,11 @@ const InvestmentDetail = () => {
                <span>{isPrintingPDF ? 'กำลังเตรียม PDF...' : 'ดาวน์โหลดสัญญา (PDF)'}</span>
              </button>
 
-             {inv.status !== 'refunded' && inv.status !== 'cancelled' && (
+             {inv.status === 'refund_pending' ? (
+               <div className="w-full mt-3 bg-amber-50 border border-amber-200 text-amber-700 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium text-[14px]">
+                   <Clock size={16} /> <span>กำลังดำเนินการขอคืนเงิน</span>
+               </div>
+             ) : inv.status !== 'refunded' && inv.status !== 'cancelled' && (
                <button
                  onClick={() => setShowRefundModal(true)}
                  className="w-full mt-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px] cursor-pointer"
