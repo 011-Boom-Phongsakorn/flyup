@@ -1,22 +1,22 @@
-import { useEffect } from 'react';
-import { MessageSquareWarning, ChevronRight, AlertCircle, XCircle, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { MessageSquareWarning, ChevronRight, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router';
 import { useComplaintStore } from '../../store/useComplaintStore';
 
-// ─── Component ──────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const statusConfig = {
   open: {
     label: 'กำลังตรวจสอบ',
     badgeClass: 'bg-muted text-muted-foreground',
-    iconClass: 'bg-red-50 text-red-500',
+    iconClass: 'bg-amber-50 text-amber-500',
     Icon: MessageSquareWarning,
   },
   resolved: {
     label: 'จัดการแล้ว',
     badgeClass: 'bg-primary text-white',
     iconClass: 'bg-primary/10 text-primary',
-    Icon: AlertCircle,
+    Icon: CheckCircle2,
   },
   rejected: {
     label: 'ปฏิเสธ',
@@ -26,8 +26,20 @@ const statusConfig = {
   },
 } as const;
 
+type FilterKey = 'all' | 'open' | 'resolved' | 'rejected';
+
+const FILTER_TABS: { key: FilterKey; label: string }[] = [
+  { key: 'all',      label: 'ทั้งหมด' },
+  { key: 'open',     label: 'กำลังตรวจสอบ' },
+  { key: 'resolved', label: 'จัดการแล้ว' },
+  { key: 'rejected', label: 'ปฏิเสธ' },
+];
+
+// ─── Component ──────────────────────────────────────────────────────────────
+
 const Complaints = () => {
   const { complaints, isLoading, fetchMyComplaints } = useComplaintStore();
+  const [filter, setFilter] = useState<FilterKey>('all');
 
   useEffect(() => {
     fetchMyComplaints();
@@ -35,6 +47,11 @@ const Complaints = () => {
 
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const filtered = useMemo(
+    () => filter === 'all' ? complaints : complaints.filter((c) => c.status === filter),
+    [complaints, filter]
+  );
 
   return (
     <div className="relative">
@@ -44,19 +61,52 @@ const Complaints = () => {
         <p className="text-sm text-muted-foreground mt-1">แจ้งปัญหาเกี่ยวกับโปรเจกต์ที่คุณลงทุน</p>
       </div>
 
+      {/* Filter Tabs */}
+      {!isLoading && complaints.length > 0 && (
+        <div className="flex gap-2 flex-wrap mb-5">
+          {FILTER_TABS.map((tab) => {
+            const count = tab.key === 'all' ? complaints.length : complaints.filter((c) => c.status === tab.key).length;
+            const isActive = filter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setFilter(tab.key)}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+                  isActive
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
+                }`}
+              >
+                {tab.label}
+                {count > 0 && (
+                  <span className={`ml-1.5 ${isActive ? 'opacity-80' : 'opacity-60'}`}>({count})</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* List */}
       {isLoading ? (
         <div className="flex justify-center items-center py-24">
           <Loader2 size={28} className="animate-spin text-primary" />
         </div>
       ) : complaints.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <MessageSquareWarning size={36} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">ยังไม่มีคำร้องเรียน</p>
+        <div className="text-center py-20">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+            <MessageSquareWarning size={28} className="text-muted-foreground opacity-50" />
+          </div>
+          <p className="font-semibold text-foreground mb-1">ยังไม่มีคำร้องเรียน</p>
+          <p className="text-sm text-muted-foreground">หากพบปัญหาเกี่ยวกับโปรเจกต์ที่คุณลงทุน สามารถแจ้งได้จากหน้ารายละเอียดโปรเจกต์</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <p className="text-sm">ไม่มีคำร้องเรียนในหมวดนี้</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {complaints.map((item) => {
+          {filtered.map((item) => {
             const cfg = statusConfig[item.status] ?? statusConfig.open;
             const { Icon } = cfg;
             return (
@@ -79,7 +129,7 @@ const Complaints = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-6 shrink-0">
                   <div className={`text-[11px] font-semibold px-3 py-1 rounded-full ${cfg.badgeClass}`}>
                     {cfg.label}
                   </div>
