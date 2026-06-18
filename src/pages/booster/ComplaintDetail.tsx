@@ -122,14 +122,14 @@ const ComplaintDetail = () => {
           <div className="relative border-l-2 border-muted ml-3 space-y-8 pb-2">
             {/* Submitted */}
             <div className="relative pl-6">
-              <div className={`absolute -left-2.25 top-1 w-4 h-4 rounded-full border-4 border-white ${isFinished ? 'bg-primary' : 'bg-muted'}`} />
+              <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white ${isFinished ? 'bg-primary' : 'bg-muted'}`} />
               <h4 className="text-sm font-bold text-foreground">ส่งคำร้องเรียน</h4>
               <p className="text-xs text-muted-foreground mt-1">{fmtDateTime(complaint!.created_at)}</p>
             </div>
 
             {/* Under review */}
             <div className="relative pl-6">
-              <div className={`absolute -left-2.25 top-1 w-4 h-4 rounded-full border-4 border-white ${isFinished ? 'bg-primary' : 'bg-primary'}`} />
+              <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white ${isFinished ? 'bg-primary' : 'bg-primary'}`} />
               <h4 className="text-sm font-bold text-foreground">รับเรื่องโดย Admin</h4>
               <p className="text-xs text-muted-foreground mt-1">ระบบได้รับเรื่องแล้ว</p>
             </div>
@@ -137,7 +137,7 @@ const ComplaintDetail = () => {
             {/* Resolved / Rejected */}
             {isFinished && (
               <div className="relative pl-6">
-                <div className={`absolute -left-2.25 top-1 w-4 h-4 rounded-full border-4 border-white ${complaint!.status === 'resolved' ? 'bg-primary' : 'bg-red-400'}`} />
+                <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white ${complaint!.status === 'resolved' ? 'bg-primary' : 'bg-red-400'}`} />
                 <h4 className="text-sm font-bold text-foreground">
                   {complaint!.status === 'resolved' ? 'จัดการเรียบร้อย' : 'ปฏิเสธคำร้องเรียน'}
                 </h4>
