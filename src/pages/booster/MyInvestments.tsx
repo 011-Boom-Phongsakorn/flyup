@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Banknote, TrendingUp, Wallet, Eye, Loader2, ChevronLeft, ChevronRight, X, Calendar } from 'lucide-react';
+import { Banknote, TrendingUp, Wallet, Eye, Loader2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useBoosterStore, type BoosterInvestment } from '../../store/useBoosterStore';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -97,8 +97,6 @@ function MultipleInvestmentsModal({ group, onClose }: { group: GroupedInvestment
     [...group.all].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
     [group]
   );
-  const [activeIdx, setActiveIdx] = useState(0);
-  const inv = sorted[activeIdx];
 
   const dateStr = (d: string) => new Date(d).toLocaleDateString('th-TH', {
     day: 'numeric', month: 'short', year: 'numeric',
@@ -106,7 +104,7 @@ function MultipleInvestmentsModal({ group, onClose }: { group: GroupedInvestment
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-card w-full max-w-lg rounded-2xl shadow-xl flex flex-col max-h-[85vh] overflow-hidden">
+      <div className="bg-card w-full max-w-2xl rounded-2xl shadow-xl flex flex-col max-h-[85vh] overflow-hidden">
 
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b border-border">
@@ -119,79 +117,45 @@ function MultipleInvestmentsModal({ group, onClose }: { group: GroupedInvestment
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex overflow-x-auto border-b border-border px-4 scrollbar-hide gap-1 flex-shrink-0">
-          {sorted.map((item, i) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveIdx(i)}
-              className={`flex-shrink-0 px-4 py-3 text-sm font-medium transition-colors cursor-pointer border-b-2 ${
-                activeIdx === i
-                  ? 'text-primary border-primary'
-                  : 'text-muted-foreground border-transparent hover:text-foreground'
-              }`}
-            >
-              ครั้งที่ {i + 1}
-            </button>
-          ))}
+        {/* Table */}
+        <div className="overflow-auto flex-1">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="text-left px-5 py-3 font-semibold text-muted-foreground text-xs w-10">#</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs">เลขอ้างอิง</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs">วันที่</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs">สถานะ</th>
+                <th className="text-right px-4 py-3 font-semibold text-muted-foreground text-xs">ยอดลงทุน</th>
+                <th className="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((inv, i) => (
+                <tr key={inv.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors">
+                  <td className="px-5 py-4 text-muted-foreground font-medium">{i + 1}</td>
+                  <td className="px-4 py-4 font-semibold text-foreground">INV-{inv.id}</td>
+                  <td className="px-4 py-4 text-muted-foreground whitespace-nowrap">{dateStr(inv.created_at)}</td>
+                  <td className="px-4 py-4"><StatusBadge inv={inv} /></td>
+                  <td className="px-4 py-4 text-right font-bold text-primary">฿{(inv.amount ?? 0).toLocaleString()}</td>
+                  <td className="px-5 py-4">
+                    <Link
+                      to={`/booster/investments/${inv.id}`}
+                      className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+                    >
+                      ดูรายละเอียด →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* Content */}
-        <div className="p-5 overflow-y-auto flex-1">
-          <div className="bg-muted/40 rounded-xl p-4 space-y-3 text-sm border border-border/50">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">เลขอ้างอิง</span>
-              <span className="font-semibold text-foreground">INV-{inv.id}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">วันที่ทำรายการ</span>
-              <span className="font-semibold flex items-center gap-1.5 text-foreground">
-                <Calendar size={13} /> {dateStr(inv.created_at)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">สถานะ</span>
-              <StatusBadge inv={inv} />
-            </div>
-            <div className="border-t border-border/50 pt-3 space-y-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">ยอดลงทุน</span>
-                <span className="font-bold text-primary text-base">฿{(inv.amount ?? 0).toLocaleString()}</span>
-              </div>
-              {(inv.platform_fee ?? 0) > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">ค่าธรรมเนียมแพลตฟอร์ม</span>
-                  <span className="text-error">฿{inv.platform_fee!.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {(inv.vat ?? 0) > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">VAT 7%</span>
-                  <span className="text-error">฿{inv.vat!.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center pt-2 border-t border-border/50">
-                <span className="font-bold text-foreground">ยอดสุทธิ</span>
-                <span className="font-bold text-foreground">฿{(inv.net_amount ?? inv.amount ?? 0).toLocaleString()}</span>
-              </div>
-            </div>
-            {(inv.profit_share_pct ?? 0) > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">ส่วนแบ่งกำไร</span>
-                <span className="font-semibold text-primary">{inv.profit_share_pct}%</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-border flex-shrink-0">
-          <Link
-            to={`/booster/investments/${inv.id}`}
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-white-foreground rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
-          >
-            ดูรายละเอียดเต็มของครั้งที่ {activeIdx + 1} →
-          </Link>
+        {/* Summary Footer */}
+        <div className="px-5 py-3.5 border-t border-border bg-muted/30 flex justify-between items-center">
+          <span className="text-xs text-muted-foreground">ยอดรวมทั้งหมด</span>
+          <span className="font-bold text-foreground">฿{group.totalAmount.toLocaleString()}</span>
         </div>
       </div>
     </div>
