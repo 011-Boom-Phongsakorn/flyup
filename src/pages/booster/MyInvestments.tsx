@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Copy, TrendingUp, Wallet, Eye, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Banknote, TrendingUp, Wallet, Eye, Loader2, ChevronLeft, ChevronRight, X, Calendar } from 'lucide-react';
 import { useBoosterStore, type BoosterInvestment } from '../../store/useBoosterStore';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -92,6 +92,112 @@ function matchesTab(inv: BoosterInvestment, tab: string): boolean {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
+function MultipleInvestmentsModal({ group, onClose }: { group: GroupedInvestment; onClose: () => void }) {
+  const sorted = useMemo(() =>
+    [...group.all].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+    [group]
+  );
+  const [activeIdx, setActiveIdx] = useState(0);
+  const inv = sorted[activeIdx];
+
+  const dateStr = (d: string) => new Date(d).toLocaleDateString('th-TH', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-card w-full max-w-lg rounded-2xl shadow-xl flex flex-col max-h-[85vh] overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 border-b border-border">
+          <div>
+            <h3 className="font-bold text-foreground text-base">{group.primary.project?.title || '—'}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">การลงทุนทั้งหมด {group.all.length} รายการ</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg transition-colors cursor-pointer flex-shrink-0">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex overflow-x-auto border-b border-border px-4 scrollbar-hide gap-1 flex-shrink-0">
+          {sorted.map((item, i) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveIdx(i)}
+              className={`flex-shrink-0 px-4 py-3 text-sm font-medium transition-colors cursor-pointer border-b-2 ${
+                activeIdx === i
+                  ? 'text-primary border-primary'
+                  : 'text-muted-foreground border-transparent hover:text-foreground'
+              }`}
+            >
+              ครั้งที่ {i + 1}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="p-5 overflow-y-auto flex-1">
+          <div className="bg-muted/40 rounded-xl p-4 space-y-3 text-sm border border-border/50">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">เลขอ้างอิง</span>
+              <span className="font-semibold text-foreground">INV-{inv.id}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">วันที่ทำรายการ</span>
+              <span className="font-semibold flex items-center gap-1.5 text-foreground">
+                <Calendar size={13} /> {dateStr(inv.created_at)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">สถานะ</span>
+              <StatusBadge inv={inv} />
+            </div>
+            <div className="border-t border-border/50 pt-3 space-y-2.5">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">ยอดลงทุน</span>
+                <span className="font-bold text-primary text-base">฿{(inv.amount ?? 0).toLocaleString()}</span>
+              </div>
+              {(inv.platform_fee ?? 0) > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">ค่าธรรมเนียมแพลตฟอร์ม</span>
+                  <span className="text-error">฿{inv.platform_fee!.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+              )}
+              {(inv.vat ?? 0) > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">VAT 7%</span>
+                  <span className="text-error">฿{inv.vat!.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-2 border-t border-border/50">
+                <span className="font-bold text-foreground">ยอดสุทธิ</span>
+                <span className="font-bold text-foreground">฿{(inv.net_amount ?? inv.amount ?? 0).toLocaleString()}</span>
+              </div>
+            </div>
+            {(inv.profit_share_pct ?? 0) > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">ส่วนแบ่งกำไร</span>
+                <span className="font-semibold text-primary">{inv.profit_share_pct}%</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border flex-shrink-0">
+          <Link
+            to={`/booster/investments/${inv.id}`}
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-white-foreground rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
+          >
+            ดูรายละเอียดเต็มของครั้งที่ {activeIdx + 1} →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatusBadge({ inv }: { inv: BoosterInvestment }) {
   const cfg = getEffectiveStatus(inv);
   return (
@@ -101,7 +207,7 @@ function StatusBadge({ inv }: { inv: BoosterInvestment }) {
   );
 }
 
-function InvestmentRow({ group }: { group: GroupedInvestment }) {
+function InvestmentRow({ group, onShowAll }: { group: GroupedInvestment; onShowAll: (g: GroupedInvestment) => void }) {
   const inv = group.primary;
   const project = inv.project;
   const title = project?.title || '—';
@@ -165,12 +271,21 @@ function InvestmentRow({ group }: { group: GroupedInvestment }) {
         >
           <Eye size={14} /> ดูโปรเจกต์
         </Link>
-        <Link
-          to={`/booster/investments/${inv.id}`}
-          className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          รายละเอียด
-        </Link>
+        {isMultiple ? (
+          <button
+            onClick={() => onShowAll(group)}
+            className="px-4 py-2 bg-primary text-white-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+          >
+            รายละเอียด
+          </button>
+        ) : (
+          <Link
+            to={`/booster/investments/${inv.id}`}
+            className="px-4 py-2 bg-primary text-white-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            รายละเอียด
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -219,6 +334,7 @@ const MyInvestments = () => {
   const { investments, isLoading, fetchMyInvestments } = useBoosterStore();
   const [activeTab, setActiveTab] = useState('all');
   const [page, setPage] = useState(1);
+  const [modalGroup, setModalGroup] = useState<GroupedInvestment | null>(null);
 
   useEffect(() => { fetchMyInvestments(); }, [fetchMyInvestments]);
 
@@ -267,7 +383,7 @@ const MyInvestments = () => {
         <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm text-muted-foreground">ลงทุนรวม</span>
-            <Copy size={16} className="text-muted-foreground" />
+            <Banknote size={16} className="text-muted-foreground" />
           </div>
           <p className="text-2xl font-bold text-foreground">฿{stats.totalAmount.toLocaleString()}</p>
         </div>
@@ -310,17 +426,24 @@ const MyInvestments = () => {
       {/* List */}
       <div className="space-y-4">
         {paginated.length > 0 ? (
-          paginated.map(g => <InvestmentRow key={g.project_id} group={g} />)
+          paginated.map(g => <InvestmentRow key={g.project_id} group={g} onShowAll={setModalGroup} />)
         ) : (
-          <div className="text-center py-16 bg-card border border-border rounded-2xl">
-            <Wallet size={32} className="mx-auto mb-3 text-muted-foreground" />
-            <p className="text-muted-foreground mb-4">ไม่มีการลงทุนในสถานะนี้</p>
+          <div className="text-center py-20 bg-card border border-border rounded-2xl flex flex-col items-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Wallet size={28} className="text-muted-foreground" />
+            </div>
+            <p className="font-semibold text-foreground mb-1">
+              {activeTab === 'all' ? 'ยังไม่มีการลงทุน' : 'ไม่มีการลงทุนในสถานะนี้'}
+            </p>
+            <p className="text-sm text-muted-foreground mb-5">
+              {activeTab === 'all' ? 'เริ่มต้นสนับสนุนโปรเจกต์ที่คุณสนใจได้เลย' : 'ลองเลือกดูสถานะอื่น'}
+            </p>
             {activeTab === 'all' && (
               <Link
                 to="/projects"
-                className="inline-flex items-center gap-2 px-6 py-2.5 border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
               >
-                สำรวจโปรเจกต์เพื่อลงทุน
+                สำรวจโปรเจกต์เพื่อลงทุน →
               </Link>
             )}
           </div>
@@ -328,6 +451,10 @@ const MyInvestments = () => {
       </div>
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      {modalGroup && (
+        <MultipleInvestmentsModal group={modalGroup} onClose={() => setModalGroup(null)} />
+      )}
     </div>
   );
 };
