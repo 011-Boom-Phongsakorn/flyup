@@ -133,10 +133,10 @@ const Register = () => {
                     <h1 className="text-[24px] font-semibold text-foreground">สร้างบัญชี FLYUP</h1>
                     <p className="text-[14px] text-muted-foreground font-medium">เข้าร่วมแพลตฟอร์มระดมทุนซอฟต์แวร์นักศึกษา</p>
                 </div>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-[16px]">
+                <form data-testid="register-form" onSubmit={handleSubmit} className="flex flex-col gap-[16px]">
                     <p className="text-[14px] text-foreground font-semibold">เลือกบทบาทของคุณ</p>
                     <div className="grid grid-cols-2 gap-[10px] w-full">
-                        <div className={`flex flex-col items-center justify-center h-[132px] border-[2px] rounded-[12px] gap-[10px] p-[16px] cursor-pointer transition-all duration-200 ${role === 'pioneer' ? 'border-accent' : 'border-border hover:border-accent'}`} onClick={() => handleRoleSelect('pioneer')}>
+                        <div data-testid="register-role-pioneer" className={`flex flex-col items-center justify-center h-[132px] border-[2px] rounded-[12px] gap-[10px] p-[16px] cursor-pointer transition-all duration-200 ${role === 'pioneer' ? 'border-accent' : 'border-border hover:border-accent'}`} onClick={() => handleRoleSelect('pioneer')}>
                             <div className={`w-[48px] h-[48px] flex justify-center items-center rounded-full transition-all duration-200 ${role === 'pioneer' ? 'bg-accent text-white' : 'bg-background'}`}>
                                 <Users size={16} />
                             </div>
@@ -145,7 +145,7 @@ const Register = () => {
                                 <p className="text-muted-foreground text-[12px]">ผู้สร้างโปรเจกต์</p>
                             </div>
                         </div>
-                        <div className={`flex flex-col items-center justify-center h-[132px] border-[2px] rounded-[12px] gap-[10px] p-[16px] cursor-pointer transition-all duration-200 ${role === 'booster' ? 'border-primary' : 'border-border hover:border-primary'}`} onClick={() => handleRoleSelect('booster')}>
+                        <div data-testid="register-role-booster" className={`flex flex-col items-center justify-center h-[132px] border-[2px] rounded-[12px] gap-[10px] p-[16px] cursor-pointer transition-all duration-200 ${role === 'booster' ? 'border-primary' : 'border-border hover:border-primary'}`} onClick={() => handleRoleSelect('booster')}>
                             <div className={`w-[48px] h-[48px] flex justify-center items-center rounded-full transition-all duration-200 ${role === 'booster' ? 'bg-primary text-white' : 'bg-background'}`}>
                                 <Users size={16} />
                             </div>
@@ -159,25 +159,25 @@ const Register = () => {
                         <div className="grid grid-cols-2 gap-[10px] w-full">
                             <div className="flex flex-col gap-[4px]">
                                 <label className="font-[14px] text-foreground">ชื่อ <span className="text-error">*</span></label>
-                                <input name="first_name" onChange={handleChange} value={formData.first_name} type="text" className={inputStyle('first_name')} />
+                                <input data-testid="register-first-name" name="first_name" onChange={handleChange} value={formData.first_name} type="text" className={inputStyle('first_name')} />
                             </div>
                             <div className="flex flex-col gap-[4px]">
                                 <label className="font-[14px] text-foreground">นามสกุล <span className="text-error">*</span></label>
-                                <input name="last_name" onChange={handleChange} value={formData.last_name} type="text" className={inputStyle('last_name')} />
+                                <input data-testid="register-last-name" name="last_name" onChange={handleChange} value={formData.last_name} type="text" className={inputStyle('last_name')} />
                             </div>
                         </div>
                         <div className="flex flex-col gap-[4px]">
                             <label className="font-[14px] text-foreground">อีเมล <span className="text-error">*</span></label>
-                            <input name="email" onChange={handleChange} value={formData.email} type="email" autoComplete="email" className={inputStyle('email')} />
+                            <input data-testid="register-email" name="email" onChange={handleChange} value={formData.email} type="email" autoComplete="email" className={inputStyle('email')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
                             <label className="font-[14px] text-foreground">เบอร์โทรศัพท์ <span className="text-error">*</span></label>
-                            <input name="phone" onChange={handleChange} value={formData.phone} type="text" className={inputStyle('phone')} />
+                            <input data-testid="register-phone" name="phone" onChange={handleChange} value={formData.phone} type="text" className={inputStyle('phone')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
                             <label className="font-[14px] text-foreground">รหัสผ่าน <span className="text-error">*</span></label>
                             <div className="relative">
-                                <input name="password" onChange={handleChange} value={formData.password} type={showPassword ? 'text' : 'password'} className={`${inputStyle('password')} pr-[38px]`} />
+                                <input data-testid="register-password" name="password" onChange={handleChange} value={formData.password} type={showPassword ? 'text' : 'password'} className={`${inputStyle('password')} pr-[38px]`} />
                                 <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-[10px] top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -208,18 +208,18 @@ const Register = () => {
                         <div className="flex flex-col gap-[4px]">
                             <label className="font-[14px] text-foreground">ยืนยันรหัสผ่าน <span className="text-error">*</span></label>
                             <div className="relative">
-                                <input name="confirmPassword" onChange={handleConfirmPasswordChange} value={confirmPassword} type={showConfirmPassword ? 'text' : 'password'} className={`${inputStyle('confirmPassword')} pr-[38px]`} />
+                                <input data-testid="register-confirm-password" name="confirmPassword" onChange={handleConfirmPasswordChange} value={confirmPassword} type={showConfirmPassword ? 'text' : 'password'} className={`${inputStyle('confirmPassword')} pr-[38px]`} />
                                 <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className="absolute right-[10px] top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                                     {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
                             </div>
                         </div>
                         <div className="flex gap-[8px] items-center">
-                            <input name="accept_terms" onChange={handleCheckboxChange} checked={formData.accept_terms} type="checkbox" className="w-[18px] h-[18px] accent-primary cursor-pointer" />
+                            <input data-testid="register-accept-terms" name="accept_terms" onChange={handleCheckboxChange} checked={formData.accept_terms} type="checkbox" className="w-[18px] h-[18px] accent-primary cursor-pointer" />
                             <label className="text-muted-foreground text-[14px]">ฉันยอมรับ <Link to='/condition' className="underline text-foreground hover:text-primary transition-all duration-200">ข้อกำหนดและเงื่อนไข</Link> ของ FlyUp</label>
                         </div>
                     </div>
-                    <button disabled={isRegistering} type="submit" className="bg-primary text-white text-[14px] w-full flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300">
+                    <button data-testid="register-submit" disabled={isRegistering} type="submit" className="bg-primary text-white text-[14px] w-full flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300">
                         {
                             isRegistering ? (
                                 <>

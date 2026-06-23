@@ -9,6 +9,7 @@ import {
   SlidersHorizontal, X, Star, Zap
 } from 'lucide-react';
 import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
+import { getProgress, getDaysLeft } from '../../lib/project';
 
 // ─── Category icon mapping ──────────────────────────────────────────────────
 
@@ -115,16 +116,7 @@ const Projects = () => {
     return [allOption, ...apiCategories];
   }, [categories]);
 
-  const getProgress = (p: PublicProject) => {
-    if (!p.funding_goal || p.funding_goal === 0) return 0;
-    return Math.min(Math.round((p.current_funding / p.funding_goal) * 100), 100);
-  };
-
-  const getDaysLeft = (p: PublicProject) => {
-    if (!p.end_date) return p.duration_days || 0;
-    const diff = new Date(p.end_date).getTime() - NOW;
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  };
+  const daysLeftOf = (p: PublicProject) => getDaysLeft(p, NOW);
 
   const activeFilterCount = [minGoal, maxGoal].filter(v => v !== '').length;
 
@@ -199,6 +191,7 @@ const Projects = () => {
           <div className="flex-1 flex items-center gap-2 bg-card border border-border h-12 md:h-11 rounded-lg px-4 focus-within:border-primary transition-all shadow-sm w-full">
             <Search size={18} className="text-muted-foreground flex-shrink-0" />
             <input
+              data-testid="projects-search"
               type="text"
               placeholder="ค้นหาชื่อโปรเจกต์..."
               value={searchQuery}
@@ -345,13 +338,14 @@ const Projects = () => {
             {filteredProjects.map((project) => {
               const ProjectCategoryIcon = getCategoryIcon(project.category);
               const progress = getProgress(project);
-              const daysLeft = getDaysLeft(project);
+              const daysLeft = daysLeftOf(project);
               const isHot = progress >= 70;
               const isNew = (NOW - new Date(project.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
 
               return (
                 <Link
                   key={project.id}
+                  data-testid="project-card"
                   to={`/projects/${project.slug || project.id}`}
                   className="bg-card rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer group flex flex-col"
                 >

@@ -17,19 +17,7 @@ import {
 import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import useCreateProjectGuard from '../../hooks/useCreateProjectGuard';
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const getProgress = (p: PublicProject) => {
-  if (!p.funding_goal || p.funding_goal === 0) return 0;
-  return Math.min(Math.round((p.current_funding / p.funding_goal) * 100), 100);
-};
-
-const getDaysLeft = (p: PublicProject) => {
-  if (!p.end_date) return p.duration_days || 0;
-  const diff = new Date(p.end_date).getTime() - Date.now();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-};
+import { getProgress, getDaysLeft } from '../../lib/project';
 
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800';
 
@@ -41,6 +29,7 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
 
   return (
     <Link
+      data-testid="project-card"
       to={`/projects/${project.slug || project.id}`}
       className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group flex flex-col"
     >
@@ -136,7 +125,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900 pb-20">
-      <section className="relative pt-24 pb-32 lg:pt-32 lg:pb-40 overflow-hidden">
+      <section data-testid="home-hero" className="relative pt-24 pb-32 lg:pt-32 lg:pb-40 overflow-hidden">
         <div
           className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat z-0"
           style={{
@@ -195,7 +184,7 @@ const Home = () => {
                   </Link>
                 ) : null
                 }
-                <Link to="/projects" className="bg-background hover:bg-muted text-foreground px-8 py-3 rounded-full font-medium transition-colors border border-border shadow-sm inline-block">
+                <Link data-testid="home-browse-projects" to="/projects" className="bg-background hover:bg-muted text-foreground px-8 py-3 rounded-full font-medium transition-colors border border-border shadow-sm inline-block">
                   สำรวจโปรเจกต์
                 </Link>
               </div>
