@@ -19,6 +19,7 @@ import { usePublicProjectStore } from "../../store/usePublicProjectStore";
 import { useProjectDetailStore } from "../../store/useProjectDetailStore";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useBoosterStore } from "../../store/useBoosterStore";
+import { useComplaintStore } from "../../store/useComplaintStore";
 import ComplaintModal from "../../components/ComplaintModal";
 import PreviewStory from "../../components/preview/PreviewStory";
 import { PreviewUpdate, PreviewComment, PreviewQuestion } from "../../components/preview/PreviewMisc";
@@ -43,6 +44,7 @@ function ProjectDetail() {
   const { updates, threads, faqs, investorCount: actualInvestorCount, investors, fetchAll, createThread } = useProjectDetailStore();
   const { authUser } = useAuthStore();
   const { investments, fetchMyInvestments } = useBoosterStore();
+  const { complaints, fetchMyComplaints } = useComplaintStore();
   const [commentBody, setCommentBody] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,6 +57,7 @@ function ProjectDetail() {
   const hasInvested = isLoggedIn && investments.some(
     inv => inv.project_id === projectId && inv.status === 'verified'
   );
+  const hasComplained = isLoggedIn && complaints.some(c => c.project_id === projectId);
 
   // Dynamic SEO per project page
   useSEO({
@@ -73,8 +76,11 @@ function ProjectDetail() {
       else fetchPublicProjectBySlug(slug);
       window.scrollTo(0, 0);
     }
-    if (isLoggedIn) fetchMyInvestments();
-  }, [slug, fetchPublicProjectBySlug, fetchPublicProjectById, fetchMyInvestments, isLoggedIn]);
+    if (isLoggedIn) {
+      fetchMyInvestments();
+      fetchMyComplaints();
+    }
+  }, [slug, fetchPublicProjectBySlug, fetchPublicProjectById, fetchMyInvestments, fetchMyComplaints, isLoggedIn]);
 
   useEffect(() => {
     if (projectId) fetchAll(projectId);
@@ -586,12 +592,32 @@ function ProjectDetail() {
                       });
                       return;
                     }
+                    if (hasComplained) {
+                      toast.error('คุณรายงานโปรเจกต์นี้ไปแล้ว', {
+                        id: 'report-already',
+                        position: 'top-center',
+                        duration: 3000,
+                        style: {
+                          borderRadius: '10px',
+                          background: 'var(--color-card)',
+                          color: 'var(--color-foreground)',
+                          fontSize: '14px',
+                          border: '1px solid var(--color-border)',
+                        },
+                        iconTheme: { primary: 'var(--color-error)', secondary: 'var(--color-white-foreground)' },
+                      });
+                      return;
+                    }
                     setShowComplaintModal(true);
                   }}
-                  title="ร้องเรียนโปรเจกต์นี้"
-                  className="w-[44px] h-[44px] bg-secondary border border-border rounded-[10px] flex justify-center items-center text-foreground hover:bg-muted transition-colors cursor-pointer duration-200"
+                  title={hasComplained ? 'คุณรายงานโปรเจกต์นี้ไปแล้ว' : 'ร้องเรียนโปรเจกต์นี้'}
+                  className={`w-[44px] h-[44px] border border-border rounded-[10px] flex justify-center items-center transition-colors cursor-pointer duration-200 ${
+                    hasComplained
+                      ? 'bg-secondary/50 text-muted-foreground opacity-50 hover:bg-secondary/50'
+                      : 'bg-secondary text-foreground hover:bg-muted'
+                  }`}
                 >
-                  <Flag size={18} />
+                  <Flag size={18} className={hasComplained ? 'fill-current' : undefined} />
                 </button>
               </div>
             </div>
@@ -650,6 +676,7 @@ function ProjectDetail() {
           projectId={project.id}
           projectTitle={project.title}
           onClose={() => setShowComplaintModal(false)}
+          onSuccess={() => fetchMyComplaints()}
         />
       )}
 
