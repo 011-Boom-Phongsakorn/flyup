@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 import { ArrowLeft, CheckCircle2, ChevronRight, FileText, Image as ImageIcon, Link2, XCircle, Loader2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'react-hot-toast';
 import { useBoosterStore } from '../../store/useBoosterStore';
-import api from '../../services/api';
+import { useMilestoneStore } from '../../store/useMilestoneStore';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,7 +33,8 @@ interface MilestoneDetail {
 const VoteDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { voteOnMilestone, investments, fetchMyInvestments } = useBoosterStore();
+  const { voteOnMilestone, getMyVote, investments, fetchMyInvestments } = useBoosterStore();
+  const { fetchProjectMilestones } = useMilestoneStore();
 
   const [milestone, setMilestone] = useState<MilestoneDetail | null>(null);
   const [projectTitle, setProjectTitle] = useState('');
@@ -42,36 +44,43 @@ const VoteDetail = () => {
   const [comment, setComment] = useState('');
   const [isVoted, setIsVoted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
 
   // 1. Load investments if not loaded
   useEffect(() => {
     if (investments.length === 0) fetchMyInvestments();
   }, [investments.length, fetchMyInvestments]);
 
-  // 2. Fetch milestone detail
+  // 2. Fetch milestone detail + check if already voted
   useEffect(() => {
     if (!id) return;
 
     const fetchMilestone = async () => {
       setLoading(true);
       try {
-        // Try to find the project that owns this milestone
         const projectIds = [...new Set(investments.map(inv => inv.project_id).filter(Boolean))];
 
+        let found: MilestoneDetail | null = null;
         for (const pid of projectIds) {
           try {
-            const res = await api.get(`/projects/${pid}/milestones`);
-            const milestones: MilestoneDetail[] = res.data?.data ?? [];
-            const found = milestones.find(m => m.id === Number(id));
-            if (found) {
-              setMilestone({ ...found, project_id: pid });
+            const milestones = await fetchProjectMilestones(pid) as MilestoneDetail[];
+            const m = milestones.find(m => m.id === Number(id));
+            if (m) {
+              found = { ...m, project_id: pid };
+              setMilestone(found);
               const proj = investments.find(inv => inv.project_id === pid);
               setProjectTitle(proj?.project?.title || `โปรเจกต์ #${pid}`);
               break;
             }
           } catch {
             // continue to next project
+          }
+        }
+
+        if (found?.voting_open) {
+          const existingVote = await getMyVote(Number(id));
+          if (existingVote) {
+            setVoteValue(existingVote.choice as 'approve' | 'reject');
+            setIsVoted(true);
           }
         }
       } finally {
@@ -82,31 +91,45 @@ const VoteDetail = () => {
     if (investments.length > 0) {
       fetchMilestone();
     }
-  }, [id, investments]);
+  }, [id, investments, getMyVote, fetchProjectMilestones]);
 
-  const handleVoteSubmit = () => {
-    if (!voteValue) return;
-    setShowConfirm(true);
-  };
-
-  const confirmVote = async () => {
+  const handleVoteSubmit = async () => {
     if (!voteValue || !milestone) return;
-    setIsSubmitting(true);
-    setShowConfirm(false);
 
-    const success = await voteOnMilestone(milestone.id, {
-      vote: voteValue,
+    const label = voteValue === 'approve' ? 'ยอมรับ' : 'ไม่ยอมรับ'
+    const color = voteValue === 'approve' ? '#16a34a' : '#dc2626'
+
+    const result = await Swal.fire({
+      title: 'ยืนยันการโหวต',
+      html: `คุณต้องการโหวต <strong style="color:${color}">${label}</strong><br/>สำหรับ Phase ${milestone.phase_no}: ${milestone.title}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'ยืนยัน',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#7C3AED',
+      cancelButtonColor: '#6B7280',
+      reverseButtons: true,
+    })
+
+    if (!result.isConfirmed) return
+
+    setIsSubmitting(true)
+    const voteResult = await voteOnMilestone(milestone.id, {
+      choice: voteValue,
       comment: comment.trim() || undefined,
-    });
+    })
+    setIsSubmitting(false)
 
-    setIsSubmitting(false);
-
-    if (success) {
-      toast.success('บันทึกการลงคะแนนสำเร็จ');
-      setIsVoted(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (voteResult === true) {
+      toast.success('บันทึกการลงคะแนนสำเร็จ')
+      setIsVoted(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (voteResult === 'already_voted') {
+      toast('คุณได้ลงคะแนนแล้ว', { icon: 'ℹ️' })
+      setIsVoted(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      toast.error('เกิดข้อผิดพลาดในการโหวต กรุณาลองใหม่');
+      toast.error('เกิดข้อผิดพลาดในการโหวต กรุณาลองใหม่')
     }
   };
 
@@ -125,8 +148,8 @@ const VoteDetail = () => {
 
   if (!milestone) {
     return (
-      <div className="max-w-5xl">
-        <button onClick={() => navigate('/booster/votes')} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6">
+      <div className="max-w-5xl mx-auto">
+        <button onClick={() => navigate('/booster/votes')} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6 cursor-pointer">
           <ArrowLeft size={16} /> กลับไปหน้าโหวต
         </button>
         <div className="text-center py-20 text-muted-foreground">
@@ -158,11 +181,11 @@ const VoteDetail = () => {
   }
 
   return (
-    <div className="max-w-5xl relative">
+    <div className="max-w-5xl mx-auto relative">
       {/* Back Button */}
       <button
         onClick={() => navigate('/booster/votes')}
-        className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6"
+        className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6 cursor-pointer"
       >
         <ArrowLeft size={16} /> กลับไปหน้าโหวต
       </button>
@@ -328,7 +351,7 @@ const VoteDetail = () => {
               <button
                 onClick={handleVoteSubmit}
                 disabled={!voteValue || isSubmitting}
-                className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-primary text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               >
                 {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                 ยืนยันการโหวต
@@ -342,31 +365,6 @@ const VoteDetail = () => {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border w-full max-w-sm rounded-[24px] p-6 shadow-xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold text-foreground mb-2">ยืนยันการโหวต</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              คุณต้องการโหวต <span className={voteValue === 'approve' ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{voteValue === 'approve' ? 'ยอมรับ' : 'ไม่ยอมรับ'}</span> สำหรับ Phase {milestone.phase_no}: {milestone.title}?
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-semibold hover:bg-muted transition-colors text-sm"
-              >
-                ยกเลิก
-              </button>
-              <button
-                onClick={confirmVote}
-                className="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition-opacity text-sm"
-              >
-                ยืนยัน
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

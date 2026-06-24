@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
-import api from "../../services/api";
-import toast from "react-hot-toast";
+import { useNotificationStore } from "../../store/useNotificationStore";
 
 interface NotifItem {
   key: string;
@@ -31,6 +30,7 @@ function safePrefs(raw: unknown): Record<string, boolean> {
 
 const NotificationTab = () => {
   const authUser = useAuthStore((s) => s.authUser);
+  const { fetchNotificationPreferences, updateNotificationPreferences } = useNotificationStore();
 
   const [toggles, setToggles] = useState<Record<string, boolean>>(() => ({
     ...defaultToggles,
@@ -40,19 +40,10 @@ const NotificationTab = () => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    api.get("/user/notification-preferences")
-      .then((res) => {
-        const prefs = safePrefs(res.data?.data);
-        if (Object.keys(prefs).length > 0) {
-          setToggles({ ...defaultToggles, ...prefs });
-          useAuthStore.setState((state) => ({
-            authUser: state.authUser
-              ? { ...state.authUser, notification_preferences: prefs }
-              : state.authUser,
-          }));
-        }
-      })
-      .catch(() => {});
+    fetchNotificationPreferences().then((prefs) => {
+      if (prefs) setToggles({ ...defaultToggles, ...prefs });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleToggle = (key: string) => {
@@ -63,19 +54,9 @@ const NotificationTab = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSaving(key);
-      try {
-        await api.patch("/user/notification-preferences", { notification_preferences: newToggles });
-        useAuthStore.setState((state) => ({
-          authUser: state.authUser
-            ? { ...state.authUser, notification_preferences: newToggles }
-            : state.authUser,
-        }));
-      } catch {
-        setToggles((prev) => ({ ...prev, [key]: !newValue }));
-        toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
-      } finally {
-        setSaving(null);
-      }
+      const ok = await updateNotificationPreferences(newToggles);
+      if (!ok) setToggles((prev) => ({ ...prev, [key]: !newValue }));
+      setSaving(null);
     }, 400);
   };
 
@@ -96,14 +77,15 @@ const NotificationTab = () => {
             <p className="text-[12px] text-muted-foreground mt-[2px]">{item.desc}</p>
           </div>
           <button
+            data-testid={`notification-toggle-${item.key}`}
             onClick={() => handleToggle(item.key)}
-            disabled={saving !== null}
-            className={`w-[48px] h-[26px] rounded-full transition-colors relative cursor-pointer disabled:opacity-70 ${
+            disabled={saving === item.key}
+            className={`w-[48px] h-[26px] rounded-full transition-colors duration-200 relative cursor-pointer ${
               toggles[item.key] ? "bg-primary" : "bg-[#E9ECEF]"
             }`}
           >
             <span
-              className={`absolute top-[3px] w-[20px] h-[20px] rounded-full bg-white shadow transition-all ${
+              className={`absolute top-[3px] w-[20px] h-[20px] rounded-full bg-white shadow transition-[left] duration-200 ease-in-out ${
                 toggles[item.key] ? "left-[25px]" : "left-[3px]"
               }`}
             />

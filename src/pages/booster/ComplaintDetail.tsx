@@ -1,13 +1,74 @@
-import { ArrowLeft, FileText, ImageIcon, Send } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { useEffect } from 'react';
+import { ArrowLeft, Loader2, MessageSquareWarning } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router';
+import { useComplaintStore } from '../../store/useComplaintStore';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const fmtDate = (d?: string | null) =>
+  d ? new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+const fmtDateTime = (d?: string | null) =>
+  d
+    ? new Date(d).toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '—';
+
+const statusConfig = {
+  open: { label: 'กำลังตรวจสอบ', badgeClass: 'bg-muted text-muted-foreground border border-border' },
+  resolved: { label: 'จัดการแล้ว', badgeClass: 'bg-primary/10 text-primary border border-primary/20' },
+  rejected: { label: 'ปฏิเสธ', badgeClass: 'bg-red-50 text-red-600 border border-red-200' },
+} as const;
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 const ComplaintDetail = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const { complaints, isLoading, fetchMyComplaints } = useComplaintStore();
+
+  useEffect(() => {
+    if (complaints.length === 0) fetchMyComplaints();
+  }, [complaints.length, fetchMyComplaints]);
+
+  const complaint = complaints.find((c) => c.id === Number(id));
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-32">
+        <Loader2 size={28} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isLoading && !complaint) {
+    return (
+      <div className="w-full">
+        <button
+          onClick={() => navigate('/booster/complaints')}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6 cursor-pointer"
+        >
+          <ArrowLeft size={16} /> กลับ
+        </button>
+        <div className="text-center py-20 text-muted-foreground">
+          <MessageSquareWarning size={36} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm">ไม่พบคำร้องเรียนนี้</p>
+        </div>
+      </div>
+    );
+  }
+
+  const cfg = statusConfig[complaint!.status] ?? statusConfig.open;
+  const hasAdminNote = complaint!.admin_note && complaint!.admin_note.trim().length > 0;
+  const isFinished = complaint!.status === 'resolved' || complaint!.status === 'rejected';
 
   return (
-    <div className="max-w-4xl relative">
+    <div className="w-full relative">
       {/* Back Button */}
       <button
         onClick={() => navigate('/booster/complaints')}
@@ -19,11 +80,14 @@ const ComplaintDetail = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">ทีมไม่อัปเดตความคืบหน้า</h1>
-          <p className="text-sm text-muted-foreground mt-1">5 ก.พ. 2026 • StudyBuddy • ความล่าช้า</p>
+          <h1 className="text-2xl font-bold text-foreground">{complaint!.subject}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {fmtDate(complaint!.created_at)}
+            {complaint!.project?.title && <> · {complaint!.project.title}</>}
+          </p>
         </div>
-        <div className="inline-flex items-center text-[12px] font-semibold px-3 py-1 bg-muted text-muted-foreground rounded-full border border-border">
-          รอตรวจสอบ
+        <div className={`inline-flex items-center text-[12px] font-semibold px-3 py-1 rounded-full shrink-0 ${cfg.badgeClass}`}>
+          {cfg.label}
         </div>
       </div>
 
@@ -31,68 +95,58 @@ const ComplaintDetail = () => {
         {/* Details Box */}
         <div className="bg-card border border-border rounded-2xl p-6">
           <h3 className="font-bold text-foreground text-sm mb-4">รายละเอียดการร้องเรียน</h3>
-          <p className="text-sm text-foreground leading-relaxed mb-6">
-            ทีม StudyBuddy ไม่ได้อัปเดตความคืบหน้าของโปรเจกต์มาเป็นเวลากว่า 2 สัปดาห์ ทั้งที่กำหนดส่ง Milestone ที่ 2 ภายในวันที่ 1 ก.พ. 2026 แต่ยังไม่มีการส่งหลักฐานใดๆ ทำให้ผู้ลงทุนไม่สามารถติดตามสถานะได้
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+            {complaint!.body}
           </p>
-
-          <h4 className="text-xs font-semibold text-muted-foreground mb-3">ไฟล์แนบ</h4>
-          <div className="flex flex-wrap gap-3">
-            <button className="flex items-center gap-2 px-3 py-2 border border-border rounded-xl hover:bg-muted transition-colors text-sm text-foreground">
-              <ImageIcon size={16} className="text-muted-foreground" /> screenshot_milestone.png
-            </button>
-            <button className="flex items-center gap-2 px-3 py-2 border border-border rounded-xl hover:bg-muted transition-colors text-sm text-foreground">
-              <FileText size={16} className="text-muted-foreground" /> chat_evidence.pdf
-            </button>
-          </div>
         </div>
 
         {/* Admin Response Box */}
-        <div className="bg-muted border border-border rounded-2xl p-6">
-          <h3 className="font-bold text-foreground text-sm mb-2">การตอบกลับจาก Admin</h3>
-          <p className="text-sm text-foreground leading-relaxed mb-4">
-            ทีมงานได้รับเรื่องแล้ว กำลังติดต่อทืม StudyBuddy เพื่อขอคำชี้แจง จะแจ้งผลภายใน 3 วันทำการ
-          </p>
-          <p className="text-[11px] text-muted-foreground font-medium">ตอบกลับเมื่อ 7 ก.พ. 2026</p>
-        </div>
+        {hasAdminNote && (
+          <div className="bg-muted border border-border rounded-2xl p-6">
+            <h3 className="font-bold text-foreground text-sm mb-2">การตอบกลับจาก Admin</h3>
+            <p className="text-sm text-foreground leading-relaxed mb-4 whitespace-pre-line">
+              {complaint!.admin_note}
+            </p>
+            {complaint!.resolved_at && (
+              <p className="text-[11px] text-muted-foreground font-medium">
+                ตอบกลับเมื่อ {fmtDate(complaint!.resolved_at)}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Timeline */}
         <div className="bg-card border border-border rounded-2xl p-6">
           <h3 className="font-bold text-foreground text-sm mb-6">ไทม์ไลน์</h3>
-          
+
           <div className="relative border-l-2 border-muted ml-3 space-y-8 pb-2">
-            {/* Step 1 */}
+            {/* Submitted */}
             <div className="relative pl-6">
-              <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-muted border-4 border-white" />
+              <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white ${isFinished ? 'bg-primary' : 'bg-muted'}`} />
               <h4 className="text-sm font-bold text-foreground">ส่งคำร้องเรียน</h4>
-              <p className="text-xs text-muted-foreground mt-1">5 ก.พ. 2026 10:30 • โดย คุณ</p>
+              <p className="text-xs text-muted-foreground mt-1">{fmtDateTime(complaint!.created_at)}</p>
             </div>
-            
-            {/* Step 2 */}
+
+            {/* Under review */}
             <div className="relative pl-6">
-              <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-muted border-4 border-white" />
+              <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white ${isFinished ? 'bg-primary' : 'bg-primary'}`} />
               <h4 className="text-sm font-bold text-foreground">รับเรื่องโดย Admin</h4>
-              <p className="text-xs text-muted-foreground mt-1">5 ก.พ. 2026 14:00 • โดย Admin</p>
+              <p className="text-xs text-muted-foreground mt-1">ระบบได้รับเรื่องแล้ว</p>
             </div>
 
-            {/* Step 3 (Current) */}
-            <div className="relative pl-6">
-              <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-primary border-4 border-white shadow-sm" />
-              <h4 className="text-sm font-bold text-foreground">ตอบกลับจาก Admin</h4>
-              <p className="text-xs text-muted-foreground mt-1">7 ก.พ. 2026 09:15 • โดย Admin</p>
-            </div>
+            {/* Resolved / Rejected */}
+            {isFinished && (
+              <div className="relative pl-6">
+                <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white ${complaint!.status === 'resolved' ? 'bg-primary' : 'bg-red-400'}`} />
+                <h4 className="text-sm font-bold text-foreground">
+                  {complaint!.status === 'resolved' ? 'จัดการเรียบร้อย' : 'ปฏิเสธคำร้องเรียน'}
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {complaint!.resolved_at ? fmtDateTime(complaint!.resolved_at) : '—'}
+                </p>
+              </div>
+            )}
           </div>
-        </div>
-
-        {/* Reply Box */}
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="font-bold text-foreground text-sm mb-4">ส่งข้อความติดตาม</h3>
-          <textarea 
-            placeholder="พิมพ์ข้อความเพิ่มเติม..."
-            className="w-full bg-muted/30 border border-border rounded-xl p-4 text-sm focus:outline-none focus:border-primary transition-colors min-h-[120px] resize-none mb-4"
-          />
-          <button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-colors">
-            <Send size={16} /> ส่งข้อความ
-          </button>
         </div>
       </div>
     </div>

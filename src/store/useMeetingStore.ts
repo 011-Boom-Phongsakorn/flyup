@@ -4,7 +4,6 @@ import api from '../services/api';
 import {
   MEETING_ELIGIBLE_MILESTONE_STATUS,
   type CreateMeetingPayload,
-  type FilterMode,
   type Meeting,
   type MilestoneOption,
 } from '../components/pioneer/meeting/types';
@@ -21,7 +20,7 @@ interface MeetingStoreState {
   milestonesLoading: boolean;
   isSubmitting: boolean;
 
-  fetchMyMeetings: (projects: ProjectRef[], filter: FilterMode) => Promise<void>;
+  fetchMyMeetings: (projects: ProjectRef[]) => Promise<void>;
   fetchEligibleMilestones: (projects: ProjectRef[]) => Promise<void>;
   createMeeting: (payload: CreateMeetingPayload) => Promise<boolean>;
   editMeeting: (id: number, payload: CreateMeetingPayload) => Promise<boolean>;
@@ -30,6 +29,10 @@ interface MeetingStoreState {
 
 const BACKEND_ERROR_TH: Record<string, string> = {
   'meeting already exists for this milestone': 'มี Milestone นี้นัดหมายอยู่แล้ว ไม่สามารถสร้างซ้ำได้',
+  'cannot create meeting: milestone is expired': 'ไม่สามารถนัดหมายได้ Milestone นี้หมดเวลาแล้ว',
+  'cannot schedule meeting after milestone due date': 'ไม่สามารถนัดหมายหลังจากวันสิ้นสุด Milestone ได้',
+  'cannot create meeting: milestone is not active': 'Milestone นี้ยังไม่พร้อมนัดหมาย',
+  'forbidden: you cannot use this milestone': 'คุณไม่มีสิทธิ์ใช้ Milestone นี้',
 }
 
 function toThaiError(msg: string): string {
@@ -43,7 +46,7 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
   milestonesLoading: false,
   isSubmitting: false,
 
-  fetchMyMeetings: async (projects, filter) => {
+  fetchMyMeetings: async (projects) => {
     if (projects.length === 0) {
       set({ meetings: [] });
       return;
@@ -53,7 +56,7 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
       const results = await Promise.all(
         projects.map(p =>
           api
-            .get(`/me/projects/${p.id}/meetings`, { params: { filter } })
+            .get(`/me/projects/${p.id}/meetings`, { params: { filter: 'all' } })
             .then(r => (r.data?.data ?? []) as Meeting[])
             .catch(() => [] as Meeting[])
         )
@@ -76,7 +79,7 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
           api
             .get(`/projects/${p.id}/milestones`)
             .then(res => {
-              const raw: { id: number; phase_no?: number; title?: string; status?: string }[] =
+              const raw: { id: number; phase_no?: number; title?: string; status?: string; due_date?: string }[] =
                 res.data?.data ?? [];
               return raw
                 .filter(m => m.status === MEETING_ELIGIBLE_MILESTONE_STATUS)
@@ -87,6 +90,7 @@ export const useMeetingStore = create<MeetingStoreState>((set) => ({
                   status: m.status ?? '',
                   project_id: p.id,
                   project_title: p.title,
+                  due_date: m.due_date,
                 }));
             })
             .catch(() => [] as MilestoneOption[])

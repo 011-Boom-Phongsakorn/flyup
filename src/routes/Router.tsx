@@ -1,82 +1,101 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router'
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
+
+function ScrollToTop() {
+    const { pathname } = useLocation()
+    useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+    return null
+}
+
+function PageLoader() {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <Loader2 className="size-10 animate-spin" />
+        </div>
+    )
+}
 import GoogleRoleModal from '../components/GoogleRoleModal';
 
-// Layouts
+// Layouts (eager — shared shells rendered for every nested route)
 import MainLayout from '../layouts/MainLayout';
-
-// Public Pages
-import Home from '../pages/public/Home';
-import Projects from '../pages/public/Projects';
-import Register from '../pages/public/Register';
-import Login from '../pages/public/Login';
-import VerifyEmail from '../pages/public/VerifyEmail';
-import ProjectDetail from '../pages/public/ProjectDetail';
-import Investment from '../pages/public/Investment';
-import ForgotPassword from '../pages/public/ForgotPassword';
-import ResetPassword from '../pages/public/ResetPassword';
-import MilestoneDetail from '../pages/public/MilestoneDetail';
+import PioneerLayout from '../layouts/PioneerLayout';
+import ProjectStageLayout from '../layouts/ProjectStageLayout';
+import AdminLayout from '../layouts/AdminLayout';
+import BoosterLayout from '../layouts/BoosterLayout';
 
 import { Loader2 } from 'lucide-react';
 
-// Pioneer Pages
-import ProjectOverview from '../pages/pioneer/ProjectOverview';
-import Dashboard from '../pages/pioneer/Dashboard';
-import PioneerLayout from '../layouts/PioneerLayout';
-import MyProjects from '../pages/pioneer/MyProjects';
-import Profile from '../pages/pioneer/Profile';
-import ProjectStageLayout from '../layouts/ProjectStageLayout';
-import Step1Basics from '../components/steps/Step1Basics';
-import Step2Story from '../components/steps/Step2Story';
-import Step3Milestone from '../components/steps/Step3Milestone';
-import Step4Agreement from '../components/steps/Step4Agreement';
-import Step5Updates from '../components/steps/Step5Updates';
-import Preview from '../pages/pioneer/Preview'
-import MilestonePage from '../pages/pioneer/MilestonePage'
-import MilestoneListPage from '../pages/pioneer/MilestoneListPage';
-import PioneerMeetings from '../pages/pioneer/Meetings';
-import PioneerPayouts from '../pages/pioneer/Payouts';
-import CancelProjectRequest from '../pages/pioneer/CancelProjectRequest';
-import PreviewMilestoneDetail from '../pages/pioneer/PreviewMilestoneDetail';
+// Public Pages — lazy-loaded so each route only ships the JS it needs
+const Home = lazy(() => import('../pages/public/Home'));
+const Projects = lazy(() => import('../pages/public/Projects'));
+const Register = lazy(() => import('../pages/public/Register'));
+const Login = lazy(() => import('../pages/public/Login'));
+const VerifyEmail = lazy(() => import('../pages/public/VerifyEmail'));
+const ProjectDetail = lazy(() => import('../pages/public/ProjectDetail'));
+const Investment = lazy(() => import('../pages/public/Investment'));
+const ForgotPassword = lazy(() => import('../pages/public/ForgotPassword'));
+const ResetPassword = lazy(() => import('../pages/public/ResetPassword'));
+const MilestoneDetail = lazy(() => import('../pages/public/MilestoneDetail'));
+const AboutUs = lazy(() => import('../pages/public/AboutUs'));
+const Terms = lazy(() => import('../pages/public/Terms'));
+const HelpCenter = lazy(() => import('../pages/public/HelpCenter'));
 
-// Admin
-import AdminLayout from '../layouts/AdminLayout';
-import AdminDashboard from '../pages/admin/AdminDashboard';
-import ProjectApproval from '@/pages/admin/ProjectApproval';
-import AdminProjectDetail from '@/pages/admin/AdminProjectDetail';
-import VerificationApproval from '@/pages/admin/VerificationApproval';
+// Pioneer Pages
+const ProjectOverview = lazy(() => import('../pages/pioneer/ProjectOverview'));
+const ProjectGuide = lazy(() => import('../pages/pioneer/ProjectGuide'));
+const Dashboard = lazy(() => import('../pages/pioneer/Dashboard'));
+const MyProjects = lazy(() => import('../pages/pioneer/MyProjects'));
+const Profile = lazy(() => import('../pages/pioneer/Profile'));
+const Step1Basics = lazy(() => import('../components/steps/Step1Basics'));
+const Step2Story = lazy(() => import('../components/steps/Step2Story'));
+const Step3Milestone = lazy(() => import('../components/steps/Step3Milestone'));
+const Step4Agreement = lazy(() => import('../components/steps/Step4Agreement'));
+const Step5Updates = lazy(() => import('../components/steps/Step5Updates'));
+const Preview = lazy(() => import('../pages/pioneer/Preview'));
+const MilestonePage = lazy(() => import('../pages/pioneer/MilestonePage'));
+const MilestoneListPage = lazy(() => import('../pages/pioneer/MilestoneListPage'));
+const PioneerMeetings = lazy(() => import('../pages/pioneer/Meetings'));
+const PioneerPayouts = lazy(() => import('../pages/pioneer/Payouts'));
+const PioneerProfitPage = lazy(() => import('../pages/pioneer/PioneerProfitPage'));
+const CancelProjectRequest = lazy(() => import('../pages/pioneer/CancelProjectRequest'));
+const PreviewMilestoneDetail = lazy(() => import('../pages/pioneer/PreviewMilestoneDetail'));
+
+// Admin Pages
+const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
+const ProjectApproval = lazy(() => import('@/pages/admin/ProjectApproval'));
+const AdminProjectDetail = lazy(() => import('@/pages/admin/AdminProjectDetail'));
+const VerificationApproval = lazy(() => import('@/pages/admin/VerificationApproval'));
+const AdminProfile = lazy(() => import('@/pages/admin/AdminProfile'));
+const AdminMilestoneApproval = lazy(() => import('@/pages/admin/AdminMilestoneApproval'));
+const AdminMilestoneDetail = lazy(() => import('@/pages/admin/AdminMilestoneDetail'));
+const AdminProjectMilestonesOverview = lazy(() => import('@/pages/admin/AdminProjectMilestonesOverview'));
+const AdminDisbursements = lazy(() => import('@/pages/admin/AdminDisbursements'));
+const AdminProjectSuspension = lazy(() => import('@/pages/admin/AdminProjectSuspension'));
+const AdminUserManagement = lazy(() => import('@/pages/admin/AdminUserManagement'));
+const AdminComplaints = lazy(() => import('@/pages/admin/AdminComplaints'));
+const AdminAuditLogs = lazy(() => import('@/pages/admin/AdminAuditLogs'));
+const AdminRefunds = lazy(() => import('@/pages/admin/AdminRefunds'));
+const AdminProfitDistribution = lazy(() => import('@/pages/admin/AdminProfitDistribution'));
+const AdminUniversities = lazy(() => import('@/pages/admin/AdminUniversities'));
+const AdminUniversityDetail = lazy(() => import('@/pages/admin/AdminUniversityDetail'));
+const AdminCategories = lazy(() => import('@/pages/admin/AdminCategories'));
+const AdminCancelRequests = lazy(() => import('@/pages/admin/AdminCancelRequests'));
 
 // Booster Pages
-import BoosterLayout from '../layouts/BoosterLayout';
-import BoosterDashboard from '../pages/booster/Dashboard';
-import BoosterMyInvestments from '../pages/booster/MyInvestments';
-import BoosterInvestmentDetail from '../pages/booster/InvestmentDetail';
-import BoosterMeetings from '../pages/booster/Meetings';
-import BoosterVotes from '../pages/booster/Votes';
-import BoosterVoteDetail from '../pages/booster/VoteDetail';
-import BoosterProfits from '../pages/booster/Profits';
-import BoosterRefunds from '../pages/booster/Refunds';
-import BoosterComplaints from '../pages/booster/Complaints';
-import BoosterComplaintDetail from '../pages/booster/ComplaintDetail';
-import BoosterComplaintNew from '../pages/booster/ComplaintNew';
-import BoosterProfile from '../pages/booster/Profile';
-import AdminProfile from '@/pages/admin/AdminProfile'
-import AdminMilestoneApproval from '@/pages/admin/AdminMilestoneApproval'
-import AdminMilestoneDetail from '@/pages/admin/AdminMilestoneDetail'
-import AdminProjectMilestonesOverview from '@/pages/admin/AdminProjectMilestonesOverview'
-import AdminDisbursements from '@/pages/admin/AdminDisbursements'
-import AdminProjectSuspension from '@/pages/admin/AdminProjectSuspension'
-import AdminUserManagement from '@/pages/admin/AdminUserManagement'
-import AdminComplaints from '@/pages/admin/AdminComplaints'
-import AdminAuditLogs from '@/pages/admin/AdminAuditLogs'
-import AdminRefunds from '@/pages/admin/AdminRefunds';
-import AdminProfitDistribution from '@/pages/admin/AdminProfitDistribution';
-import AdminUniversities from '@/pages/admin/AdminUniversities';
-import AdminUniversityDetail from '@/pages/admin/AdminUniversityDetail';
-import AdminCategories from '@/pages/admin/AdminCategories';
-import AdminCancelRequests from '@/pages/admin/AdminCancelRequests';
+const BoosterDashboard = lazy(() => import('../pages/booster/Dashboard'));
+const BoosterMyInvestments = lazy(() => import('../pages/booster/MyInvestments'));
+const BoosterInvestmentDetail = lazy(() => import('../pages/booster/InvestmentDetail'));
+const BoosterMeetings = lazy(() => import('../pages/booster/Meetings'));
+const BoosterVotes = lazy(() => import('../pages/booster/Votes'));
+const BoosterVoteDetail = lazy(() => import('../pages/booster/VoteDetail'));
+const BoosterProfits = lazy(() => import('../pages/booster/Profits'));
+const BoosterRefunds = lazy(() => import('../pages/booster/Refunds'));
+const BoosterComplaints = lazy(() => import('../pages/booster/Complaints'));
+const BoosterComplaintDetail = lazy(() => import('../pages/booster/ComplaintDetail'));
+const BoosterComplaintNew = lazy(() => import('../pages/booster/ComplaintNew'));
+const BoosterProfile = lazy(() => import('../pages/booster/Profile'));
 
 const PioneerGuard = () => {
     const { authUser } = useAuthStore()
@@ -104,15 +123,21 @@ const Router = () => {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
-        const token = params.get('token')
+        const accessToken = params.get('access_token')
+        // backward compat: รองรับ ?token=1 เดิม + ?access_token=<jwt> ใหม่
+        const legacyFlag = params.get('token')
         const isVerifyPage = window.location.pathname === '/verify'
-        if (token && !isVerifyPage) {
-            loginWithGoogleToken(token)
+        if ((accessToken || legacyFlag) && !isVerifyPage) {
+            // Google OAuth flow: ใช้ loginWithGoogleToken อย่างเดียว
+            // ไม่เรียก checkAuth() พร้อมกัน เพื่อป้องกัน race condition
+            params.delete('access_token')
             params.delete('token')
             const newSearch = params.toString()
             window.history.replaceState({}, '', newSearch ? `?${newSearch}` : window.location.pathname)
+            loginWithGoogleToken(accessToken ?? undefined)
+        } else {
+            checkAuth()
         }
-        checkAuth()
     }, [checkAuth, loginWithGoogleToken])
 
     const hasUniversityDomain = !!authUser?.student_profile?.university;
@@ -140,6 +165,8 @@ const Router = () => {
     return (
         <>
             <BrowserRouter>
+                <ScrollToTop />
+                <Suspense fallback={<PageLoader />}>
                 <Routes>
                     <Route element={<MainLayout />}>
                         <Route path='/' element={<Home />} />
@@ -149,9 +176,12 @@ const Router = () => {
                         <Route path='/reset-password' element={!authUser ? <ResetPassword /> : <Navigate to='/' />} />
                         <Route path='/projects' element={<Projects />} />
                         <Route path='/verify' element={<VerifyEmail />} />
-                        <Route path='/projects/:id' element={<ProjectDetail />} />
-                        <Route path='/projects/:id/invest' element={<Investment />} />
-                        <Route path='/projects/:id/milestones' element={<MilestoneDetail />} />
+                        <Route path='/projects/:slug' element={<ProjectDetail />} />
+                        <Route path='/projects/:slug/invest' element={<Investment />} />
+                        <Route path='/projects/:slug/milestones' element={<MilestoneDetail />} />
+                        <Route path='/about/we' element={<AboutUs />} />
+                        <Route path='/legal/terms' element={<Terms />} />
+                        <Route path='/help' element={<HelpCenter />} />
                     </Route>
 
                     <Route element={<PioneerGuard />}>
@@ -161,6 +191,7 @@ const Router = () => {
                             <Route path='/pioneer/dashboard/milestones' element={<MilestoneListPage />} />
                             <Route path='/pioneer/dashboard/meetings' element={<PioneerMeetings />} />
                             <Route path='/pioneer/dashboard/payouts' element={<PioneerPayouts />} />
+                            <Route path='/pioneer/dashboard/profit' element={<PioneerProfitPage />} />
                             <Route path='/pioneer/dashboard/projects/:projectId/cancel-request' element={<CancelProjectRequest />} />
                             <Route path='/pioneer/dashboard/projects/:projectId/milestones' element={<MilestonePage />} />
                             <Route path='/pioneer/profile' element={<Profile />} />
@@ -169,6 +200,7 @@ const Router = () => {
                             <Route path='/preview/:projectId' element={<Preview />} />
                             <Route path='/preview/:projectId/milestones' element={<PreviewMilestoneDetail />} />
                             <Route path='/project/overview/:projectId' element={<ProjectOverview />} />
+                            <Route path='/project/guide' element={<ProjectGuide />} />
                             <Route path='/project/overview/:projectId/step' element={<ProjectStageLayout />}>
                                 <Route index element={<Navigate to="1" replace />} />
                                 <Route path='1' element={<Step1Basics />} />
@@ -222,6 +254,7 @@ const Router = () => {
                     </Route>
 
                 </Routes>
+                </Suspense>
                 <GoogleRoleModal open={showRoleModal} onClose={() => {}} />
                 <Toaster
                     position='bottom-right'

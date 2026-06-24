@@ -1,49 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Loader2, FolderX, CheckCircle, XCircle, Clock, X, ExternalLink, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { AxiosError } from 'axios'
 import toast from 'react-hot-toast'
-import api from '../../services/api'
 import SearchBar from '../../components/admin/SearchBar'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
-
-type CancelProject = {
-    id: number
-    title: string
-    cancel_reason: string
-    cancel_description: string
-    state: string
-    owner_user_id: number
-    UpdatedAt: string
-}
-
-type PreviewMilestone = {
-    phase_no: number
-    title: string
-    percent_release: number
-    disbursed_amount: number
-    is_confirmed: boolean
-}
-
-type PreviewInvestor = {
-    user_id: number
-    first_name: string
-    last_name: string
-    email: string
-    total_amount: number
-    refund_amount: number
-}
-
-type CancelPreview = {
-    project_id: number
-    title: string
-    total_funding: number
-    total_disbursed: number
-    refundable_amount: number
-    milestones: PreviewMilestone[]
-    investors: PreviewInvestor[]
-}
+import { useAdminBadgeStore } from '../../store/useAdminBadgeStore'
+import { useAdminStore, type CancelProjectRequest as CancelProject, type CancelPreview } from '../../store/useAdminStore'
 
 const STATE_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
     pending_cancel:  { label: 'รอดำเนินการ', className: 'bg-amber-50 text-amber-600 border border-amber-200', icon: <Clock size={12} /> },
@@ -91,7 +55,7 @@ const DetailModal = ({
                         </div>
                         <p className="text-[12px] text-muted-foreground">ส่งเมื่อ {fmtDate(project.UpdatedAt)}</p>
                     </div>
-                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground cursor-pointer">
                         <X size={18} />
                     </button>
                 </div>
@@ -99,12 +63,14 @@ const DetailModal = ({
                 {/* Project Info */}
                 <div className="bg-gray-50 rounded-xl p-4 mb-4 flex justify-between text-[13px]">
                     <div>
-                        <span className="text-muted-foreground">Owner ID</span>
-                        <span className="font-medium ml-2">#{project.owner_user_id}</span>
+                        <span className="text-muted-foreground">เจ้าของโปรเจกต์</span>
+                        <span className="font-medium ml-2">
+                            {project.owner ? `${project.owner.first_name} ${project.owner.last_name}`.trim() : `#${project.owner_user_id}`}
+                        </span>
                     </div>
                     <button
                         onClick={() => navigate(`/admin/projects/${project.id}`)}
-                        className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                        className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
                     >
                         ดูโปรเจกต์ <ExternalLink size={10} />
                     </button>
@@ -212,14 +178,16 @@ const DetailModal = ({
                 {isPending && (
                     <div className="flex gap-2 justify-end pt-2 border-t border-border">
                         <button
+                            data-testid="cancel-request-reject-open-btn"
                             onClick={onReject}
-                            className="px-4 py-2 text-[13px] rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2"
+                            className="px-4 py-2 text-[13px] rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 cursor-pointer"
                         >
                             <XCircle size={14} /> ปฏิเสธ
                         </button>
                         <button
+                            data-testid="cancel-request-approve-open-btn"
                             onClick={onApprove}
-                            className="px-4 py-2 text-[13px] rounded-lg bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                            className="px-4 py-2 text-[13px] rounded-lg bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 cursor-pointer"
                         >
                             <CheckCircle size={14} /> อนุมัติ & คืนเงินนักลงทุน
                         </button>
@@ -256,7 +224,7 @@ const ConfirmModal = ({
                     <h2 className="text-lg font-bold text-foreground">
                         {isApprove ? 'ยืนยันอนุมัติการยกเลิก' : 'ปฏิเสธคำขอยกเลิก'}
                     </h2>
-                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground cursor-pointer">
                         <X size={18} />
                     </button>
                 </div>
@@ -273,6 +241,7 @@ const ConfirmModal = ({
                         หมายเหตุจาก Admin <span className="text-error">*</span>
                     </label>
                     <textarea
+                        data-testid="cancel-request-note-input"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         rows={4}
@@ -281,13 +250,14 @@ const ConfirmModal = ({
                     />
                 </div>
                 <div className="flex gap-2 justify-end">
-                    <button onClick={onClose} className="px-4 py-2 text-[13px] rounded-lg border border-border hover:bg-gray-50">
+                    <button onClick={onClose} className="px-4 py-2 text-[13px] rounded-lg border border-border hover:bg-gray-50 cursor-pointer">
                         ยกเลิก
                     </button>
                     <button
+                        data-testid="cancel-request-confirm-btn"
                         onClick={() => onConfirm(note)}
-                        disabled={!note.trim() || isSubmitting}
-                        className={`px-4 py-2 text-[13px] rounded-lg text-white disabled:opacity-50 flex items-center gap-2 ${
+                        disabled={isSubmitting}
+                        className={`px-4 py-2 text-[13px] rounded-lg text-white disabled:opacity-50 flex items-center gap-2 cursor-pointer ${
                             isApprove ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
                         }`}
                     >
@@ -301,8 +271,7 @@ const ConfirmModal = ({
 }
 
 const AdminCancelRequests = () => {
-    const [projects, setProjects] = useState<CancelProject[]>([])
-    const [isLoading, setIsLoading] = useState(false)
+    const { cancelRequests: projects, isCancelRequestsLoading: isLoading, fetchCancelRequests, fetchCancelPreview, resolveCancelRequest } = useAdminStore()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [search, setSearch] = useState('')
     const [selected, setSelected] = useState<CancelProject | null>(null)
@@ -310,34 +279,19 @@ const AdminCancelRequests = () => {
     const [isLoadingPreview, setIsLoadingPreview] = useState(false)
     const [modalMode, setModalMode] = useState<'approve' | 'reject' | null>(null)
 
-    const fetchRequests = useCallback(async () => {
-        setIsLoading(true)
-        try {
-            const res = await api.get('/admin/projects/cancel-request')
-            setProjects(res.data?.data ?? [])
-        } catch {
-            toast.error('โหลดข้อมูลไม่สำเร็จ')
-        } finally {
-            setIsLoading(false)
-        }
-    }, [])
+    const fetchBadges = useAdminBadgeStore((s) => s.fetchBadges)
 
     useEffect(() => {
-        fetchRequests()
-    }, [fetchRequests])
+        fetchCancelRequests().catch(() => toast.error('โหลดข้อมูลไม่สำเร็จ'))
+    }, [fetchCancelRequests])
 
     const openDetail = async (project: CancelProject) => {
         setSelected(project)
         setPreview(null)
         setIsLoadingPreview(true)
-        try {
-            const res = await api.get(`/admin/projects/${project.id}/cancel-preview`)
-            setPreview(res.data?.data ?? null)
-        } catch {
-            // preview fails gracefully — modal still opens without it
-        } finally {
-            setIsLoadingPreview(false)
-        }
+        const data = await fetchCancelPreview(project.id)
+        setPreview(data)
+        setIsLoadingPreview(false)
     }
 
     const handleConfirm = async (note: string) => {
@@ -345,12 +299,13 @@ const AdminCancelRequests = () => {
         setIsSubmitting(true)
         try {
             const action = modalMode === 'approve' ? 'approve-cancel' : 'reject-cancel'
-            await api.patch(`/admin/projects/${selected.id}/${action}`, { admin_note: note })
+            await resolveCancelRequest(selected.id, action, note)
             toast.success(modalMode === 'approve' ? 'อนุมัติการยกเลิกและคืนเงินนักลงทุนแล้ว' : 'ปฏิเสธคำขอยกเลิกแล้ว')
             setModalMode(null)
             setSelected(null)
             setPreview(null)
-            fetchRequests()
+            fetchCancelRequests()
+            fetchBadges()
         } catch (err) {
             const msg = err instanceof AxiosError ? err.response?.data?.message : null
             toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่')
@@ -384,7 +339,7 @@ const AdminCancelRequests = () => {
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
                 <div className="grid grid-cols-[2fr_1fr_2fr_120px_100px] bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">
                     <div>โปรเจกต์</div>
-                    <div className="text-center">Owner ID</div>
+                    <div className="text-center">เจ้าของโปรเจกต์</div>
                     <div>เหตุผล</div>
                     <div className="text-center">สถานะ</div>
                     <div className="text-center">จัดการ</div>
@@ -415,7 +370,9 @@ const AdminCancelRequests = () => {
                                     <span className="text-[11px] text-muted-foreground">{fmtDate(r.UpdatedAt)}</span>
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
-                                    <span className="text-[13px] text-muted-foreground">#{r.owner_user_id}</span>
+                                    <span className="text-[13px] text-muted-foreground">
+                                        {r.owner ? `${r.owner.first_name} ${r.owner.last_name}`.trim() : `#${r.owner_user_id}`}
+                                    </span>
                                 </div>
                                 <div className="h-14 flex items-center px-2">
                                     <span className="text-[13px] truncate">{r.cancel_reason || '-'}</span>
@@ -425,8 +382,9 @@ const AdminCancelRequests = () => {
                                 </div>
                                 <div className="h-14 flex justify-center items-center">
                                     <button
+                                        data-testid={`cancel-request-detail-btn-${r.id}`}
                                         onClick={(e) => { e.stopPropagation(); openDetail(r) }}
-                                        className="px-3 py-1.5 rounded-lg bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[12px] font-medium text-foreground"
+                                        className="px-3 py-1.5 rounded-lg bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[12px] font-medium text-foreground cursor-pointer"
                                     >
                                         ดูรายละเอียด
                                     </button>

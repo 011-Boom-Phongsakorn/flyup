@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { ChevronLeft, Loader2 } from 'lucide-react'
-import { useMilestoneStore } from '../../store/useMilestoneStore'
+import { useMilestoneStore, type MeetingBrief } from '../../store/useMilestoneStore'
 import PhaseCard from '../../components/pioneer/milestone/PhaseCard'
 import type { EvidenceLink } from '../../components/pioneer/milestone/types'
 
@@ -9,17 +9,27 @@ const MilestonePage = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
 
-  const { milestones, projectTitle, isLoading, isSubmitting, isOpeningVoting, fetchMilestones, submitEvidence, recallEvidence, openVoting } =
+  const { milestones, projectTitle, projectSuspended, isLoading, isSubmitting, isOpeningVoting, fetchMilestones, fetchProjectMeetings, submitEvidence, recallEvidence, openVoting } =
     useMilestoneStore()
 
   const [activePhase, setActivePhase] = useState<number | null>(null)
+  const [meetingsByMilestone, setMeetingsByMilestone] = useState<Record<number, MeetingBrief[]>>({})
 
   useEffect(() => {
     if (!projectId) return
     fetchMilestones(projectId).then(firstActive => {
       if (firstActive !== null) setActivePhase(firstActive)
     })
-  }, [projectId, fetchMilestones])
+    // ดึง meetings ของ project นี้ เพื่อเช็คว่า milestone ไหนนัดแล้ว
+    fetchProjectMeetings(projectId).then(meetings => {
+      const byMilestone: Record<number, MeetingBrief[]> = {}
+      meetings.forEach(m => {
+        if (!byMilestone[m.milestone_id]) byMilestone[m.milestone_id] = []
+        byMilestone[m.milestone_id].push(m)
+      })
+      setMeetingsByMilestone(byMilestone)
+    })
+  }, [projectId, fetchMilestones, fetchProjectMeetings])
 
   const handleSubmit = async (
     milestoneId: number,
@@ -36,7 +46,7 @@ const MilestonePage = () => {
   }
 
   const handleOpenVoting = async (milestoneId: number) => {
-    await openVoting(milestoneId)
+    await openVoting(milestoneId, projectId!)
   }
 
   const completedCount = milestones.filter(m => m.status === 'completed').length
@@ -88,8 +98,9 @@ const MilestonePage = () => {
         {milestones.map((m, idx) => (
           <PhaseCard
             key={m.phase_no}
-            milestone={m}
+            milestone={{ ...m, meetings: m.id ? (meetingsByMilestone[m.id] ?? m.meetings ?? []) : (m.meetings ?? []) }}
             isActive={activePhase === idx}
+            projectSuspended={projectSuspended}
             onToggle={() => setActivePhase(prev => prev === idx ? null : idx)}
             onSubmit={handleSubmit}
             onRecall={handleRecall}

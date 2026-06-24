@@ -1,72 +1,142 @@
+import { useEffect } from 'react'
 import { NavLink, useNavigate } from "react-router"
 import {
     HomeIcon, LogOut, SearchIcon, LayoutDashboard, UserRound,
-    Wallet, Video, Vote, TrendingUp, RotateCcw, MessageSquareWarning
+    Wallet, Video, Vote, TrendingUp, RotateCcw, MessageSquareWarning,
 } from 'lucide-react'
 import { useAuthStore } from '../store/useAuthStore'
+import { useBoosterBadgeStore, type BoosterBadgeCounts } from '../store/useBoosterBadgeStore'
 
-const menu = [
-    { icon: <HomeIcon size={20} />, title: 'หน้าหลัก', path: '/' },
-    { icon: <SearchIcon size={20} />, title: 'สำรวจโปรเจกต์', path: '/projects' },
-    { icon: <LayoutDashboard size={20} />, title: 'แดชบอร์ด', path: '/booster/dashboard' },
-    { icon: <Wallet size={20} />, title: 'การลงทุน', path: '/booster/investments' },
-    { icon: <Video size={20} />, title: 'การประชุม', path: '/booster/meetings' },
-    { icon: <Vote size={20} />, title: 'โหวต', path: '/booster/votes' },
-    { icon: <TrendingUp size={20} />, title: 'กำไร', path: '/booster/profits' },
-    { icon: <RotateCcw size={20} />, title: 'คืนเงิน', path: '/booster/refunds' },
-    { icon: <MessageSquareWarning size={20} />, title: 'คำร้องเรียน', path: '/booster/complaints' },
-    { icon: <UserRound size={20} />, title: 'โปรไฟล์', path: '/booster/profile' },
+type BadgeKey = keyof BoosterBadgeCounts
+
+interface MenuItem {
+    icon: React.ReactNode
+    title: string
+    path: string
+    end?: boolean
+    badge?: BadgeKey
+}
+
+interface MenuSection {
+    label: string
+    items: MenuItem[]
+}
+
+const sections: MenuSection[] = [
+    {
+        label: 'ทั่วไป',
+        items: [
+            { icon: <HomeIcon size={18} />, title: 'หน้าหลัก', path: '/', end: true },
+            { icon: <SearchIcon size={18} />, title: 'สำรวจโปรเจกต์', path: '/projects' },
+            { icon: <LayoutDashboard size={18} />, title: 'แดชบอร์ด', path: '/booster/dashboard', end: true },
+        ],
+    },
+    {
+        label: 'การลงทุน',
+        items: [
+            { icon: <Wallet size={18} />, title: 'การลงทุน', path: '/booster/investments' },
+            { icon: <Vote size={18} />, title: 'โหวต', path: '/booster/votes', badge: 'pending_votes' },
+            { icon: <Video size={18} />, title: 'การประชุม', path: '/booster/meetings', badge: 'upcoming_meetings' },
+        ],
+    },
+    {
+        label: 'การเงิน',
+        items: [
+            { icon: <TrendingUp size={18} />, title: 'กำไร', path: '/booster/profits' },
+            { icon: <RotateCcw size={18} />, title: 'คืนเงิน', path: '/booster/refunds', badge: 'pending_refunds' },
+        ],
+    },
+    {
+        label: 'การจัดการ',
+        items: [
+            { icon: <MessageSquareWarning size={18} />, title: 'คำร้องเรียน', path: '/booster/complaints', badge: 'open_complaints' },
+        ],
+    },
+    {
+        label: 'บัญชี',
+        items: [
+            { icon: <UserRound size={18} />, title: 'โปรไฟล์', path: '/booster/profile' },
+        ],
+    },
 ]
 
 const SidebarBooster = () => {
-    const navigate = useNavigate();
-    const { logout, authUser } = useAuthStore();
+    const navigate = useNavigate()
+    const { logout, authUser } = useAuthStore()
+    const { counts, fetchBadges } = useBoosterBadgeStore()
 
-    const handleLogout = () => {
-        logout();
-        navigate('/');
-    }
+    useEffect(() => {
+        fetchBadges()
+        const interval = setInterval(fetchBadges, 30_000)
+        return () => clearInterval(interval)
+    }, [fetchBadges])
 
-    const profileUrl = authUser?.profile_url || "https://ui-avatars.com/api/?name=" + (authUser?.email || "B");
+    const handleLogout = () => { logout(); navigate('/') }
+
+    const initials = `${(authUser?.first_name as string)?.[0] ?? ''}${(authUser?.last_name as string)?.[0] ?? ''}`.toUpperCase() || '?'
 
     return (
-        <aside className="bg-sidebar w-[230px] min-w-[230px] h-full text-primary-light flex flex-col pt-[10px] border-r border-sidebar-accent">
-            <div className="w-full flex flex-col items-center gap-[10px] pb-4">
-                <img
-                    src={typeof profileUrl === 'string' ? profileUrl : '/flyup-logo.png'}
-                    alt="Profile"
-                    className="h-[56px] w-[56px] rounded-full border-2 border-sidebar-accent object-cover"
-                />
-                <span className="text-sidebar-primary text-[13px] px-[10px] py-[2px] rounded-[20px] bg-sidebar-primary/20 font-medium">
+        <aside className="bg-sidebar w-57.5 flex-none h-full text-primary-light flex flex-col pt-2.5 border-r border-sidebar-accent">
+
+            {/* Profile */}
+            <div className="w-full flex flex-col items-center gap-2 pb-4 px-3">
+                {authUser?.picture ? (
+                    <img src={authUser.picture as string} alt="profile" className="h-11 w-11 rounded-full border-2 border-sidebar-accent object-cover" />
+                ) : (
+                    <div className="h-11 w-11 rounded-full border-2 border-sidebar-accent bg-primary/20 flex items-center justify-center text-primary font-bold text-[15px]">
+                        {initials}
+                    </div>
+                )}
+                <span className="text-sidebar-primary text-[12px] px-2 py-0.5 rounded-full bg-sidebar-primary/20 font-semibold">
                     Booster
                 </span>
             </div>
 
-            <ul className="w-full flex flex-col gap-[4px] p-[10px] flex-1 overflow-y-auto font-kanit">
-                {menu.map((item, idx) => (
-                    <li key={idx}>
-                        <NavLink
-                            to={item.path}
-                            end={item.path === '/booster/dashboard'}
-                            className={({ isActive }) =>
-                                `flex p-[10px] gap-[10px] text-[14px] items-center transition-all duration-200 ${isActive
-                                    ? "text-sidebar-primary bg-sidebar-accent rounded-[12px]"
-                                    : "hover:text-sidebar-primary hover:bg-sidebar-accent hover:rounded-[12px]"
-                                }`
-                            }
-                        >
-                            {item.icon} {item.title}
-                        </NavLink>
-                    </li>
+            {/* Menu */}
+            <div className="flex-1 overflow-y-auto px-2.5 pb-2 flex flex-col gap-4">
+                {sections.map(section => (
+                    <div key={section.label}>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-light/40 px-2.5 mb-1">
+                            {section.label}
+                        </p>
+                        <ul className="flex flex-col gap-0.5">
+                            {section.items.map((m, idx) => {
+                                const count = m.badge ? (counts[m.badge] ?? 0) : 0
+                                return (
+                                    <li key={idx}>
+                                        <NavLink
+                                            to={m.path}
+                                            end={m.end ?? false}
+                                            className={({ isActive }) =>
+                                                `flex p-2.5 gap-2.5 text-[13.5px] items-center transition-all duration-200 cursor-pointer ${isActive
+                                                    ? 'text-sidebar-primary bg-sidebar-accent rounded-[10px]'
+                                                    : 'hover:text-sidebar-primary hover:bg-sidebar-accent hover:rounded-[10px]'
+                                                }`
+                                            }
+                                        >
+                                            {m.icon}
+                                            <span className="flex-1 leading-tight">{m.title}</span>
+                                            {count > 0 && (
+                                                <span className="min-w-5 h-5 bg-error text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                                                    {count > 99 ? '99+' : count}
+                                                </span>
+                                            )}
+                                        </NavLink>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    </div>
                 ))}
-            </ul>
+            </div>
 
-            <div className="w-full p-[10px] border-t border-sidebar-accent">
+            {/* Logout */}
+            <div className="w-full p-2.5 border-t border-sidebar-accent">
                 <button
                     onClick={handleLogout}
-                    className="flex w-full p-[10px] gap-[12px] text-[14px] items-center hover:text-error hover:bg-sidebar-accent hover:rounded-[12px] transition-all duration-200 cursor-pointer"
+                    className="flex w-full p-2.5 gap-3 text-[13.5px] items-center hover:text-error active:text-error hover:bg-sidebar-accent hover:rounded-xl transition-colors cursor-pointer"
                 >
-                    <LogOut size={20} /> ออกจากระบบ
+                    <LogOut size={17} /> ออกจากระบบ
                 </button>
             </div>
         </aside>

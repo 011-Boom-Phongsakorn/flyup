@@ -1,91 +1,36 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router'
 import { Megaphone, Plus, Trash2, Edit2, Check, X } from 'lucide-react'
-import api from '../../services/api'
-import toast from 'react-hot-toast'
+import { useProjectStore } from '../../store/useProjectStore'
 import StepNavigation from '../StepNavigation'
-
-interface ProjectUpdate {
-  id: number
-  title: string
-  body: string
-  visibility: string
-  created_at: string
-}
 
 const Step5Updates = () => {
   const { projectId } = useParams()
-  const [updates, setUpdates] = useState<ProjectUpdate[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const {
+    updates, isLoadingUpdates: isLoading, isSavingUpdate: isSaving,
+    fetchProjectUpdates, addProjectUpdate, editProjectUpdate, deleteProjectUpdate,
+  } = useProjectStore()
   const [form, setForm] = useState({ title: '', content: '' })
-  const [isSaving, setIsSaving] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState({ title: '', content: '' })
 
-  const fetchUpdates = useCallback(async () => {
-    if (!projectId) return
-    try {
-      const res = await api.get(`/projects/${projectId}/updates`)
-      setUpdates(res.data?.data ?? [])
-    } catch {
-      toast.error('โหลดข้อมูลอัปเดตไม่สำเร็จ')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [projectId])
-
   useEffect(() => {
-    fetchUpdates()
-  }, [fetchUpdates])
+    if (projectId) fetchProjectUpdates(projectId)
+  }, [projectId, fetchProjectUpdates])
 
   const handleCreate = async () => {
-    if (!form.title.trim() || !form.content.trim()) {
-      toast.error('กรุณากรอกหัวข้อและเนื้อหา')
-      return
-    }
-    setIsSaving(true)
-    try {
-      await api.post(`/pioneer/projects/${projectId}/updates`, {
-        title: form.title,
-        content: form.content,
-        visibility: 'public',
-      })
-      toast.success('เพิ่มอัปเดตสำเร็จ')
-      setForm({ title: '', content: '' })
-      await fetchUpdates()
-    } catch {
-      toast.error('เพิ่มอัปเดตไม่สำเร็จ')
-    } finally {
-      setIsSaving(false)
-    }
+    if (!projectId) return
+    const ok = await addProjectUpdate(projectId, form)
+    if (ok) setForm({ title: '', content: '' })
   }
 
   const handleEdit = async (id: number) => {
-    if (!editForm.title.trim() || !editForm.content.trim()) {
-      toast.error('กรุณากรอกหัวข้อและเนื้อหา')
-      return
-    }
-    try {
-      await api.patch(`/pioneer/projects/updates/${id}`, {
-        title: editForm.title,
-        content: editForm.content,
-      })
-      setUpdates(prev => prev.map(u => u.id === id ? { ...u, title: editForm.title, body: editForm.content } : u))
-      setEditingId(null)
-      toast.success('แก้ไขอัปเดตสำเร็จ')
-    } catch {
-      toast.error('แก้ไขไม่สำเร็จ')
-    }
+    const ok = await editProjectUpdate(id, editForm)
+    if (ok) setEditingId(null)
   }
 
   const handleDelete = async (id: number) => {
-    try {
-      await api.delete(`/pioneer/projects/updates/${id}`)
-      setUpdates(prev => prev.filter(u => u.id !== id))
-      toast.success('ลบอัปเดตสำเร็จ')
-    } catch {
-      toast.error('ลบไม่สำเร็จ')
-    }
+    await deleteProjectUpdate(id)
   }
 
   return (
@@ -103,6 +48,7 @@ const Step5Updates = () => {
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground">หัวข้อ <span className="text-error">*</span></label>
           <input
+            data-testid="update-title-input"
             value={form.title}
             onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
             placeholder="หัวข้ออัปเดต เช่น 'ความคืบหน้าสัปดาห์ที่ 1'"
@@ -113,6 +59,7 @@ const Step5Updates = () => {
         <div className="flex flex-col gap-[6px]">
           <label className="text-[13px] font-medium text-foreground">เนื้อหา <span className="text-error">*</span></label>
           <textarea
+            data-testid="update-content-input"
             value={form.content}
             onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
             onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }}
@@ -123,6 +70,7 @@ const Step5Updates = () => {
         </div>
 
         <button
+          data-testid="update-add-btn"
           onClick={handleCreate}
           disabled={isSaving}
           className="self-start flex items-center gap-[6px] bg-primary hover:bg-primary-hover text-white px-[16px] py-[9px] rounded-[8px] text-[14px] font-medium transition-colors disabled:opacity-50"
@@ -162,12 +110,14 @@ const Step5Updates = () => {
                   />
                   <div className="flex gap-[10px]">
                     <button
+                      data-testid={`update-edit-save-btn-${u.id}`}
                       onClick={() => handleEdit(u.id)}
                       className="flex items-center gap-[4px] text-[13px] text-green-600 hover:text-green-700 font-medium"
                     >
                       <Check size={14} /> บันทึก
                     </button>
                     <button
+                      data-testid={`update-edit-cancel-btn-${u.id}`}
                       onClick={() => setEditingId(null)}
                       className="flex items-center gap-[4px] text-[13px] text-muted-foreground hover:text-foreground"
                     >
@@ -184,12 +134,14 @@ const Step5Updates = () => {
                     <h4 className="font-semibold text-foreground text-[15px]">{u.title}</h4>
                     <div className="flex gap-[8px] shrink-0">
                       <button
+                        data-testid={`update-edit-open-btn-${u.id}`}
                         onClick={() => { setEditingId(u.id); setEditForm({ title: u.title, content: u.body }) }}
                         className="text-muted-foreground hover:text-primary transition-colors"
                       >
                         <Edit2 size={15} />
                       </button>
                       <button
+                        data-testid={`update-delete-btn-${u.id}`}
                         onClick={() => handleDelete(u.id)}
                         className="text-muted-foreground hover:text-error transition-colors"
                       >

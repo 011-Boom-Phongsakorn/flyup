@@ -6,9 +6,7 @@ import type { PublicProject } from './usePublicProjectStore';
 
 export interface BoosterMeeting {
   id: number;
-  project_id: number;
-  milestone_id: number | null;
-  topic: string;
+  milestone_id: number;
   about?: string;
   meeting_type?: string;
   place?: string;
@@ -17,11 +15,16 @@ export interface BoosterMeeting {
   link: string | null;
   status: string;
   created_at: string;
-  project?: PublicProject;
+  project?: {
+    id: number;
+    title: string;
+    cover_image?: string | null;
+  };
   milestone?: {
     id: number;
     title: string;
     phase_no: number;
+    project_id: number;
   };
 }
 
@@ -40,6 +43,9 @@ export interface BoosterInvestment {
   slip_image: string | null;
   payment_status: string;
   paid_at: string | null;
+  refund_amount?: number;
+  refund_note?: string;
+  refunded_at?: string | null;
   created_at: string;
   updated_at: string;
   project?: PublicProject | null;
@@ -52,20 +58,38 @@ export interface BoosterInvestment {
   }[];
 }
 
+export interface ProfitPayout {
+  id: number;
+  project_id: number;
+  project_title: string;
+  cover_image?: string | null;
+  quarter_no: number;
+  amount: number;
+  share_pct: number;
+  status: 'pending' | 'confirmed';
+  transfer_ref: string;
+  confirmed_at?: string;
+  created_at: string;
+}
+
 // ─── Store Interface ─────────────────────────────────────────────────────────
 
 interface BoosterStoreState {
   investments: BoosterInvestment[];
   currentInvestment: BoosterInvestment | null;
   boosterMeetings: BoosterMeeting[];
+  profitPayouts: ProfitPayout[];
   isLoading: boolean;
   isDetailLoading: boolean;
+  isLoadingProfitPayouts: boolean;
 
   fetchMyInvestments: () => Promise<void>;
   fetchBoosterMeetings: () => Promise<void>;
   fetchInvestmentById: (id: number) => Promise<void>;
+  fetchProfitPayouts: () => Promise<void>;
   requestRefund: (investmentId: number, reason: string) => Promise<boolean>;
-  voteOnMilestone: (milestoneId: number, payload: { vote: 'approve' | 'reject', comment?: string }) => Promise<boolean>;
+  voteOnMilestone: (milestoneId: number, payload: { choice: 'approve' | 'reject', comment?: string }) => Promise<boolean | 'already_voted'>;
+  getMyVote: (milestoneId: number) => Promise<{ choice: string; comment?: string } | null>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -74,12 +98,14 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
   investments: [],
   currentInvestment: null,
   boosterMeetings: [],
+  profitPayouts: [],
   isLoading: false,
   isDetailLoading: false,
+  isLoadingProfitPayouts: false,
 
   fetchBoosterMeetings: async () => {
     try {
-      const res = await api.get('/me/meetings');
+      const res = await api.get('/me/investor-meetings');
       set({ boosterMeetings: res.data?.data ?? [] });
     } catch (error) {
       console.error('fetchBoosterMeetings:', error);
@@ -93,20 +119,29 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
       const res = await api.get('/investments');
       const data = res.data?.data ?? res.data?.investments ?? [];
       
-      let investmentsArray = Array.isArray(data) ? data.map(inv => ({
+      type RawInvestment = BoosterInvestment & { total_amount?: number; CreatedAt?: string; vat_amount?: number };
+      let investmentsArray = Array.isArray(data) ? data.map((inv: RawInvestment) => ({
         ...inv,
         amount: inv.amount ?? inv.total_amount ?? 0,
+        created_at: inv.created_at ?? inv.CreatedAt ?? '',
+        vat: inv.vat ?? inv.vat_amount ?? 0,
       })) : [];
 
       try {
         const myProjectsRes = await api.get('/investments/my-projects');
-        const myProjects = myProjectsRes.data?.data ?? [];
-        const projectMap = new Map<number, PublicProject>();
-        myProjects.forEach((p: PublicProject) => projectMap.set(p.id, p));
+        const myProjects: Array<{ project_id: number; title: string; cover_image?: string | null; profit_share_pct?: number }> = myProjectsRes.data?.data ?? [];
+        const projectMap = new Map<number, { title: string; cover_image?: string | null; profit_share_pct?: number }>();
+        myProjects.forEach((p) => projectMap.set(p.project_id, p));
 
         investmentsArray = investmentsArray.map(inv => {
-          if (!inv.project && inv.project_id) {
-            inv.project = projectMap.get(inv.project_id) ?? null;
+          const meta = projectMap.get(inv.project_id);
+          if (meta) {
+            inv.project = {
+              ...(inv.project ?? {}),
+              title: meta.title,
+              cover_image: meta.cover_image ?? null,
+              profit_share_pct: meta.profit_share_pct ?? inv.project?.profit_share_pct ?? 0,
+            } as PublicProject;
           }
           return inv;
         });
@@ -127,11 +162,13 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
     set({ isDetailLoading: true, currentInvestment: null });
     try {
       const res = await api.get(`/investments/${id}`);
-      let data = res.data?.data ?? res.data?.investment ?? res.data;
+      let data = res.data?.data?.investment ?? res.data?.data ?? res.data?.investment ?? res.data;
       if (data) {
         data = {
           ...data,
           amount: data.amount ?? data.total_amount ?? 0,
+          created_at: data.created_at ?? data.CreatedAt ?? '',
+          vat: data.vat ?? data.vat_amount ?? 0,
         };
       }
       set({ currentInvestment: data });
@@ -143,9 +180,22 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
     }
   },
 
+  fetchProfitPayouts: async () => {
+    set({ isLoadingProfitPayouts: true });
+    try {
+      const res = await api.get('/me/profit-payouts');
+      set({ profitPayouts: res.data?.data ?? [] });
+    } catch (error) {
+      console.error('fetchProfitPayouts:', error);
+      set({ profitPayouts: [] });
+    } finally {
+      set({ isLoadingProfitPayouts: false });
+    }
+  },
+
   requestRefund: async (investmentId: number, reason: string) => {
     try {
-      await api.post(`/investments/${investmentId}/refund`, { reason });
+      await api.post(`/investments/${investmentId}/refund`, { note: reason });
       return true;
     } catch (error) {
       console.error('requestRefund:', error);
@@ -153,13 +203,24 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
     }
   },
 
-  voteOnMilestone: async (milestoneId: number, payload: { vote: 'approve' | 'reject', comment?: string }) => {
+  voteOnMilestone: async (milestoneId: number, payload: { choice: 'approve' | 'reject', comment?: string }) => {
     try {
       await api.post(`/investments/milestones/${milestoneId}/vote`, payload);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? '';
+      if (msg === 'you have already voted') return 'already_voted' as const;
       console.error('voteOnMilestone:', error);
       return false;
+    }
+  },
+
+  getMyVote: async (milestoneId: number) => {
+    try {
+      const res = await api.get(`/investments/milestones/${milestoneId}/my-vote`);
+      return res.data?.data ?? null;
+    } catch {
+      return null;
     }
   },
 }));

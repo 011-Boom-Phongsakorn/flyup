@@ -21,9 +21,10 @@ const PioneerMeetings = () => {
 
   const [filter, setFilter] = useState<FilterMode>('all');
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
+  const [projectsReady, setProjectsReady] = useState(false);
 
   useEffect(() => {
-    fetchMyProjects();
+    fetchMyProjects().then(() => setProjectsReady(true));
   }, [fetchMyProjects]);
 
   const eligibleProjects = useMemo(
@@ -32,15 +33,13 @@ const PioneerMeetings = () => {
   );
 
   useEffect(() => {
+    if (!projectsReady) return;
     fetchEligibleMilestones(eligibleProjects);
-  }, [eligibleProjects, fetchEligibleMilestones]);
-
-  useEffect(() => {
-    fetchMyMeetings(eligibleProjects, filter);
-  }, [eligibleProjects, filter, fetchMyMeetings]);
+    fetchMyMeetings(eligibleProjects);
+  }, [projectsReady, eligibleProjects, filter, fetchEligibleMilestones, fetchMyMeetings]);
 
   const handleCreated = () => {
-    fetchMyMeetings(eligibleProjects, filter);
+    fetchMyMeetings(eligibleProjects);
   };
 
   const handleEdit = (m: Meeting) => {
@@ -62,7 +61,7 @@ const PioneerMeetings = () => {
     if (result.isConfirmed) {
       const ok = await cancelMeeting(m.id);
       if (ok) {
-        fetchMyMeetings(eligibleProjects, filter);
+        fetchMyMeetings(eligibleProjects);
       }
     }
   };
@@ -98,7 +97,7 @@ const PioneerMeetings = () => {
           onClose={() => setEditingMeeting(null)}
           onSaved={() => {
             setEditingMeeting(null);
-            fetchMyMeetings(eligibleProjects, filter);
+            fetchMyMeetings(eligibleProjects);
           }}
         />
       )}

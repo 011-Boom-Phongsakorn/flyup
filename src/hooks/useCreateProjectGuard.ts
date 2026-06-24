@@ -12,7 +12,7 @@ const useCreateProjectGuard = () => {
         const studentApproved =
             authUser?.student_card_verification?.status === 'approved' &&
             authUser?.id_card_verification?.status === 'approved'
-        const hasBank = !!authUser?.bank_account?.id
+        const hasBank = (authUser?.bank_accounts?.length ?? 0) > 0
 
         if (!studentApproved || !hasBank) {
             const missing: string[] = []

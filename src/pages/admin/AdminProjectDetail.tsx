@@ -13,6 +13,7 @@ import {
 import toast from "react-hot-toast"
 import { AxiosError } from "axios"
 import { useAdminStore } from "../../store/useAdminStore"
+import { useAdminBadgeStore } from "../../store/useAdminBadgeStore"
 import PreviewStory from "../../components/preview/PreviewStory"
 import { PreviewUpdate, PreviewQuestion, PreviewComment } from "../../components/preview/PreviewMisc"
 import MilestoneTab from "../../components/admin/MilestoneTab"
@@ -37,6 +38,8 @@ const AdminProjectDetail = () => {
         rejectProject,
     } = useAdminStore()
 
+    const fetchBadges = useAdminBadgeStore((s) => s.fetchBadges)
+
     const [actionLoading, setActionLoading] = useState<"approve" | "reject" | null>(null)
     const [selectedMedia, setSelectedMedia] = useState(0)
     const [activeTab, setActiveTab] = useState<Tab>("story")
@@ -57,6 +60,7 @@ const AdminProjectDetail = () => {
                 await rejectProject(project.id)
                 toast.success("ปฏิเสธโปรเจกต์แล้ว")
             }
+            fetchBadges()
             navigate("/admin/projects-approval")
         } catch (error) {
             const msg = error instanceof AxiosError ? error.response?.data?.message : null
@@ -137,32 +141,34 @@ const AdminProjectDetail = () => {
                     กลับ
                 </button>
 
-                <div className="flex items-center gap-[8px]">
-                    <button
-                        onClick={() => handleAction("reject")}
-                        disabled={!!actionLoading}
-                        className="flex items-center gap-[6px] px-[16px] py-[8px] rounded-[10px] bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors disabled:opacity-50 text-[13px] font-medium cursor-pointer"
-                    >
-                        {actionLoading === "reject" ? (
-                            <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                            <XCircle size={14} />
-                        )}
-                        ปฏิเสธ
-                    </button>
-                    <button
-                        onClick={() => handleAction("approve")}
-                        disabled={!!actionLoading}
-                        className="flex items-center gap-[6px] px-[16px] py-[8px] rounded-[10px] bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 text-[13px] font-medium cursor-pointer"
-                    >
-                        {actionLoading === "approve" ? (
-                            <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                            <CheckCircle size={14} />
-                        )}
-                        อนุมัติ
-                    </button>
-                </div>
+                {project?.state === "pending_review" && (
+                    <div className="flex items-center gap-[8px]">
+                        <button
+                            onClick={() => handleAction("reject")}
+                            disabled={!!actionLoading}
+                            className="flex items-center gap-[6px] px-[16px] py-[8px] rounded-[10px] bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors disabled:opacity-50 text-[13px] font-medium cursor-pointer"
+                        >
+                            {actionLoading === "reject" ? (
+                                <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                                <XCircle size={14} />
+                            )}
+                            ปฏิเสธ
+                        </button>
+                        <button
+                            onClick={() => handleAction("approve")}
+                            disabled={!!actionLoading}
+                            className="flex items-center gap-[6px] px-[16px] py-[8px] rounded-[10px] bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 text-[13px] font-medium cursor-pointer"
+                        >
+                            {actionLoading === "approve" ? (
+                                <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                                <CheckCircle size={14} />
+                            )}
+                            อนุมัติ
+                        </button>
+                    </div>
+                )}
             </div>
 
             <main className="max-w-7xl mx-auto px-[20px] pt-[32px]">
@@ -289,7 +295,7 @@ const AdminProjectDetail = () => {
                     <div className="w-full lg:w-[380px] flex flex-col gap-[20px]">
                         {/* Funding Card */}
                         <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-primary to-purple-300" />
+                            <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-pink-500 to-purple-600" />
 
                             <h2 className="text-[32px] font-bold text-primary tracking-tight">
                                 ฿{fmt(project.funding_goal)}

@@ -1,10 +1,9 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useProjectStore, type Milestone } from '../../store/useProjectStore'
 import { Plus, Trash2, Upload, Video, X, Loader2, ChevronRight, ChevronLeft } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
 import toast from 'react-hot-toast'
 import { useParams, useSearchParams } from 'react-router'
-import api from '../../services/api'
 
 const Step3Milestone = () => {
   const { projectId } = useParams()
@@ -19,12 +18,40 @@ const Step3Milestone = () => {
     )
   )
 
+  const storageKey = `milestone-touched-${projectId}`
+
+  const [touchedPhases, setTouchedPhases] = useState<Set<number>>(() => {
+    try {
+      const stored = sessionStorage.getItem(`milestone-touched-${projectId}`)
+      return stored ? new Set<number>(JSON.parse(stored)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
+
+  const markTouched = (idx: number) => {
+    setTouchedPhases(prev => {
+      const next = new Set(prev).add(idx)
+      try { sessionStorage.setItem(storageKey, JSON.stringify([...next])) } catch { /* ignore */ }
+      return next
+    })
+  }
+
+  const isPhaseIncomplete = (m: Milestone) =>
+    !m.title?.trim() || !m.description?.trim() || !m.duration || m.criteria.every(c => !c.trim())
+
+  const handlePhaseChange = (newIdx: number) => {
+    markTouched(activePhase)
+    savePhaseIfChanged(activePhase)
+    setActivePhase(newIdx)
+  }
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
   const criteriaRefs = useRef<(HTMLInputElement | null)[]>([])
   // ✅ ดึง currentProject มาก่อน แล้วค่อยเข้าถึง milestones
-  const { currentProject, updateMilestone, saveMilestonePhase, setSaveStatus } = useProjectStore()
+  const { currentProject, updateMilestone, saveMilestonePhase, setSaveStatus, uploadFile } = useProjectStore()
 
   const triggerSaved = () => {
     setSaveStatus('saved');
@@ -97,17 +124,8 @@ const Step3Milestone = () => {
 
   // อัปโหลดไฟล์เดียวผ่าน /upload (key: file) — คืน server URL
   const uploadOneFile = async (file: File): Promise<string | null> => {
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000,
-      })
-      return res.data?.data?.url ?? null
-    } catch {
-      return null
-    }
+    const uploaded = await uploadFile(file)
+    return uploaded?.url ?? null
   }
 
   // แทนที่ blob URL ด้วย server URL ใน milestone files
@@ -273,20 +291,27 @@ const Step3Milestone = () => {
             (ใช้วนลูปแสดง Phase 1 ถึง 4 เรียงต่อกันตรงกลางพร้อมเส้นใต้ตอน Active)
             ========================================= */}
         <div className="flex justify-center items-center space-x-6 md:space-x-10 border-b border-border pb-[10px]">
-          {[1, 2, 3, 4].map((phase, idx) => (
-            <button
-              key={phase}
-              onClick={() => setActivePhase(idx)}
-              className={`pb-2 text-[14px] md:text-[15px] font-semibold transition-all relative ${activePhase === idx ? 'text-primary' : 'text-muted-foreground hover:text-foreground cursor-pointer'
+          {[1, 2, 3, 4].map((phase, idx) => {
+            const isTouched = touchedPhases.has(idx)
+            const incomplete = isPhaseIncomplete(currentProject.milestones[idx])
+            const showError = isTouched && incomplete
+            return (
+              <button
+                key={phase}
+                onClick={() => handlePhaseChange(idx)}
+                className={`pb-2 text-[14px] md:text-[15px] font-semibold transition-all relative cursor-pointer ${
+                  activePhase === idx
+                    ? showError ? 'text-red-500' : 'text-primary'
+                    : showError ? 'text-red-400 hover:text-red-500' : 'text-muted-foreground hover:text-foreground'
                 }`}
-            >
-              Phase {phase}
-              {/* แสดงเส้นใต้แถบสีม่วง (primary) เมื่อ Tab ถูกคลิก */}
-              {activePhase === idx && (
-                <div className="absolute -bottom-[11px] left-0 w-full h-[2px] bg-primary" />
-              )}
-            </button>
-          ))}
+              >
+                Phase {phase}
+                {activePhase === idx && (
+                  <div className={`absolute -bottom-2.75 left-0 w-full h-0.5 ${showError ? 'bg-red-500' : 'bg-primary'}`} />
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {/* =========================================
@@ -590,7 +615,7 @@ const Step3Milestone = () => {
             {activePhase > 0 ? (
               <button
                 type="button"
-                onClick={() => setActivePhase(activePhase - 1)}
+                onClick={() => handlePhaseChange(activePhase - 1)}
                 className="flex items-center gap-[6px] px-[20px] py-[10px] border border-border text-foreground rounded-[10px] text-[14px] font-medium hover:bg-muted transition-all cursor-pointer"
               >
                 <ChevronLeft size={16} />
@@ -600,7 +625,7 @@ const Step3Milestone = () => {
             {activePhase < 3 && (
               <button
                 type="button"
-                onClick={() => setActivePhase(activePhase + 1)}
+                onClick={() => handlePhaseChange(activePhase + 1)}
                 className="flex items-center gap-[6px] px-[20px] py-[10px] bg-primary text-white rounded-[10px] text-[14px] font-medium hover:bg-primary/90 transition-all cursor-pointer"
               >
                 Phase {activePhase + 2} ต่อไป

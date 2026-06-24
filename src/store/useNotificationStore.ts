@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import api from '../services/api'
+import toast from 'react-hot-toast'
+import { useAuthStore } from './useAuthStore'
 
 export interface Notification {
     id: number
@@ -22,7 +24,17 @@ interface NotificationStore {
     fetchNotifications: () => Promise<void>
     markAsRead: (id: number) => Promise<void>
     markAllAsRead: () => Promise<void>
+    clearUnreadCount: () => void
     addNotification: (notif: Notification) => void
+    fetchNotificationPreferences: () => Promise<Record<string, boolean> | null>
+    updateNotificationPreferences: (prefs: Record<string, boolean>) => Promise<boolean>
+}
+
+function safeNotificationPrefs(raw: unknown): Record<string, boolean> | null {
+    if (raw && typeof raw === 'object' && !Array.isArray(raw) && Object.keys(raw).length > 0) {
+        return raw as Record<string, boolean>
+    }
+    return null
 }
 
 export const useNotificationStore = create<NotificationStore>((set) => ({
@@ -74,6 +86,10 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
         }
     },
 
+    clearUnreadCount: () => {
+        set({ unread: 0 })
+    },
+
     addNotification: (notif: Notification) => {
         set((state) => {
             const exists = state.notifications.some((n) => n.id === notif.id)
@@ -84,5 +100,33 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
                 total: state.total + 1,
             }
         })
+    },
+
+    fetchNotificationPreferences: async () => {
+        try {
+            const res = await api.get('/user/notification-preferences')
+            const prefs = safeNotificationPrefs(res.data?.data)
+            if (prefs) {
+                useAuthStore.setState((state) => ({
+                    authUser: state.authUser ? { ...state.authUser, notification_preferences: prefs } : state.authUser,
+                }))
+            }
+            return prefs
+        } catch {
+            return null
+        }
+    },
+
+    updateNotificationPreferences: async (prefs) => {
+        try {
+            await api.patch('/user/notification-preferences', { notification_preferences: prefs })
+            useAuthStore.setState((state) => ({
+                authUser: state.authUser ? { ...state.authUser, notification_preferences: prefs } : state.authUser,
+            }))
+            return true
+        } catch {
+            toast.error('บันทึกไม่สำเร็จ กรุณาลองใหม่')
+            return false
+        }
     },
 }))

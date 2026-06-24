@@ -414,16 +414,17 @@ function MilestoneCard({
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function MilestoneDetail() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
-  const { currentPublicProject, isDetailLoading, fetchPublicProjectById } = usePublicProjectStore();
+  const { currentPublicProject, isDetailLoading, fetchPublicProjectBySlug, fetchPublicProjectById } = usePublicProjectStore();
 
   useEffect(() => {
-    if (id) {
-      fetchPublicProjectById(Number(id));
+    if (slug) {
+      if (/^\d+$/.test(slug)) fetchPublicProjectById(Number(slug));
+      else fetchPublicProjectBySlug(slug);
       window.scrollTo(0, 0);
     }
-  }, [id, fetchPublicProjectById]);
+  }, [slug, fetchPublicProjectBySlug, fetchPublicProjectById]);
 
   const project = currentPublicProject;
   const milestones = (project?.milestones ?? []).slice().sort((a, b) => a.phase_no - b.phase_no);
@@ -443,7 +444,7 @@ export default function MilestoneDetail() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center mt-[100px] gap-4">
         <p className="text-gray-500">ไม่พบข้อมูลโปรเจกต์</p>
-        <button onClick={() => navigate("/projects")} className="text-primary hover:underline flex items-center gap-2 text-sm">
+        <button onClick={() => navigate("/projects")} className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors">
           <ArrowLeft size={16} /> กลับไปหน้าโปรเจกต์
         </button>
       </div>
@@ -456,8 +457,8 @@ export default function MilestoneDetail() {
 
         {/* Back + Breadcrumb */}
         <Link
-          to={`/projects/${id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium mb-6 group transition-colors"
+          to={`/projects/${slug}`}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-medium mb-6 group transition-colors"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
           กลับไปหน้าโปรเจกต์
@@ -489,7 +490,7 @@ export default function MilestoneDetail() {
               </div>
               <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-primary to-emerald-500 rounded-full transition-all duration-1000 ease-out"
+                  className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all duration-1000 ease-out"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
@@ -526,7 +527,7 @@ export default function MilestoneDetail() {
                 fundingGoal={project.funding_goal}
                 campaignDuration={project.duration_days}
                 fundingAt={project.funding_at}
-                defaultOpen={isActive(m.status) || idx === 0}
+                defaultOpen={false}
               />
             ))
           ) : (
@@ -540,7 +541,7 @@ export default function MilestoneDetail() {
         {/* CTA at bottom */}
         <div className="mt-8 flex justify-start">
           <Link
-            to={`/projects/${id}`}
+            to={`/projects/${slug}`}
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors shadow-md shadow-primary/10"
           >
             <ArrowLeft size={16} />

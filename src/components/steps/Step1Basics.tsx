@@ -4,11 +4,13 @@ import { ChevronDown, X, ImageIcon, Upload, FileImage, Video, Loader2 } from "lu
 import StepNavigation from "../StepNavigation";
 import { useProjectStore, type Project } from "../../store/useProjectStore";
 import toast from "react-hot-toast";
-import api from "../../services/api";
 
 const Step1Basics = () => {
   const { projectId } = useParams();
-  const { currentProject, updateProjectInfo, updateProject, setSaveStatus } = useProjectStore()
+  const {
+    currentProject, updateProjectInfo, updateProject, setSaveStatus,
+    fetchCategories, uploadFile, attachProjectMedia, fetchProjectMedia, deleteProjectMedia,
+  } = useProjectStore()
 
   const [isOpen, setIsOpen] = useState(false)
   const [activeField, setActiveField] = useState<string | null>(null)
@@ -70,10 +72,8 @@ const Step1Basics = () => {
   }, [localData.description]);
 
   useEffect(() => {
-    api.get('/categories').then(res => {
-      setAllCategories(res.data?.data ?? []);
-    }).catch(() => {});
-  }, []);
+    fetchCategories().then(setAllCategories);
+  }, [fetchCategories]);
 
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const coverImageRef = useRef<HTMLInputElement>(null);
@@ -107,23 +107,16 @@ const Step1Basics = () => {
     if (!projectId) return null;
     try {
       // Step 1: upload file to Cloudinary via /upload
-      const formData = new FormData();
-      formData.append('file', file);
-      const uploadRes = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000,
-      });
-      const { url, type } = uploadRes.data?.data ?? {};
-      if (!url || !type) return null;
+      const uploaded = await uploadFile(file);
+      if (!uploaded?.url || !uploaded.type) return null;
 
       // Step 2: attach uploaded URL to project
-      await api.post(`/pioneer/projects/${projectId}/media`, [{ url, type: [type] }]);
+      await attachProjectMedia(projectId, uploaded.url, uploaded.type);
 
       // Step 3: fetch media list to get the DB id of the newly attached item
-      const mediaRes = await api.get(`/pioneer/projects/${projectId}/media`);
-      const mediaList: { id: number; url: string }[] = mediaRes.data?.data ?? [];
-      const matched = mediaList.find((m) => m.url === url);
-      return { url, mediaId: matched?.id };
+      const mediaList = await fetchProjectMedia(projectId);
+      const matched = mediaList.find((m) => m.url === uploaded.url);
+      return { url: uploaded.url, mediaId: matched?.id };
     } catch (error) {
       console.error('upload media failed:', error);
       return null;
@@ -146,13 +139,8 @@ const Step1Basics = () => {
     updateProjectInfo({ coverImage: blobUrl });
     toast.loading('กำลังอัปโหลดรูปปก...', { id: 'upload-cover' });
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const uploadRes = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000,
-      });
-      const { url } = uploadRes.data?.data ?? {};
+      const uploaded = await uploadFile(file);
+      const url = uploaded?.url;
       if (!url) throw new Error('no url');
       URL.revokeObjectURL(blobUrl);
       updateProjectInfo({ coverImage: url });
@@ -275,7 +263,7 @@ const Step1Basics = () => {
     updateProjectInfo({ files: currentImages.filter((_, i) => i !== index) });
 
     if (targetImage.id) {
-      await api.delete(`/pioneer/projects/media/${targetImage.id}`).catch(console.error);
+      await deleteProjectMedia(targetImage.id).catch(console.error);
     }
     triggerSaved();
   };
@@ -286,7 +274,7 @@ const Step1Basics = () => {
     if (videoInputRef.current) videoInputRef.current.value = "";
 
     if (vid?.id) {
-      await api.delete(`/pioneer/projects/media/${vid.id}`).catch(console.error);
+      await deleteProjectMedia(vid.id).catch(console.error);
     }
     triggerSaved();
   };
@@ -299,6 +287,7 @@ const Step1Basics = () => {
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">ชื่อโปรเจกต์ <span className="text-error">*</span></label>
             <input
+              data-testid="basics-title-input"
               value={localData.title}
               onBlur={() => !isLocked && handleAutoSave('title', localData.title)}
               onChange={(e) => !isLocked && setLocalData({ ...localData, title: e.target.value })}
@@ -311,6 +300,7 @@ const Step1Basics = () => {
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">คำอธิบาย <span className="text-error">*</span></label>
             <textarea
+              data-testid="basics-description-input"
               ref={descriptionRef}
               value={localData.description}
               onBlur={() => handleAutoSave('description', localData.description)}
@@ -328,6 +318,7 @@ const Step1Basics = () => {
             <label className="text-[14px] text-foreground">หมวดหมู่ <span className="text-error">*</span></label>
             <button
               type="button"
+              data-testid="basics-category-dropdown-btn"
               onClick={() => setIsOpen(!isOpen)}
               className={`flex justify-between items-center w-full h-[38px] px-[12px] rounded-[6px] bg-background border transition-all duration-200 cursor-pointer ${isOpen ? 'border-primary' : 'border-border hover:border-primary/50'}`}>
               <span className={`text-[13px] ${localData.category ? 'text-foreground' : 'text-muted-foreground'}`}>{localData.category || 'เลือกหมวดหมู่'}</span>
@@ -343,6 +334,7 @@ const Step1Basics = () => {
                   {allCategories.map((cat) => (
                     <li
                       key={cat.id}
+                      data-testid={`basics-category-option-${cat.id}`}
                       onClick={() => {
                         setLocalData({ ...localData, category: cat.name, categoryId: cat.id });
                         updateProjectInfo({ category: cat.name, categoryId: cat.id });
@@ -376,6 +368,7 @@ const Step1Basics = () => {
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">เป้าหมายเงินทุน (บาท) <span className="text-error">*</span></label>
             <input
+              data-testid="basics-funding-goal-input"
               type="text"
               value={numVal('fundingGoal', localData.fundingGoal)}
               onFocus={() => setActiveField('fundingGoal')}
@@ -403,6 +396,7 @@ const Step1Basics = () => {
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">ระยะเวลาโปรเจกต์ (เดือน) <span className="text-error">*</span></label>
             <input
+              data-testid="basics-project-duration-input"
               type="text"
               value={numVal('projectDuration', localData.projectDuration)}
               onFocus={() => setActiveField('projectDuration')}
@@ -425,6 +419,7 @@ const Step1Basics = () => {
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">Soft Cap (ได้รับทุนแม้ไม่ถึงเป้า) <span className="text-error">*</span></label>
               <input
+                data-testid="basics-soft-cap-input"
                 type="text"
                 value={numVal('softCap', localData.softCap)}
                 onFocus={() => setActiveField('softCap')}
@@ -453,6 +448,7 @@ const Step1Basics = () => {
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">ระยะเวลาระดมทุน (1-60 วัน) <span className="text-error">*</span></label>
               <input
+                data-testid="basics-campaign-duration-input"
                 type="text"
                 value={numVal('campaignDuration', localData.campaignDuration)}
                 onFocus={() => setActiveField('campaignDuration')}
@@ -475,6 +471,7 @@ const Step1Basics = () => {
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">ส่วนแบ่งกำไร (%) <span className="text-error">*</span></label>
               <input
+                data-testid="basics-revenue-share-input"
                 type="text"
                 value={numVal('revenueShare', localData.revenueShare)}
                 onFocus={() => setActiveField('revenueShare')}
@@ -524,6 +521,7 @@ const Step1Basics = () => {
               <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border">
                 <img src={currentProject.coverImage} alt="cover" className="w-full h-full object-cover" />
                 <button
+                  data-testid="basics-cover-image-remove-btn"
                   onClick={removeCoverImage}
                   className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors cursor-pointer"
                 >
@@ -532,10 +530,12 @@ const Step1Basics = () => {
               </div>
             ) : (
               <div
+                data-testid="basics-cover-image-dropzone"
                 onClick={() => coverImageRef.current?.click()}
                 className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer"
               >
                 <input
+                  data-testid="basics-cover-image-input"
                   type="file"
                   hidden
                   ref={coverImageRef}
@@ -553,12 +553,14 @@ const Step1Basics = () => {
 
           {/* รูปภาพประกอบ */}
           <div className="space-y-3">
-            <label className="text-foreground text-[14px] flex items-center gap-[10px]"><FileImage size={16} />รูปภาพประกอบ <span className="text-error">*</span></label>
+            <label className="text-foreground text-[14px] flex items-center gap-[10px]"><FileImage size={16} />รูปภาพประกอบ (สูงสุด 5 รูป) <span className="text-error">*</span></label>
             <div
+              data-testid="basics-additional-images-dropzone"
               onClick={() => additionalImagesRef.current?.click()}
               className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer group"
             >
               <input
+                data-testid="basics-additional-images-input"
                 type="file"
                 multiple
                 hidden
@@ -573,7 +575,6 @@ const Step1Basics = () => {
               </div>
             </div>
 
-            <p className="flex items-center gap-[10px] text-[14px] text-foreground"><ImageIcon size={14} /> รูปภาพเพิ่มเติม (สูงสุด 5 รูป)</p>
             {/* Chip แสดงไฟล์ */}
             <div className="flex flex-wrap gap-2">
               {currentProject?.files?.map((f, i) => {
@@ -591,6 +592,7 @@ const Step1Basics = () => {
                     <span className={`max-w-[150px] truncate ${uploading ? 'text-muted-foreground' : ''}`}>{f.name}</span>
                     {!uploading && (
                       <button
+                        data-testid={`basics-additional-image-remove-btn-${i}`}
                         onClick={(e) => { e.stopPropagation(); removeImage(i); }}
                         className="ml-2 hover:text-error cursor-pointer">
                         <X size={14} />
@@ -608,10 +610,12 @@ const Step1Basics = () => {
               <Video size={16} /> ไฟล์วิดีโอ (ไม่บังคับ)
             </label>
             <div
+              data-testid="basics-video-dropzone"
               onClick={() => videoInputRef.current?.click()}
               className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer group"
             >
               <input
+                data-testid="basics-video-input"
                 type="file"
                 accept="video/*"
                 hidden
@@ -643,6 +647,7 @@ const Step1Basics = () => {
                   <span className={videoUploading ? 'text-muted-foreground' : ''}>{currentProject.video!.name}</span>
                   {!videoUploading && (
                     <button
+                      data-testid="basics-video-remove-btn"
                       type="button"
                       onClick={(e) => { e.stopPropagation(); removeVideo(); }}
                       className="ml-2 cursor-pointer hover:text-error">

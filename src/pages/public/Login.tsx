@@ -45,7 +45,7 @@ const Login = () => {
         if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
             newErrors.email = true;
             setErrors(newErrors);
-            toast.error('รูปแบบอีเมล์ไม่ถูกต้อง')
+            toast.error('รูปแบบอีเมลไม่ถูกต้อง')
             return false;
         }
 
@@ -63,7 +63,7 @@ const Login = () => {
         return true;
     }
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (validateForm()) {
             await login(formData)
@@ -81,7 +81,7 @@ const Login = () => {
                         <img src="./flyup-logo.png" alt="flyup-logo.png" />
                         <h1 className="text-foreground text-[24px] font-semibold">ยินดีต้อนรับกลับ</h1>
                         <p className="text-muted-foreground text-[14px] font-medium">เข้าสู่ระบบบัญชี FlyUp ของคุณ</p>
-                        <button type="button" onClick={() => window.location.href = `${import.meta.env.VITE_BASE_URL}/auth/google`} className="flex items-center gap-[8px] mt-[24px] mb-[8px] h-[40px] bg-background border border-border rounded-[12px] justify-center w-full cursor-pointer hover:bg-muted transition-colors"><FcGoogle size={32} />เข้าสู่ระบบด้วย Google</button>
+                        <button data-testid="login-google" type="button" onClick={() => window.location.href = `${import.meta.env.VITE_BASE_URL}/auth/google`} className="flex items-center gap-[8px] mt-[24px] mb-[8px] h-[40px] bg-background border border-border rounded-[12px] justify-center w-full cursor-pointer hover:bg-muted transition-colors"><FcGoogle size={32} />เข้าสู่ระบบด้วย Google</button>
                         <div className="flex items-center w-full gap-4 mb-[6px]">
                             <div className="flex-grow h-px bg-border"></div>
                             <span className="text-muted-foreground text-sm font-medium">หรือ</span>
@@ -89,16 +89,16 @@ const Login = () => {
                         </div>
                     </div>
                 </div>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-[27px]">
+                <form data-testid="login-form" onSubmit={handleSubmit} className="flex flex-col gap-[27px]">
                     <div className="flex flex-col gap-[16px]">
                         <div className="flex flex-col gap-[4px]">
-                            <label className="text-[14px] text-foreground">อีมล์ <span className="text-error">*</span></label>
-                            <input name="email" onChange={handleChange} value={formData.email} type="text" className={inputStyle('email')} />
+                            <label className="text-[14px] text-foreground">อีเมล <span className="text-error">*</span></label>
+                            <input data-testid="login-email" name="email" onChange={handleChange} value={formData.email} type="email" autoComplete="email" className={inputStyle('email')} />
                         </div>
                         <div className="flex flex-col gap-[4px]">
                             <label className="text-[14px] text-foreground">รหัสผ่าน <span className="text-error">*</span></label>
                             <div className="relative">
-                                <input name="password" onChange={handleChange} value={formData.password} type={showPassword ? 'text' : 'password'} className={`${inputStyle('password')} w-full pr-[38px]`} />
+                                <input data-testid="login-password" name="password" onChange={handleChange} value={formData.password} type={showPassword ? 'text' : 'password'} className={`${inputStyle('password')} w-full pr-[38px]`} />
                                 <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-[10px] top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -106,7 +106,7 @@ const Login = () => {
                         </div>
                         <Link to='/forgot/password' className="self-start text-[14px] text-muted-foreground hover:text-primary transition-all duration-200">ลืมรหัสผ่าน</Link>
                     </div>
-                    <button disabled={isLoggingIn} type="submit" className="bg-primary text-white text-[14px] w-full flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300">
+                    <button data-testid="login-submit" disabled={isLoggingIn} type="submit" className="bg-primary text-white text-[14px] w-full flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300">
                         {isLoggingIn ? (
                             <>
                                 <Loader className="h-5 w-5 animate-spin" />

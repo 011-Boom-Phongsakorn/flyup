@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Video, MapPin, ChevronDown, ExternalLink, CheckCircle, Pencil, Trash2, Ban,
 } from 'lucide-react';
-import { MEETING_TYPE_LABEL, type Meeting } from './types';
+import { MEETING_TYPE_LABEL, MEETING_WINDOW_MS, type Meeting } from './types';
 
 function formatDateThai(iso: string) {
   if (!iso) return '';
@@ -15,7 +15,7 @@ function formatTime(iso: string) {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
 
 
@@ -32,11 +32,27 @@ export default function MeetingCard({
 }: MeetingCardProps) {
   const [expanded, setExpanded] = useState(false);
   const typeLabel = MEETING_TYPE_LABEL[meeting.meeting_type] ?? meeting.meeting_type;
-  const hasDetail = !!meeting.about || !!meeting.link || !!meeting.place;
+  const hasDetail = !!meeting.about || !!meeting.description || !!meeting.link || !!meeting.place;
   const isCanceled = meeting.status === 'cancelled';
   const isClosed = meeting.status === 'closed';
   const isOpen = meeting.status === 'open';
-  const canModify = isOpen && !isCanceled;
+
+  // เช็ค datetime จริงว่าผ่านไปแล้วหรือยัง
+  const meetingDatetime = (() => {
+    try {
+      const dateD = new Date(meeting.date)
+      const timeD = new Date(meeting.time)
+      const combined = new Date(
+        Date.UTC(dateD.getUTCFullYear(), dateD.getUTCMonth(), dateD.getUTCDate(),
+                 timeD.getUTCHours(), timeD.getUTCMinutes())
+      )
+      return combined
+    } catch { return null }
+  })()
+  const now = new Date()
+  const isOngoing  = isOpen && !!meetingDatetime && meetingDatetime <= now && now < new Date(meetingDatetime.getTime() + MEETING_WINDOW_MS)
+  const isUpcoming = isOpen && (!meetingDatetime || meetingDatetime > now)
+  const canModify = isUpcoming;
 
   return (
     <div className={`bg-white border rounded-2xl overflow-hidden transition-all ${expanded ? 'border-primary/40 shadow-sm' : 'border-border'} ${isCanceled ? 'opacity-60' : ''}`}>
@@ -62,10 +78,34 @@ export default function MeetingCard({
             <span className="text-xs font-medium text-error border border-error/30 bg-error/5 px-3 py-1.5 rounded-full">
               ยกเลิก
             </span>
-          ) : isClosed ? (
+          ) : isClosed || (isOpen && !isUpcoming && !isOngoing) ? (
             <span className="text-xs font-medium text-muted-foreground border border-border px-3 py-1.5 rounded-full">
               เสร็จสิ้น
             </span>
+          ) : isOngoing ? (
+            <>
+              <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full animate-pulse hidden sm:inline-block">
+                กำลังประชุม
+              </span>
+              {meeting.link && (
+                <a
+                  href={meeting.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity"
+                >
+                  <Video size={13} /> เข้าร่วม
+                </a>
+              )}
+              {hasDetail && (
+                <button
+                  onClick={() => setExpanded(!expanded)}
+                  className={`p-2 rounded-lg hover:bg-muted transition-colors ${expanded ? 'text-primary' : 'text-muted-foreground'} cursor-pointer`}
+                >
+                  <ChevronDown size={16} className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+            </>
           ) : (
             <>
               <span className="text-xs font-medium text-primary bg-purple-50 border border-primary/20 px-3 py-1.5 rounded-full hidden sm:inline-block">

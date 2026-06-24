@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- หน้าหลัก -->
+  <url>
+    <loc>https://www.fly-up.app/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- โปรเจกต์ทั้งหมด -->
+  <url>
+    <loc>https://www.fly-up.app/projects</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- เกี่ยวกับเรา -->
+  <url>
+    <loc>https://www.fly-up.app/about/we</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- ข้อกำหนดการใช้งาน -->
+  <url>
+    <loc>https://www.fly-up.app/legal/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- ศูนย์ช่วยเหลือ -->
+  <url>
+    <loc>https://www.fly-up.app/help</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!--
+    NOTE: หน้าโปรเจกต์ /projects/:slug ไม่ได้ list ที่นี่
+    เพราะ slug เปลี่ยนแบบ dynamic — ให้ Google crawl ผ่านหน้า /projects แทน
+    หรือเพิ่ม sitemap index แยกที่ generate จาก backend ในอนาคต
+  -->
+
+</urlset>

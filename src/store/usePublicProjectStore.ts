@@ -43,6 +43,7 @@ export interface PublicMilestone {
 
 export interface PublicProject {
   id: number;
+  slug: string;
   owner_user_id: number;
   category: string | null;
   title: string;
@@ -78,6 +79,13 @@ export interface Category {
   name: string;
 }
 
+export interface PlatformStats {
+  funded_projects: number;
+  total_funding: number;
+  unique_boosters: number;
+  passed_milestones: number;
+}
+
 // ─── Store Interface ─────────────────────────────────────────────────────────
 
 interface PublicProjectState {
@@ -85,16 +93,20 @@ interface PublicProjectState {
   recommendedProjects: PublicProject[];
   newProjects: PublicProject[];
   endingProjects: PublicProject[];
+  executingProjects: PublicProject[];
   currentPublicProject: PublicProject | null;
   categories: Category[];
+  platformStats: PlatformStats | null;
   isLoading: boolean;
   isDetailLoading: boolean;
 
   fetchPublicProjects: () => Promise<void>;
   fetchHomeProjects: () => Promise<void>;
   fetchPublicProjectById: (id: number) => Promise<void>;
+  fetchPublicProjectBySlug: (slug: string) => Promise<void>;
   fetchProjectsByCategory: (categoryId: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
+  fetchPlatformStats: () => Promise<void>;
 }
 
 // ─── Store Implementation ────────────────────────────────────────────────────
@@ -104,8 +116,10 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
   recommendedProjects: [],
   newProjects: [],
   endingProjects: [],
+  executingProjects: [],
   currentPublicProject: null,
   categories: [],
+  platformStats: null,
   isLoading: false,
   isDetailLoading: false,
 
@@ -129,10 +143,11 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
   fetchHomeProjects: async () => {
     set({ isLoading: true });
     try {
-      const [recRes, newRes, endRes] = await Promise.all([
+      const [recRes, newRes, endRes, execRes] = await Promise.all([
         api.get('/projects/recommend'),
         api.get('/projects/new'),
-        api.get('/projects/ending')
+        api.get('/projects/ending'),
+        api.get('/projects/executing'),
       ]);
 
       const processProjects = (projectsRaw: PublicProject[]) =>
@@ -141,11 +156,13 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
       const recommended = processProjects(recRes.data?.data ?? []);
       const newP = processProjects(newRes.data?.data ?? []);
       const ending = processProjects(endRes.data?.data ?? []);
+      const executing = processProjects(execRes.data?.data ?? []);
 
       set({
         recommendedProjects: recommended,
         newProjects: newP,
-        endingProjects: ending
+        endingProjects: ending,
+        executingProjects: executing,
       });
     } catch (error) {
       console.error('fetchHomeProjects:', error);
@@ -158,10 +175,21 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
     set({ isDetailLoading: true, currentPublicProject: null });
     try {
       const res = await api.get(`/projects/${id}`);
-      const project: PublicProject = res.data?.data ?? null;
-      set({ currentPublicProject: project });
+      set({ currentPublicProject: res.data?.data ?? null });
     } catch (error) {
       console.error('fetchPublicProjectById:', error);
+    } finally {
+      set({ isDetailLoading: false });
+    }
+  },
+
+  fetchPublicProjectBySlug: async (slug: string) => {
+    set({ isDetailLoading: true, currentPublicProject: null });
+    try {
+      const res = await api.get(`/projects/slug/${slug}`);
+      set({ currentPublicProject: res.data?.data ?? null });
+    } catch (error) {
+      console.error('fetchPublicProjectBySlug:', error);
     } finally {
       set({ isDetailLoading: false });
     }
@@ -188,6 +216,15 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
       set({ categories });
     } catch (error) {
       console.error('fetchCategories:', error);
+    }
+  },
+
+  fetchPlatformStats: async () => {
+    try {
+      const res = await api.get('/stats');
+      set({ platformStats: res.data?.data ?? null });
+    } catch (error) {
+      console.error('fetchPlatformStats:', error);
     }
   },
 }));

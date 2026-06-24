@@ -2,6 +2,7 @@ import { Outlet } from "react-router"
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import ChatWidget from "../components/ChatWidget"
+import CookieConsent from "../components/CookieConsent"
 
 const MainLayout = () => {
   return (
@@ -12,6 +13,7 @@ const MainLayout = () => {
         </main>
         <Footer />
         <ChatWidget />
+        <CookieConsent />
     </div>
   );
 };

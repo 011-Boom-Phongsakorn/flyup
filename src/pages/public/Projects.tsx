@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSEO } from '../../hooks/useSEO';
 import { Link } from 'react-router';
 import type { ElementType } from 'react';
 import {
   Search, ChevronDown, Flame, Sparkles,
   LayoutGrid, Laptop, Smartphone, Bot, Briefcase,
-  Rocket, BookOpen, ShieldCheck, Wifi, Gamepad2, Loader2
+  Rocket, BookOpen, ShieldCheck, Wifi, Gamepad2, Loader2,
+  SlidersHorizontal, X, Star, Zap
 } from 'lucide-react';
 import { usePublicProjectStore, type PublicProject } from '../../store/usePublicProjectStore';
+import { getProgress, getDaysLeft } from '../../lib/project';
 
 // ─── Category icon mapping ──────────────────────────────────────────────────
 
@@ -42,7 +45,16 @@ function getCategoryIcon(name: string | null): ElementType {
 const NOW = Date.now();
 
 const Projects = () => {
-  const { publicProjects, categories, isLoading, fetchPublicProjects, fetchCategories } = usePublicProjectStore();
+  useSEO({
+    title: 'โปรเจกต์ทั้งหมด',
+    description: 'ค้นหาและลงทุนในโปรเจกต์ซอฟต์แวร์ของนักศึกษาไทยที่น่าสนใจ หลากหลายหมวดหมู่ พร้อมระบบ Milestone โปร่งใส',
+    url: '/projects',
+  });
+
+  const {
+    publicProjects, endingProjects, newProjects, executingProjects, recommendedProjects,
+    categories, isLoading, fetchPublicProjects, fetchHomeProjects, fetchCategories,
+  } = usePublicProjectStore();
 
   const [activeCategory, setActiveCategory] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -52,13 +64,39 @@ const Projects = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('q') || '';
   });
-  const [sortOrder, setSortOrder] = useState<'latest' | 'oldest'>('latest');
+  const [sortOrder] = useState<'latest' | 'oldest' | 'ending_soon' | 'popular'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sort = params.get('sort');
+    if (sort === 'oldest' || sort === 'ending_soon' || sort === 'popular') return sort;
+    return 'latest';
+  });
+  const [section, setSection] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('section') || '';
+  });
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [minGoal, setMinGoal] = useState('');
+  const [maxGoal, setMaxGoal] = useState('');
 
   useEffect(() => {
-    fetchPublicProjects();
     fetchCategories();
-  }, [fetchPublicProjects, fetchCategories]);
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    if (section) fetchHomeProjects();
+    else fetchPublicProjects();
+  }, [section, fetchPublicProjects, fetchHomeProjects]);
+
+  const SECTION_OPTIONS = [
+    { key: 'hot',         label: 'ใกล้สำเร็จแล้ว!',       icon: Flame,     color: 'text-red-500' },
+    { key: 'new',         label: 'โปรเจกต์มาใหม่',         icon: Sparkles,  color: 'text-purple-500' },
+    { key: 'executing',   label: 'กำลังดำเนินการ',          icon: Zap,       color: 'text-green-500' },
+    { key: 'recommended', label: 'แนะนำ',                   icon: Star,      color: 'text-amber-500' },
+  ] as const;
+
+  const activeSectionOption = SECTION_OPTIONS.find(s => s.key === section) ?? null;
+  const dropdownLabel = activeSectionOption ? activeSectionOption.label : 'เลือกหมวดหมู่';
 
   const categoryList = useMemo(() => {
     const allOption = { name: 'ทั้งหมด', icon: LayoutGrid };
@@ -69,38 +107,51 @@ const Projects = () => {
     return [allOption, ...apiCategories];
   }, [categories]);
 
+  const daysLeftOf = (p: PublicProject) => getDaysLeft(p, NOW);
+
+  const activeFilterCount = [minGoal, maxGoal].filter(v => v !== '').length;
+
+  const sourceProjects = useMemo(() => {
+    if (section === 'hot') return endingProjects;
+    if (section === 'new') return newProjects;
+    if (section === 'executing') return executingProjects;
+    if (section === 'recommended') return recommendedProjects;
+    return publicProjects;
+  }, [section, publicProjects, endingProjects, newProjects, executingProjects, recommendedProjects]);
+
   const filteredProjects = useMemo(() => {
-    let result = [...publicProjects];
+    let result = [...sourceProjects];
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(project =>
-        project.title.toLowerCase().includes(query) ||
-        (project.description || '').toLowerCase().includes(query)
+      result = result.filter(p =>
+        p.title.toLowerCase().includes(query) ||
+        (p.description || '').toLowerCase().includes(query)
       );
     }
 
     if (activeCategory !== 'ทั้งหมด') {
-      result = result.filter(project => project.category === activeCategory);
+      result = result.filter(p => p.category === activeCategory);
     }
 
-    result.sort((a, b) => {
-      return sortOrder === 'latest' ? b.id - a.id : a.id - b.id;
-    });
+    const min = parseFloat(minGoal.replace(/,/g, ''));
+    const max = parseFloat(maxGoal.replace(/,/g, ''));
+    if (!isNaN(min)) result = result.filter(p => (p.funding_goal ?? 0) >= min);
+    if (!isNaN(max)) result = result.filter(p => (p.funding_goal ?? 0) <= max);
+
+    // หมวดหมู่พิเศษ (section) มาจาก endpoint ที่ backend เรียงลำดับมาให้แล้ว
+    // ไม่ควร sort ทับ ไม่งั้นจะขัดกับ label ที่บอกว่าเรียงตามอะไร
+    if (!section) {
+      result.sort((a, b) => {
+        if (sortOrder === 'oldest') return a.id - b.id;
+        if (sortOrder === 'ending_soon') return getDaysLeft(a) - getDaysLeft(b);
+        if (sortOrder === 'popular') return (b.current_funding ?? 0) - (a.current_funding ?? 0);
+        return b.id - a.id; // latest
+      });
+    }
 
     return result;
-  }, [publicProjects, activeCategory, searchQuery, sortOrder]);
-
-  const getProgress = (p: PublicProject) => {
-    if (!p.funding_goal || p.funding_goal === 0) return 0;
-    return Math.min(Math.round((p.current_funding / p.funding_goal) * 100), 100);
-  };
-
-  const getDaysLeft = (p: PublicProject) => {
-    if (!p.end_date) return p.duration_days || 0;
-    const diff = new Date(p.end_date).getTime() - NOW;
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  };
+  }, [sourceProjects, activeCategory, searchQuery, sortOrder, minGoal, maxGoal, section]);
 
   return (
     <div className="bg-background min-h-screen pb-20 font-sans text-foreground mt-[100px]">
@@ -108,13 +159,34 @@ const Projects = () => {
 
         <div className="mb-5 md:mb-6">
           <h1 className="text-2xl md:text-3xl font-bold mb-1">สำรวจโปรเจกต์</h1>
-          <p className="text-sm text-muted-foreground">ค้นพบโปรเจกต์ซอฟต์แวร์จากนักศึกษาที่กำลังระดมทุน</p>
+          {section === 'hot' && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-semibold">
+              <Flame size={13} fill="currentColor" /> ใกล้สำเร็จแล้ว! — เรียงตามใกล้หมดเวลา
+            </div>
+          )}
+          {section === 'new' && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-600 text-xs font-semibold">
+              <Sparkles size={13} fill="currentColor" /> โปรเจกต์มาใหม่ — เรียงตามล่าสุด
+            </div>
+          )}
+          {section === 'executing' && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-green-50 border border-green-200 text-green-600 text-xs font-semibold">
+              <Zap size={13} fill="currentColor" /> โปรเจกต์กำลังดำเนินการ — เรียงตามยอดนิยม
+            </div>
+          )}
+          {section === 'recommended' && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-600 text-xs font-semibold">
+              <Star size={13} fill="currentColor" /> โปรเจกต์แนะนำ — เรียงตามยอดนิยม
+            </div>
+          )}
+          {!section && <p className="text-sm text-muted-foreground">ค้นพบโปรเจกต์ซอฟต์แวร์จากนักศึกษาที่กำลังระดมทุน</p>}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-3 md:gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row gap-3 md:gap-4 mb-4">
           <div className="flex-1 flex items-center gap-2 bg-card border border-border h-12 md:h-11 rounded-lg px-4 focus-within:border-primary transition-all shadow-sm w-full">
             <Search size={18} className="text-muted-foreground flex-shrink-0" />
             <input
+              data-testid="projects-search"
               type="text"
               placeholder="ค้นหาชื่อโปรเจกต์..."
               value={searchQuery}
@@ -124,36 +196,101 @@ const Projects = () => {
           </div>
 
           <div className="flex gap-3 w-full lg:w-auto">
-            <div className="relative flex-1 lg:flex-none w-full lg:w-auto">
+            {/* Sort / Section dropdown */}
+            <div className="relative flex-1 lg:flex-none lg:w-47.5">
               <div
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-                className="flex items-center justify-between bg-card border border-border h-12 md:h-11 rounded-lg px-4 lg:min-w-[140px] cursor-pointer hover:bg-muted/30 transition-all shadow-sm select-none w-full"
+                className="flex items-center justify-between bg-card border border-border h-12 md:h-11 rounded-lg px-4 cursor-pointer hover:bg-muted/30 transition-all shadow-sm select-none w-full"
               >
-                <span className="text-sm font-medium whitespace-nowrap">
-                  {sortOrder === 'latest' ? 'ล่าสุด' : 'เก่าสุด'}
+                <span className="text-sm font-medium whitespace-nowrap flex items-center gap-1.5">
+                  {activeSectionOption && <activeSectionOption.icon size={13} className={activeSectionOption.color} />}
+                  {dropdownLabel}
                 </span>
-                <ChevronDown size={16} className={`text-muted-foreground transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-muted-foreground transition-transform ml-2 flex-shrink-0 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
               </div>
-
               {isSortDropdownOpen && (
-                <div className="absolute top-14 md:top-12 left-0 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden z-20">
-                  <div
-                    onClick={() => { setSortOrder('latest'); setIsSortDropdownOpen(false); }}
-                    className={`px-4 py-3 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap ${sortOrder === 'latest' ? 'text-primary font-medium bg-primary-light' : ''}`}
-                  >
-                    ล่าสุด
-                  </div>
-                  <div
-                    onClick={() => { setSortOrder('oldest'); setIsSortDropdownOpen(false); }}
-                    className={`px-4 py-3 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap ${sortOrder === 'oldest' ? 'text-primary font-medium bg-primary-light' : ''}`}
-                  >
-                    เก่าสุด
-                  </div>
+                <div className="absolute top-13 md:top-12 left-0 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden z-20">
+                  <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">เรียงตาม</div>
+                  {SECTION_OPTIONS.map(opt => {
+                    const Icon = opt.icon;
+                    return (
+                      <div
+                        key={opt.key}
+                        onClick={() => { setSection(opt.key); setIsSortDropdownOpen(false); }}
+                        className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap flex items-center gap-2 ${section === opt.key ? 'text-primary font-medium bg-primary-light' : ''}`}
+                      >
+                        <Icon size={13} className={opt.color} />
+                        {opt.label}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
+
+            {/* Filter toggle */}
+            <button
+              onClick={() => setShowFilter(v => !v)}
+              className={`relative flex items-center gap-2 px-4 h-12 md:h-11 rounded-lg border shadow-sm text-sm font-medium transition-all cursor-pointer flex-shrink-0 ${showFilter ? 'bg-primary text-white-foreground border-primary' : 'bg-card border-border hover:bg-muted/30'}`}
+            >
+              <SlidersHorizontal size={16} />
+              <span className="hidden sm:inline">ตัวกรอง</span>
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-error text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Filter panel */}
+        {showFilter && (
+          <div className="bg-card border border-border rounded-xl p-4 mb-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-foreground">กรองตามเป้าหมายระดมทุน (฿)</span>
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={() => { setMinGoal(''); setMaxGoal(''); }}
+                  className="text-xs text-error hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <X size={12} /> ล้างตัวกรอง
+                </button>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground mb-1 block">ขั้นต่ำ</label>
+                <div className="flex items-center gap-2 border border-border rounded-lg px-3 h-10 focus-within:border-primary bg-background">
+                  <span className="text-sm text-muted-foreground">฿</span>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={minGoal}
+                    onChange={e => setMinGoal(e.target.value)}
+                    className="bg-transparent outline-none w-full text-sm"
+                    min={0}
+                  />
+                </div>
+              </div>
+              <div className="flex items-end pb-[1px] text-muted-foreground text-sm hidden sm:flex">—</div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground mb-1 block">สูงสุด</label>
+                <div className="flex items-center gap-2 border border-border rounded-lg px-3 h-10 focus-within:border-primary bg-background">
+                  <span className="text-sm text-muted-foreground">฿</span>
+                  <input
+                    type="number"
+                    placeholder="ไม่จำกัด"
+                    value={maxGoal}
+                    onChange={e => setMaxGoal(e.target.value)}
+                    className="bg-transparent outline-none w-full text-sm"
+                    min={0}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex overflow-x-auto gap-2.5 pb-3 mb-6 md:mb-8 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
           {categoryList.map((category) => {
@@ -163,7 +300,7 @@ const Projects = () => {
               <button
                 key={category.name}
                 onClick={() => setActiveCategory(category.name)}
-                className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all border shadow-sm flex-shrink-0 ${isActive
+                className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all border shadow-sm flex-shrink-0 cursor-pointer ${isActive
                     ? 'bg-primary-light text-primary border-primary'
                     : 'bg-card text-muted-foreground border-border hover:border-primary hover:text-foreground'
                   }`}
@@ -185,14 +322,15 @@ const Projects = () => {
             {filteredProjects.map((project) => {
               const ProjectCategoryIcon = getCategoryIcon(project.category);
               const progress = getProgress(project);
-              const daysLeft = getDaysLeft(project);
+              const daysLeft = daysLeftOf(project);
               const isHot = progress >= 70;
               const isNew = (NOW - new Date(project.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
 
               return (
                 <Link
                   key={project.id}
-                  to={`/projects/${project.id}`}
+                  data-testid="project-card"
+                  to={`/projects/${project.slug || project.id}`}
                   className="bg-card rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:border-primary/30 transition-all cursor-pointer group flex flex-col"
                 >
                   <div className="relative h-48 w-full overflow-hidden bg-muted">
@@ -234,7 +372,7 @@ const Projects = () => {
 
                     <div className="w-full h-1.5 bg-muted rounded-full mb-3 overflow-hidden mt-auto">
                       <div
-                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all duration-500"
                         style={{ width: `${progress}%` }}
                       ></div>
                     </div>
@@ -262,7 +400,7 @@ const Projects = () => {
             <h3 className="text-base md:text-lg font-bold mb-1">ไม่พบโปรเจกต์</h3>
             <p className="text-sm text-muted-foreground">ลองเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่ใหม่อีกครั้ง</p>
             <button
-              onClick={() => { setSearchQuery(''); setActiveCategory('ทั้งหมด'); }}
+              onClick={() => { setSearchQuery(''); setActiveCategory('ทั้งหมด'); setMinGoal(''); setMaxGoal(''); }}
               className="mt-4 text-primary text-sm font-medium hover:underline p-2"
             >
               ล้างตัวกรอง

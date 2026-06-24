@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Loader2, MessageSquareWarning, CheckCircle, XCircle, Clock, X, ExternalLink, TriangleAlert } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useComplaintStore, type Complaint, type ComplaintStatus, COMPLAINT_THRESHOLD } from '../../store/useComplaintStore'
+import { useAdminBadgeStore } from '../../store/useAdminBadgeStore'
 import SearchBar from '../../components/admin/SearchBar'
+import FilterTabs from '../../components/admin/FilterTabs'
 import StatusBadge from '../../components/admin/StatusBadge'
 import PageHeader from '../../components/admin/PageHeader'
 
@@ -114,7 +116,7 @@ const DetailModal = ({
                                     onClick={() => {
                                         const target = complaint.project?.state === 'pending_review'
                                             ? `/admin/projects/${complaint.project_id}`
-                                            : `/projects/${complaint.project_id}`;
+                                            : `/projects/${(complaint.project as { slug?: string })?.slug || complaint.project_id}`;
                                         navigate(target);
                                     }}
                                     className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 mt-0.5"
@@ -205,6 +207,7 @@ const DetailModal = ({
 
 const AdminComplaints = () => {
     const { complaints, isLoading, isSubmitting, fetchAdminList, resolveComplaint, rejectComplaint } = useComplaintStore()
+    const fetchBadges = useAdminBadgeStore((s) => s.fetchBadges)
     const [tab, setTab] = useState<ComplaintStatus | 'all'>('open')
     const [search, setSearch] = useState('')
     const [selected, setSelected] = useState<Complaint | null>(null)
@@ -222,6 +225,7 @@ const AdminComplaints = () => {
         if (ok) {
             setModalMode(null)
             setSelected(null)
+            fetchBadges()
         }
     }
 
@@ -247,26 +251,15 @@ const AdminComplaints = () => {
         <div className="flex flex-col gap-[16px]">
             <PageHeader title="คำร้องเรียน" subtitle="รับเรื่องและจัดการคำร้องเรียนจากผู้ใช้" />
 
-            <div className="flex gap-2 px-2.5 flex-wrap">
-                {tabs.map((t) => (
-                    <button
-                        key={t.key}
-                        onClick={() => setTab(t.key)}
-                        className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors ${
-                            tab === t.key ? 'bg-primary text-white' : 'bg-white border border-border text-foreground hover:bg-gray-50'
-                        }`}
-                    >
-                        {t.label}
-                    </button>
-                ))}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+                <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาหัวข้อ ผู้ร้องเรียน หรือโปรเจกต์..." resultCount={filtered.length} />
+                <FilterTabs active={tab} onChange={(k) => setTab(k as ComplaintStatus | 'all')} tabs={tabs} />
             </div>
 
-            <SearchBar value={search} onChange={setSearch} placeholder="ค้นหาหัวข้อ ผู้ร้องเรียน หรือโปรเจกต์..." resultCount={filtered.length} />
-
             <div className="bg-white rounded-xl border border-border overflow-hidden text-[14px]">
-                <div className="grid grid-cols-[2fr_1fr_2fr_80px_100px_80px] bg-[#f8f9fc] px-4 py-3 font-medium text-gray-500 border-b border-border">
+                <div className="grid grid-cols-[2fr_1.5fr_1.5fr_80px_120px_130px] px-4 py-3 bg-muted/40 font-medium text-[12px] text-muted-foreground border-b border-border">
                     <div>หัวข้อ</div>
-                    <div className="text-center">ผู้ร้องเรียน</div>
+                    <div>ผู้ร้องเรียน</div>
                     <div>โปรเจกต์</div>
                     <div className="text-center">รายงาน</div>
                     <div className="text-center">สถานะ</div>
@@ -278,7 +271,7 @@ const AdminComplaints = () => {
                         <Loader2 className="animate-spin text-muted-foreground" size={28} />
                     </div>
                 ) : filtered.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 gap-[10px] text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
                         <MessageSquareWarning size={28} className="opacity-40" />
                         <p className="text-sm">{search ? 'ไม่พบรายการที่ค้นหา' : 'ยังไม่มีรายการคำร้องเรียน'}</p>
                     </div>
@@ -290,20 +283,20 @@ const AdminComplaints = () => {
                             <div
                                 key={c.id}
                                 onClick={() => setSelected(c)}
-                                className="grid grid-cols-[2fr_1fr_2fr_80px_100px_80px] border-b border-border last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                                className="grid grid-cols-[2fr_1.5fr_1.5fr_80px_120px_130px] px-4 py-3 items-center border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
                             >
-                                <div className="h-14 flex flex-col justify-center px-2">
+                                <div className="flex flex-col gap-0.5 pr-3">
                                     <span className="font-medium text-[13px] truncate">{c.subject}</span>
                                     <span className="text-[11px] text-muted-foreground">{fmtDate(c.created_at)}</span>
                                 </div>
-                                <div className="h-14 flex flex-col justify-center items-center gap-[2px]">
-                                    <span className="text-[13px]">{fullname}</span>
-                                    <span className="text-[11px] text-muted-foreground truncate max-w-[110px]">{c.complainant?.email ?? ''}</span>
+                                <div className="flex flex-col gap-0.5 pr-3">
+                                    <span className="text-[13px] truncate">{fullname}</span>
+                                    <span className="text-[11px] text-muted-foreground truncate">{c.complainant?.email ?? ''}</span>
                                 </div>
-                                <div className="h-14 flex flex-col justify-center px-2">
-                                    <span className="text-[13px] truncate">{c.project?.title ?? `ID: ${c.project_id}`}</span>
+                                <div className="pr-3">
+                                    <span className="text-[13px] truncate block">{c.project?.title ?? `ID: ${c.project_id}`}</span>
                                 </div>
-                                <div className="h-14 flex justify-center items-center">
+                                <div className="flex justify-center">
                                     {c.total_reports > 0 && (
                                         <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                                             c.resolved_reports >= COMPLAINT_THRESHOLD
@@ -316,13 +309,13 @@ const AdminComplaints = () => {
                                         </span>
                                     )}
                                 </div>
-                                <div className="h-14 flex justify-center items-center">
+                                <div className="flex justify-center">
                                     <StatusBadge label={status.label} className={status.className} icon={status.icon} />
                                 </div>
-                                <div className="h-14 flex justify-center items-center">
+                                <div className="flex justify-center">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setSelected(c) }}
-                                        className="px-[12px] py-[6px] rounded-[8px] bg-[#F1F3F5] hover:bg-[#E9ECEF] text-[12px] font-medium text-foreground"
+                                        className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/70 text-[12px] font-medium text-foreground transition-colors whitespace-nowrap"
                                     >
                                         ดูรายละเอียด
                                     </button>

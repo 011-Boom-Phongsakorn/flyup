@@ -5,6 +5,7 @@ export type MilestoneStatus =
   | 'approved'
   | 'completed'
   | 'rejected'
+  | 'failed'
 
 export interface MilestoneData {
   id?: number
@@ -20,6 +21,8 @@ export interface MilestoneData {
   progress_pct: number
   admin_note?: string
   voting_open?: boolean
+  voting_opened_at?: string | null
+  meetings?: { id: number; date: string; time: string; status: string }[]
 }
 
 export interface EvidenceLink {
@@ -28,12 +31,13 @@ export interface EvidenceLink {
 }
 
 export const STATUS_CONFIG: Record<MilestoneStatus, { label: string; badgeCls: string; borderCls: string; barCls: string }> = {
-  pending:     { label: 'รอดำเนินการ',                      badgeCls: 'bg-[#F1F3F5] text-[#6C757D]',   borderCls: 'border-border',       barCls: 'bg-primary' },
-  in_progress: { label: 'กำลังดำเนินการ',                  badgeCls: 'bg-primary text-white',          borderCls: 'border-border',       barCls: 'bg-primary' },
-  submitted:   { label: 'รอ Admin ตรวจสอบ',                badgeCls: 'bg-[#F5A623] text-white',        borderCls: 'border-border',       barCls: 'bg-primary' },
-  approved:    { label: 'Admin อนุมัติแล้ว — รอปล่อยทุน', badgeCls: 'bg-[#F5A623] text-white',        borderCls: 'border-border',       barCls: 'bg-primary' },
-  completed:   { label: 'สำเร็จ',                           badgeCls: 'bg-[#2BA88E] text-white',        borderCls: 'border-[#2BA88E]/40', barCls: 'bg-[#2BA88E]' },
-  rejected:    { label: 'ถูกปฏิเสธ',                      badgeCls: 'bg-[#EF4444] text-white',        borderCls: 'border-border',       barCls: 'bg-primary' },
+  pending:     { label: 'รอดำเนินการ',                      badgeCls: 'bg-[#F1F3F5] text-[#6C757D]',   borderCls: 'border-border',          barCls: 'bg-primary' },
+  in_progress: { label: 'กำลังดำเนินการ',                  badgeCls: 'bg-primary text-white',          borderCls: 'border-border',          barCls: 'bg-primary' },
+  submitted:   { label: 'รอ Admin ตรวจสอบ',                badgeCls: 'bg-[#F5A623] text-white',        borderCls: 'border-border',          barCls: 'bg-primary' },
+  approved:    { label: 'Admin อนุมัติแล้ว — รอปล่อยทุน', badgeCls: 'bg-[#F5A623] text-white',        borderCls: 'border-border',          barCls: 'bg-primary' },
+  completed:   { label: 'สำเร็จ',                           badgeCls: 'bg-[#2BA88E] text-white',        borderCls: 'border-[#2BA88E]/40',    barCls: 'bg-[#2BA88E]' },
+  rejected:    { label: 'ถูกปฏิเสธ — แก้ไขได้',           badgeCls: 'bg-[#EF4444] text-white',        borderCls: 'border-border',          barCls: 'bg-primary' },
+  failed:      { label: 'ถูกระงับถาวร',                    badgeCls: 'bg-gray-700 text-white',         borderCls: 'border-gray-300',        barCls: 'bg-gray-400' },
 }
 
 const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
@@ -44,7 +48,8 @@ export const fmtDate = (d: Date | null) => {
 }
 
 export const fmtDateRange = (start: Date | null, end: Date | null, duration: number) => {
-  if (start && end) return `${fmtDate(start)} – ${fmtDate(end)}`
+  if (start && end) return `${fmtDate(start)} – ${fmtDate(end)} (${duration} วัน)`
+  if (end) return `ถึง ${fmtDate(end)} (${duration} วัน)`
   if (duration > 0) return `ระยะ ${duration} วัน`
   return ''
 }

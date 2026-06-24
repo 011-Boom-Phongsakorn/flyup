@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Loader2, Calendar, AlertTriangle } from 'lucide-react';
+import DOMPurify from 'dompurify';
+import { useParams, useNavigate, Link } from 'react-router';
+import { ArrowLeft, Download, Loader2, Calendar, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useBoosterStore } from '../../store/useBoosterStore';
-import { usePublicProjectStore } from '../../store/usePublicProjectStore';
 import { useProjectDetailStore } from '../../store/useProjectDetailStore';
-import PreviewMilestone from '../../components/preview/PreviewMilestone';
 import { PreviewUpdate, PreviewQuestion, PreviewComment } from '../../components/preview/PreviewMisc';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -19,26 +18,57 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   cancelled: { label: 'ยกเลิก', color: 'bg-red-100 text-red-700' },
 };
 
-const phaseColors = ['bg-primary', 'bg-red-500', 'bg-gray-300', 'bg-gray-300'];
+const getMilestoneStatus = (s: string) => {
+  switch (s) {
+    case 'paid':       return { label: 'โอนเงินแล้ว',      cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    case 'approved':   return { label: 'Admin อนุมัติแล้ว', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    case 'active':     return { label: 'กำลังดำเนินการ',    cls: 'bg-primary/5 text-primary border-primary/20' };
+    case 'submitted':  return { label: 'ส่งงานแล้ว',        cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+    case 'rejected':
+    case 'failed':     return { label: 'ถูกปฏิเสธ',         cls: 'bg-red-50 text-red-600 border-red-200' };
+    default:           return { label: 'รอดำเนินการ',        cls: 'bg-gray-50 text-gray-500 border-gray-200' };
+  }
+};
+const isDone    = (s: string) => s === 'paid' || s === 'approved';
+const isCurrent = (s: string) => s === 'active' || s === 'submitted';
 
 // ─── Component ───────────────────────────────────────────────────────────────
+
+type MediaItem = { type: 'video' | 'image'; url: string; name: string };
 
 const InvestmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { currentInvestment, isDetailLoading: isInvLoading, fetchInvestmentById } = useBoosterStore();
-  const { currentPublicProject: project, isDetailLoading: isProjLoading, fetchPublicProjectById } = usePublicProjectStore();
+  const { currentInvestment, isDetailLoading: isInvLoading, fetchInvestmentById, requestRefund } = useBoosterStore();
   const { updates, threads, faqs, fetchAll } = useProjectDetailStore();
 
   const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Refund State
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundReason, setRefundReason] = useState('');
   const [isRefunding, setIsRefunding] = useState(false);
-  const { requestRefund } = useBoosterStore();
+  const [isPrintingPDF, setIsPrintingPDF] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    setIsPrintingPDF(true);
+    try {
+      const res = await import('../../services/api').then(m => m.default.get(
+        `/investments/${id}/contract`,
+        { responseType: 'text' }
+      ));
+      const blob = new Blob([res.data as string], { type: 'text/html; charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) { toast.error('กรุณาอนุญาต popup เพื่อดาวน์โหลด PDF'); URL.revokeObjectURL(url); return; }
+      win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url); });
+    } catch {
+      toast.error('ไม่สามารถโหลดสัญญาได้');
+    } finally {
+      setIsPrintingPDF(false);
+    }
+  };
 
   const handleRequestRefund = async () => {
     if (!refundReason.trim()) {
@@ -51,27 +81,22 @@ const InvestmentDetail = () => {
     if (success) {
       toast.success('ส่งคำร้องขอคืนเงินเรียบร้อยแล้ว');
       setShowRefundModal(false);
-      fetchInvestmentById(Number(id)); // Refresh data
+      fetchInvestmentById(Number(id));
     } else {
       toast.error('เกิดข้อผิดพลาดในการส่งคำร้อง');
     }
   };
 
-  // 1. Fetch Investment first
   useEffect(() => {
     if (id) fetchInvestmentById(Number(id));
   }, [id, fetchInvestmentById]);
 
-  // 2. Fetch Project details based on investment's project_id
   useEffect(() => {
     const projectId = currentInvestment?.project_id;
-    if (projectId) {
-      fetchPublicProjectById(projectId);
-      fetchAll(projectId);
-    }
-  }, [currentInvestment?.project_id, fetchPublicProjectById, fetchAll]);
+    if (projectId) fetchAll(projectId);
+  }, [currentInvestment?.project_id, fetchAll]);
 
-  if (isInvLoading || isProjLoading || !currentInvestment) {
+  if (isInvLoading || !currentInvestment) {
     return (
       <div className="flex items-center justify-center py-32">
         <Loader2 size={32} className="animate-spin text-primary" />
@@ -80,23 +105,24 @@ const InvestmentDetail = () => {
   }
 
   const inv = currentInvestment;
+  const project = inv.project ?? null;
   const statusCfg = statusConfig[inv.status] || { label: inv.status, color: 'bg-gray-100 text-gray-600' };
   const dateStr = new Date(inv.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-  
-  const title = project?.title || `โปรเจกต์ #${inv.project_id}`;
-  const category = project?.category || 'ไม่ระบุ';
+
+  const title = project?.title || '—';
+  const rawCategory = project?.category;
+  const category = typeof rawCategory === 'string'
+    ? rawCategory
+    : (rawCategory as { name?: string } | null)?.name || 'ไม่ระบุ';
   const description = project?.description || '';
-  const milestones = project?.milestones?.sort((a, b) => a.phase_no - b.phase_no) || [];
-  
-
+  const milestones = [...(project?.milestones ?? [])].sort((a, b) => a.phase_no - b.phase_no);
   const profitShare = inv.profit_share_pct || project?.profit_share_pct || 0;
+  const slug = (project as { slug?: string } | null)?.slug || inv.project_id;
 
-  // Media
-  type MediaItem = { type: 'video' | 'image'; url: string; name: string };
-  const getMediaType = (t: string | string[]) => Array.isArray(t) ? t[0] : t;
-  const mediaList: MediaItem[] = (project?.media || [])
+  const getMediaType = (t: string | string[]): string => Array.isArray(t) ? t[0] : t;
+  const mediaList: MediaItem[] = [...(project?.media ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map(m => ({ type: getMediaType(m.type) as 'video'|'image', url: m.url, name: 'media' }));
+    .map(m => ({ type: getMediaType(m.type) as 'video' | 'image', url: m.url, name: 'media' }));
   const selectedMedia = mediaList[selectedIndex] ?? null;
 
   return (
@@ -105,7 +131,7 @@ const InvestmentDetail = () => {
       <div className="flex flex-col gap-[10px] mb-[30px]">
         <button
           onClick={() => navigate('/booster/investments')}
-          className="w-fit flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-2"
+          className="w-fit flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-2 cursor-pointer"
         >
           <ArrowLeft size={16} /> กลับ
         </button>
@@ -164,31 +190,31 @@ const InvestmentDetail = () => {
           <div className="flex bg-[#f1f1f4] p-[4px] rounded-[10px] my-[10px] overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setActiveTab('story')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'story' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'story' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               เรื่องราว
             </button>
             <button
               onClick={() => setActiveTab('milestone')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'milestone' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'milestone' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Milestone ({milestones.length})
             </button>
             <button
               onClick={() => setActiveTab('update')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'update' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'update' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               อัปเดต ({updates.length})
             </button>
             <button
               onClick={() => setActiveTab('comment')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'comment' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'comment' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               ความคิดเห็น ({threads.length})
             </button>
             <button
               onClick={() => setActiveTab('question')}
-              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all ${activeTab === 'question' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-shrink-0 min-w-[100px] flex justify-center py-[8px] px-[16px] rounded-[6px] text-[13px] font-medium transition-all cursor-pointer ${activeTab === 'question' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               คำถาม ({faqs.length})
             </button>
@@ -198,8 +224,8 @@ const InvestmentDetail = () => {
           <div className="w-full bg-white border border-border p-6 rounded-[16px] shadow-sm min-h-[300px]">
              {activeTab === 'story' && (
                 <div className="prose prose-sm sm:prose-base max-w-none text-muted-foreground">
-                  {project?.stories && project.stories.length > 0 
-                      ? <div dangerouslySetInnerHTML={{ __html: project.stories.sort((a,b)=>a.sort_order-b.sort_order).map(s=>s.body).join('') }} />
+                  {project?.stories && project.stories.length > 0
+                      ? <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize([...project.stories].sort((a, b) => a.sort_order - b.sort_order).map(s => s.body).join('')) }} />
                       : "โปรเจกต์นี้ยังไม่ได้เขียนบรรยาย Story"}
                   {project?.risk && (
                       <div className="mt-8 p-4 bg-orange-50/50 border border-orange-200 rounded-xl">
@@ -209,7 +235,78 @@ const InvestmentDetail = () => {
                   )}
                 </div>
              )}
-             {activeTab === 'milestone' && <PreviewMilestone milestones={milestones} />}
+             {activeTab === 'milestone' && (
+               milestones.length === 0
+                 ? <p className="text-[13px] text-muted-foreground text-center py-8">ยังไม่มีข้อมูล Milestone</p>
+                 : <div className="flex flex-col mt-[4px] w-full">
+                     {milestones.map((m, index) => {
+                       const phaseNumber = m.phase_no || (index + 1);
+                       const criteria = (m.acceptance_criteria ?? '').split('\n').filter((c: string) => c.trim());
+                       const done    = isDone(m.status);
+                       const current = isCurrent(m.status);
+                       const st      = getMilestoneStatus(m.status);
+                       const isLast  = index === milestones.length - 1;
+                       return (
+                         <div key={m.id || index} className="flex gap-[16px] relative w-full">
+                           <div className="hidden md:flex flex-col items-center shrink-0">
+                             <div className={`w-[48px] h-[48px] rounded-2xl flex items-center justify-center font-bold text-[18px] shadow-sm transition-all z-10 ${
+                               done    ? 'bg-emerald-500 text-white shadow-emerald-200' :
+                               current ? 'bg-primary text-white shadow-primary/20 ring-4 ring-primary/10' :
+                                         'bg-white border-2 border-border text-gray-400'
+                             }`}>
+                               {done ? <CheckCircle2 size={22} /> : phaseNumber}
+                             </div>
+                             {!isLast && (
+                               <div className={`w-[2px] flex-1 min-h-[32px] mt-1 rounded-full ${done ? 'bg-emerald-300' : 'bg-border'}`} />
+                             )}
+                           </div>
+                           <div className={`flex-1 mb-[20px] bg-white border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[16px] ${
+                             current ? 'border-primary/30 shadow-primary/5' :
+                             done    ? 'border-emerald-200' : 'border-border'
+                           }`}>
+                             <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-[12px]">
+                               <div className="flex flex-col gap-[6px] flex-1 min-w-0">
+                                 <div className="flex items-center gap-[8px] flex-wrap">
+                                   <h3 className="text-[15px] font-bold text-foreground">Phase {phaseNumber}: {m.title}</h3>
+                                   <span className={`px-[10px] py-[3px] rounded-full text-[11px] font-semibold border ${st.cls}`}>{st.label}</span>
+                                 </div>
+                                 {m.description && <p className="text-[13px] text-muted-foreground">{m.description}</p>}
+                                 {m.duration && m.duration > 0 && (
+                                   <p className="inline-flex items-center gap-[5px] text-[12px] text-muted-foreground">
+                                     <Calendar size={12} /> ระยะเวลา {m.duration} วัน
+                                   </p>
+                                 )}
+                                 {criteria.length > 0 && (
+                                   <div className="flex flex-col gap-[6px] mt-[4px]">
+                                     <span className="text-[12px] font-semibold text-foreground">สิ่งที่ส่งมอบ:</span>
+                                     <div className="flex flex-wrap gap-[6px]">
+                                       {criteria.map((c: string, i: number) => (
+                                         <span key={i} className="px-[10px] py-[3px] border border-border rounded-full text-[12px] text-foreground bg-white whitespace-nowrap">{c}</span>
+                                       ))}
+                                     </div>
+                                   </div>
+                                 )}
+                               </div>
+                               <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-[8px] shrink-0">
+                                 <span className={`text-[18px] font-bold ${done ? 'text-emerald-600' : 'text-primary'}`}>
+                                   ฿{((inv.amount || 0) * m.percent_release / 100).toLocaleString()} ({m.percent_release}%)
+                                 </span>
+                               </div>
+                             </div>
+                             <div className="flex justify-end">
+                               <Link
+                                 to={`/projects/${slug}/milestones`}
+                                 className="text-[12px] text-primary hover:text-primary/70 transition-colors font-medium"
+                               >
+                                 ดูรายละเอียดเพิ่มเติม →
+                               </Link>
+                             </div>
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+             )}
              {activeTab === 'update' && <PreviewUpdate updates={updates} />}
              {activeTab === 'comment' && <PreviewComment comments={threads} />}
              {activeTab === 'question' && <PreviewQuestion questions={faqs} />}
@@ -221,7 +318,7 @@ const InvestmentDetail = () => {
           
           {/* Investment Snapshot */}
           <div className="bg-white border border-border rounded-[16px] p-[24px] shadow-sm relative overflow-hidden">
-             <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-primary to-purple-300"></div>
+             <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-pink-500 to-purple-600"></div>
              
              <div className="flex justify-between items-start mb-6">
                  <div>
@@ -260,14 +357,23 @@ const InvestmentDetail = () => {
                 </div>
              </div>
 
-             <button className="w-full mt-6 bg-background hover:bg-muted border border-border text-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px]">
-                 <Download size={16} /> <span>ดาวน์โหลดสัญญา</span>
+             <button
+               onClick={handleDownloadPDF}
+               disabled={isPrintingPDF}
+               className="w-full mt-6 bg-background hover:bg-muted border border-border text-foreground h-11 rounded-[10px] flex justify-center items-center gap-2 font-medium transition-colors text-[14px] cursor-pointer disabled:opacity-60"
+             >
+               {isPrintingPDF ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+               <span>{isPrintingPDF ? 'กำลังเตรียม PDF...' : 'ดาวน์โหลดสัญญา (PDF)'}</span>
              </button>
 
-             {inv.status !== 'refunded' && inv.status !== 'cancelled' && (
-               <button 
+             {inv.status === 'refund_pending' ? (
+               <div className="w-full mt-3 bg-amber-50 border border-amber-200 text-amber-700 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium text-[14px]">
+                   <Clock size={16} /> <span>กำลังดำเนินการขอคืนเงิน</span>
+               </div>
+             ) : inv.status !== 'refunded' && inv.status !== 'cancelled' && (
+               <button
                  onClick={() => setShowRefundModal(true)}
-                 className="w-full mt-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px]"
+                 className="w-full mt-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px] cursor-pointer"
                >
                    <AlertTriangle size={16} /> <span>แจ้งขอคืนเงิน (Refund)</span>
                </button>
@@ -278,22 +384,27 @@ const InvestmentDetail = () => {
           <div className="bg-white border border-border rounded-[16px] p-[24px] shadow-sm">
               <h3 className="text-[14px] font-bold text-foreground mb-4">สถานะโปรเจกต์</h3>
               <div className="space-y-4">
-                 {milestones.length > 0 ? milestones.map((m) => (
-                    <div key={m.id} className="flex gap-3">
+                 {milestones.length > 0 ? milestones.map((m, idx) => {
+                   const done    = isDone(m.status);
+                   const current = isCurrent(m.status);
+                   const isLast  = idx === milestones.length - 1;
+                   return (
+                     <div key={m.id} className="flex gap-3">
                        <div className="flex flex-col items-center mt-1">
-                          <div className={`w-3 h-3 rounded-full flex-shrink-0 ${m.status === 'completed' ? phaseColors[0] : (m.status === 'in_progress' ? phaseColors[1] : phaseColors[2])}`} />
-                          <div className="w-[1px] h-full bg-border mt-1"></div>
+                         <div className={`w-3 h-3 rounded-full flex-shrink-0 ${done ? 'bg-emerald-500' : current ? 'bg-primary' : 'bg-gray-300'}`} />
+                         {!isLast && <div className="w-[1px] flex-1 bg-border mt-1" />}
                        </div>
                        <div className="flex-1 pb-4">
-                          <p className={`text-[13px] font-medium leading-snug ${m.status==='completed' ? 'text-primary' : 'text-foreground'}`}>
-                             Phase {m.phase_no}: {m.title}
-                          </p>
-                          <p className="text-[12px] text-muted-foreground mt-1">
-                             ฿{((inv.amount || 0) * m.percent_release / 100).toLocaleString()} ({m.percent_release}%)
-                          </p>
+                         <p className={`text-[13px] font-medium leading-snug ${done ? 'text-emerald-600' : current ? 'text-primary' : 'text-foreground'}`}>
+                           Phase {m.phase_no}: {m.title}
+                         </p>
+                         <p className="text-[12px] text-muted-foreground mt-1">
+                           ฿{((inv.amount || 0) * m.percent_release / 100).toLocaleString()} ({m.percent_release}%)
+                         </p>
                        </div>
-                    </div>
-                 )) : (
+                     </div>
+                   );
+                 }) : (
                     <p className="text-[13px] text-muted-foreground text-center py-4">โปรเจกต์นี้ยังไม่มีข้อมูล Milestone</p>
                  )}
               </div>
@@ -328,7 +439,7 @@ const InvestmentDetail = () => {
             <div className="p-4 border-t border-border bg-background/50 flex gap-3">
               <button
                 onClick={() => setShowRefundModal(false)}
-                className="flex-1 py-2.5 rounded-xl border border-border bg-card text-foreground font-semibold hover:bg-muted transition-colors text-sm"
+                className="flex-1 py-2.5 rounded-xl border border-border bg-card text-foreground font-semibold hover:bg-muted transition-colors text-sm cursor-pointer"
                 disabled={isRefunding}
               >
                 ยกเลิก
@@ -336,7 +447,7 @@ const InvestmentDetail = () => {
               <button
                 onClick={handleRequestRefund}
                 disabled={isRefunding || !refundReason.trim()}
-                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
                 {isRefunding ? <Loader2 size={16} className="animate-spin" /> : null}
                 ยืนยันการขอคืนเงิน

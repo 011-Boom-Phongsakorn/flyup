@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { toast } from 'react-hot-toast'
 import api from '../services/api'
+import { useAdminBadgeStore } from './useAdminBadgeStore'
 
 export interface BankAccount {
   bank_name: string
@@ -34,6 +35,7 @@ export interface ProfitPoolDetail {
   transfer_ref: string
   status: 'pending' | 'completed'
   admin_note: string
+  quarter_no: number
   created_at: string
   payouts: InvestorPayoutDetail[]
 }
@@ -47,6 +49,7 @@ export interface ProfitPoolListItem {
   status: 'pending' | 'completed'
   investor_count: number
   confirmed_count: number
+  quarter_no: number
   created_at: string
 }
 
@@ -58,7 +61,7 @@ interface AdminProfitPoolStore {
   isConfirming: boolean
   fetchPools: () => Promise<void>
   fetchDetail: (id: number) => Promise<void>
-  createPool: (projectId: number, totalAmount: number, transferRef: string, adminNote: string) => Promise<boolean>
+  createPool: (projectId: number, totalAmount: number, transferRef: string, adminNote: string, quarterNo?: number) => Promise<boolean>
   confirmPayout: (poolId: number, payoutId: number, transferRef: string, note: string) => Promise<boolean>
 }
 
@@ -93,7 +96,7 @@ export const useAdminProfitPoolStore = create<AdminProfitPoolStore>((set) => ({
     }
   },
 
-  createPool: async (projectId, totalAmount, transferRef, adminNote) => {
+  createPool: async (projectId, totalAmount, transferRef, adminNote, quarterNo = 0) => {
     set({ isCreating: true })
     try {
       await api.post('/admin/profit-pools', {
@@ -101,6 +104,7 @@ export const useAdminProfitPoolStore = create<AdminProfitPoolStore>((set) => ({
         total_amount: totalAmount,
         transfer_ref: transferRef,
         admin_note: adminNote,
+        quarter_no: quarterNo,
       })
       toast.success('สร้างรายการกำไรสำเร็จ')
       return true
@@ -122,18 +126,28 @@ export const useAdminProfitPoolStore = create<AdminProfitPoolStore>((set) => ({
       })
       toast.success('ยืนยันการโอนกำไรสำเร็จ')
       set((state) => {
-        if (!state.detail) return {}
+        const updatedPayouts = (state.detail?.payouts ?? []).map((p) =>
+          p.id === payoutId
+            ? { ...p, status: 'confirmed' as const, transfer_ref: transferRef, admin_note: note, confirmed_at: new Date().toISOString() }
+            : p
+        )
+        const allConfirmed = updatedPayouts.length > 0 && updatedPayouts.every(p => p.status === 'confirmed')
+        const confirmedCount = updatedPayouts.filter(p => p.status === 'confirmed').length
         return {
-          detail: {
+          detail: state.detail ? {
             ...state.detail,
-            payouts: state.detail.payouts.map((p) =>
-              p.id === payoutId
-                ? { ...p, status: 'confirmed' as const, transfer_ref: transferRef, admin_note: note, confirmed_at: new Date().toISOString() }
-                : p
-            ),
-          },
+            payouts: updatedPayouts,
+            status: allConfirmed ? 'completed' : state.detail.status,
+          } : null,
+          pools: state.pools.map(pool =>
+            pool.id === poolId
+              ? { ...pool, confirmed_count: confirmedCount, status: allConfirmed ? 'completed' as const : pool.status }
+              : pool
+          ),
         }
       })
+      // refresh sidebar badge ทันที
+      useAdminBadgeStore.getState().fetchBadges()
       return true
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'ยืนยันการโอนไม่สำเร็จ'

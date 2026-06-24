@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { AxiosError } from 'axios';
 
 export interface ProjectMedia {
     id?: number;    // backend media ID (มีเมื่อถูก save แล้ว)
@@ -45,10 +46,26 @@ export interface Project {
     milestones: Milestone[];
 }
 
-export interface ProjectSummary {
+export interface FAQ {
+    id: number;
+    question: string;
+    answer: string;
+    sort_order: number;
+}
+
+export interface ProjectUpdate {
     id: number;
     title: string;
-    state: 'draft' | 'pending_review' | 'funding' | 'executing' | 'closed' | 'cancelled';
+    body: string;
+    visibility: string;
+    created_at: string;
+}
+
+export interface ProjectSummary {
+    id: number;
+    slug: string;
+    title: string;
+    state: 'draft' | 'pending_review' | 'funding' | 'executing' | 'closed' | 'cancelled' | 'pending_cancel' | 'suspended';
     status: 'active' | 'funded' | 'failed' | 'rejected' | 'completed' | 'cancelled';
     category: { id: number; name: string } | null;
     description: string | null;
@@ -66,6 +83,12 @@ interface ProjectState {
     saveStatus: 'idle' | 'saving' | 'saved';
     setSaveStatus: (status: 'idle' | 'saving' | 'saved') => void;
 
+    faqs: FAQ[];
+    isSavingFaq: boolean;
+    updates: ProjectUpdate[];
+    isLoadingUpdates: boolean;
+    isSavingUpdate: boolean;
+
     // Actions
     createProject: () => Promise<number | null>;
     loadCurrentProject: (id: number) => Promise<void>;
@@ -77,6 +100,24 @@ interface ProjectState {
     updateProjectInfo: (data: Partial<Project>) => void;
     updateMilestone: (index: number, data: Partial<Milestone>) => void;
     updateProjectStatus: (projectId: number) => Promise<void>;
+    submitProject: (projectId: number | string) => Promise<boolean>;
+    submitCancelRequest: (projectId: number | string, data: { reason: string; description: string }) => Promise<boolean | 'description_required'>;
+
+    fetchFaqs: (projectId: number | string) => Promise<void>;
+    addFaq: (projectId: number | string, data: { question: string; answer: string }) => Promise<boolean>;
+    editFaq: (id: number, data: { question: string; answer: string }) => Promise<boolean>;
+    deleteFaq: (id: number) => Promise<boolean>;
+
+    fetchProjectUpdates: (projectId: number | string) => Promise<void>;
+    addProjectUpdate: (projectId: number | string, data: { title: string; content: string }) => Promise<boolean>;
+    editProjectUpdate: (id: number, data: { title: string; content: string }) => Promise<boolean>;
+    deleteProjectUpdate: (id: number) => Promise<boolean>;
+
+    fetchCategories: () => Promise<{ id: number; name: string }[]>;
+    uploadFile: (file: File) => Promise<{ url: string; type?: string } | null>;
+    attachProjectMedia: (projectId: number | string, url: string, type: string) => Promise<void>;
+    fetchProjectMedia: (projectId: number | string) => Promise<{ id: number; url: string }[]>;
+    deleteProjectMedia: (mediaId: number) => Promise<void>;
 }
 
 const initialProject: Project = {
@@ -117,6 +158,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     isSaving: false,
     saveStatus: 'idle',
     setSaveStatus: (status) => set({ saveStatus: status }),
+
+    faqs: [],
+    isSavingFaq: false,
+    updates: [],
+    isLoadingUpdates: false,
+    isSavingUpdate: false,
 
     // ✅ Action สำหรับอัปเดตข้อมูลทั่วไป (Step 1: Basics, Step 2: Story/Risks)
     updateProjectInfo: (data) => {
@@ -501,5 +548,210 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             console.error(error);
             toast.error('ไม่สามารถยกเลิกโปรเจกต์ได้');
         }
-    }
+    },
+
+    submitProject: async (projectId) => {
+        try {
+            await api.patch(`/pioneer/projects/${projectId}/submit`);
+            return true;
+        } catch (error) {
+            const msg = error instanceof AxiosError ? error.response?.data?.message : null;
+            if (msg === 'you already have an active project') {
+                toast.error('คุณมีโปรเจกต์ที่กำลังดำเนินอยู่แล้ว ไม่สามารถส่งโปรเจกต์ใหม่ได้ในขณะนี้');
+            } else {
+                toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+            }
+            return false;
+        }
+    },
+
+    submitCancelRequest: async (projectId, data) => {
+        try {
+            await api.patch(`/pioneer/projects/${projectId}/submit-cancel`, data);
+            toast.success('ส่งคำขอยกเลิกเรียบร้อยแล้ว รอ Admin พิจารณา');
+            return true;
+        } catch (error) {
+            const msg = error instanceof AxiosError ? error.response?.data?.message : null;
+            if (msg === 'cancel request is already pending') {
+                toast.error('คุณได้ส่งคำขอยกเลิกไปแล้ว กรุณารอ Admin พิจารณา');
+            } else if (msg === 'project is already cancelled or state is draft') {
+                toast.error('ไม่สามารถส่งคำขอได้ เนื่องจากโปรเจกต์ถูกยกเลิกแล้ว หรืออยู่ในสถานะแบบร่าง');
+            } else if (msg === 'description is required') {
+                return 'description_required';
+            } else {
+                toast.error(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+            }
+            return false;
+        }
+    },
+
+    fetchFaqs: async (projectId) => {
+        try {
+            const res = await api.get(`/projects/${projectId}/faqs`);
+            set({ faqs: res.data?.data ?? [] });
+        } catch {
+            // ignore
+        }
+    },
+
+    addFaq: async (projectId, data) => {
+        if (!data.question.trim() || !data.answer.trim()) {
+            toast.error('กรุณากรอกคำถามและคำตอบ');
+            return false;
+        }
+        set({ isSavingFaq: true });
+        try {
+            const res = await api.post(`/pioneer/projects/${projectId}/faqs`, {
+                question: data.question,
+                answer: data.answer,
+                sort_order: get().faqs.length + 1,
+            });
+            set((state) => ({ faqs: [...state.faqs, res.data?.data] }));
+            toast.success('เพิ่ม FAQ สำเร็จ');
+            return true;
+        } catch {
+            toast.error('เพิ่ม FAQ ไม่สำเร็จ');
+            return false;
+        } finally {
+            set({ isSavingFaq: false });
+        }
+    },
+
+    editFaq: async (id, data) => {
+        if (!data.question.trim() || !data.answer.trim()) {
+            toast.error('กรุณากรอกคำถามและคำตอบ');
+            return false;
+        }
+        try {
+            await api.patch(`/pioneer/projects/faqs/${id}`, {
+                question: data.question,
+                answer: data.answer,
+            });
+            set((state) => ({
+                faqs: state.faqs.map(f => f.id === id ? { ...f, question: data.question, answer: data.answer } : f),
+            }));
+            toast.success('แก้ไข FAQ สำเร็จ');
+            return true;
+        } catch {
+            toast.error('แก้ไข FAQ ไม่สำเร็จ');
+            return false;
+        }
+    },
+
+    deleteFaq: async (id) => {
+        try {
+            await api.delete(`/pioneer/projects/faqs/${id}`);
+            set((state) => ({ faqs: state.faqs.filter(f => f.id !== id) }));
+            toast.success('ลบ FAQ สำเร็จ');
+            return true;
+        } catch {
+            toast.error('ลบ FAQ ไม่สำเร็จ');
+            return false;
+        }
+    },
+
+    fetchProjectUpdates: async (projectId) => {
+        set({ isLoadingUpdates: true });
+        try {
+            const res = await api.get(`/projects/${projectId}/updates`);
+            set({ updates: res.data?.data ?? [] });
+        } catch {
+            toast.error('โหลดข้อมูลอัปเดตไม่สำเร็จ');
+        } finally {
+            set({ isLoadingUpdates: false });
+        }
+    },
+
+    addProjectUpdate: async (projectId, data) => {
+        if (!data.title.trim() || !data.content.trim()) {
+            toast.error('กรุณากรอกหัวข้อและเนื้อหา');
+            return false;
+        }
+        set({ isSavingUpdate: true });
+        try {
+            await api.post(`/pioneer/projects/${projectId}/updates`, {
+                title: data.title,
+                content: data.content,
+                visibility: 'public',
+            });
+            toast.success('เพิ่มอัปเดตสำเร็จ');
+            await get().fetchProjectUpdates(projectId);
+            return true;
+        } catch {
+            toast.error('เพิ่มอัปเดตไม่สำเร็จ');
+            return false;
+        } finally {
+            set({ isSavingUpdate: false });
+        }
+    },
+
+    editProjectUpdate: async (id, data) => {
+        if (!data.title.trim() || !data.content.trim()) {
+            toast.error('กรุณากรอกหัวข้อและเนื้อหา');
+            return false;
+        }
+        try {
+            await api.patch(`/pioneer/projects/updates/${id}`, {
+                title: data.title,
+                content: data.content,
+            });
+            set((state) => ({
+                updates: state.updates.map(u => u.id === id ? { ...u, title: data.title, body: data.content } : u),
+            }));
+            toast.success('แก้ไขอัปเดตสำเร็จ');
+            return true;
+        } catch {
+            toast.error('แก้ไขไม่สำเร็จ');
+            return false;
+        }
+    },
+
+    deleteProjectUpdate: async (id) => {
+        try {
+            await api.delete(`/pioneer/projects/updates/${id}`);
+            set((state) => ({ updates: state.updates.filter(u => u.id !== id) }));
+            toast.success('ลบอัปเดตสำเร็จ');
+            return true;
+        } catch {
+            toast.error('ลบไม่สำเร็จ');
+            return false;
+        }
+    },
+
+    fetchCategories: async () => {
+        try {
+            const res = await api.get('/categories');
+            return res.data?.data ?? [];
+        } catch {
+            return [];
+        }
+    },
+
+    uploadFile: async (file) => {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await api.post('/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 120000,
+            });
+            const { url, type } = res.data?.data ?? {};
+            return url ? { url, type } : null;
+        } catch {
+            return null;
+        }
+    },
+
+    attachProjectMedia: async (projectId, url, type) => {
+        await api.post(`/pioneer/projects/${projectId}/media`, [{ url, type: [type] }]);
+    },
+
+    fetchProjectMedia: async (projectId) => {
+        const res = await api.get(`/pioneer/projects/${projectId}/media`);
+        return res.data?.data ?? [];
+    },
+
+    deleteProjectMedia: async (mediaId) => {
+        await api.delete(`/pioneer/projects/media/${mediaId}`);
+    },
 }))

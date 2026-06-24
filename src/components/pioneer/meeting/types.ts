@@ -1,6 +1,8 @@
-export type MeetingType = 'online' | 'onsite' | 'hybrid';
+﻿export type MeetingType = 'online' | 'onsite' | 'hybrid';
 export type MeetingStatus = 'open' | 'closed' | 'cancelled';
-export type FilterMode = 'upcoming' | 'past' | 'all';
+export type FilterMode = 'upcoming' | 'ongoing' | 'past' | 'all';
+
+export const MEETING_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export interface Meeting {
   id: number;
@@ -11,6 +13,7 @@ export interface Meeting {
   link?: string | null;
   place?: string | null;
   about: string;
+  description?: string | null;
   status: MeetingStatus;
 }
 
@@ -21,6 +24,7 @@ export interface MilestoneOption {
   status: string;
   project_id: number;
   project_title: string;
+  due_date?: string;
 }
 
 export interface CreateMeetingPayload {
@@ -30,7 +34,7 @@ export interface CreateMeetingPayload {
   meeting_type: MeetingType;
   link?: string;
   place?: string;
-  about: string;
+  description: string;
 }
 
 export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {

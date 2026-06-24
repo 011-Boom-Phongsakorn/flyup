@@ -1,7 +1,6 @@
 import { create } from 'zustand'
-import api from '../services/api'
+import api, { setStoredToken, clearStoredTokens } from '../services/api'
 import toast from 'react-hot-toast'
-import { jwtDecode } from 'jwt-decode'
 import { AxiosError } from 'axios'
 
 interface University {
@@ -35,6 +34,7 @@ interface BankAccount {
     bank_name?: string;
     account_name?: string;
     account_number?: string;
+    is_default?: boolean;
 }
 
 interface DecodedUser extends Record<string, unknown> {
@@ -49,7 +49,7 @@ interface DecodedUser extends Record<string, unknown> {
     google_sub?: string;
     has_password?: boolean;
     student_profile?: StudentProfile;
-    bank_account?: BankAccount;
+    bank_accounts?: BankAccount[];
     student_card_verification?: CardVerification;
     id_card_verification?: CardVerification;
     notification_preferences?: Record<string, boolean>;
@@ -79,16 +79,31 @@ interface AuthStore {
     isSelectingRole: boolean;
     register: (data: RegisterData) => Promise<boolean>;
     login: (data: LoginData) => Promise<void>;
-    loginWithGoogleToken: (token: string) => void;
+    loginWithGoogleToken: (accessToken?: string) => Promise<void>;
     logout: () => Promise<void>;
     selectRole: (role: 'pioneer' | 'booster') => Promise<boolean>;
     isSendingReset: boolean;
     isResetting: boolean;
+    verifyEmail: (token: string) => Promise<boolean>;
     forgotPassword: (email: string) => Promise<boolean>;
     resetPassword: (token: string, new_password: string) => Promise<boolean>;
+    isUploadingAvatar: boolean;
+    isSavingProfile: boolean;
+    isSavingPassword: boolean;
+    uploadAvatar: (file: File) => Promise<boolean>;
+    updateProfile: (data: Record<string, unknown>) => Promise<boolean>;
+    addPassword: (newPassword: string) => Promise<boolean>;
+    changePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
+// เมื่อ refresh token หมดอายุ api.ts จะ dispatch event นี้
+if (typeof window !== 'undefined') {
+    window.addEventListener('auth:logout', () => {
+        useAuthStore.getState().logout()
+    })
+}
+
+export const useAuthStore = create<AuthStore>((set, get) => ({
     authUser: null,
     isCheckingAuth: true,
     isRegistering: false,
@@ -96,16 +111,15 @@ export const useAuthStore = create<AuthStore>((set) => ({
     isSelectingRole: false,
     isSendingReset: false,
     isResetting: false,
+    isUploadingAvatar: false,
+    isSavingProfile: false,
+    isSavingPassword: false,
     checkAuth: async () => {
         try {
             const response = await api.get('/user/me')
             set({ authUser: response?.data?.data })
         } catch {
-            // ถ้ามี token ใน localStorage อยู่แล้ว (เช่น หลัง Google OAuth)
-            // ไม่ล้าง authUser เพื่อไม่ให้ลบ session ที่เพิ่ง set ไป
-            if (!localStorage.getItem('auth_token')) {
-                set({ authUser: null })
-            }
+            set({ authUser: null })
         } finally {
             set({ isCheckingAuth: false })
         }
@@ -133,19 +147,24 @@ export const useAuthStore = create<AuthStore>((set) => ({
             set({ isRegistering: false })
         }
     },
-    loginWithGoogleToken: (token) => {
-        localStorage.setItem('auth_token', token)
-        const decoded = jwtDecode(token) as DecodedUser
-        set({ authUser: decoded })
+    loginWithGoogleToken: async (accessToken?: string) => {
+        set({ isCheckingAuth: true })
+        if (accessToken) setStoredToken(accessToken);
+        try {
+            const res = await api.get('/user/me')
+            set({ authUser: res.data?.data })
+        } catch {
+            set({ authUser: null })
+        } finally {
+            set({ isCheckingAuth: false })
+        }
     },
     login: async (data) => {
         set({ isLoggingIn: true })
         try {
-            const res = await api.post('/signin', data)
-            const token: string = res.data?.token
-            if (token) {
-                localStorage.setItem('auth_token', token)
-            }
+            const signinRes = await api.post('/signin', data)
+            const token: string | undefined = signinRes.data?.token
+            if (token) setStoredToken(token)
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
         } catch (error: unknown) {
@@ -158,11 +177,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
             } else if (apiMessage === 'your account has been suspended') {
                 toast.error('บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ')
             } else if (errorMessage === 'please verify email') {
-                toast.error('กรุณายืนยันอีเมล์ก่อนเข้าสู่ระบบ')
+                toast.error('กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ')
             } else if (err?.response?.data?.login_method === 'google') {
                 toast.error('บัญชีผู้ใช้นี้ลงทะเบียนด้วย Google กรุณาเข้าสู่ระบบด้วย Google')
             } else {
-                toast.error('อีเมล์หรือรหัสผ่านไม่ถูกต้อง')
+                toast.error('อีเมลหรือรหัสผ่านไม่ถูกต้อง')
             }
         } finally {
             set({ isLoggingIn: false })
@@ -174,18 +193,15 @@ export const useAuthStore = create<AuthStore>((set) => ({
         } catch {
             // ignore
         } finally {
-            localStorage.removeItem('auth_token')
+            clearStoredTokens()
             set({ authUser: null })
         }
     },
     selectRole: async (role) => {
         set({ isSelectingRole: true })
         try {
-            const res = await api.patch('/user/role', { role })
-            const token: string = res.data?.token
-            if (token) {
-                localStorage.setItem('auth_token', token)
-            }
+            await api.patch('/user/role', { role })
+            // cookie with new role-embedded token set by backend
             const meRes = await api.get('/user/me')
             set({ authUser: meRes.data.data })
             return true
@@ -200,6 +216,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
             return false
         } finally {
             set({ isSelectingRole: false })
+        }
+    },
+    verifyEmail: async (token) => {
+        try {
+            await api.get(`/verify-email?token=${token}`)
+            return true
+        } catch {
+            return false
         }
     },
     forgotPassword: async (email) => {
@@ -229,5 +253,77 @@ export const useAuthStore = create<AuthStore>((set) => ({
         } finally {
             set({ isResetting: false })
         }
-    }
+    },
+    uploadAvatar: async (file) => {
+        set({ isUploadingAvatar: true })
+        try {
+            const formData = new FormData()
+            formData.append('file', file)
+            const uploadRes = await api.post('/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            })
+            const pictureUrl: string = uploadRes.data.data.url
+            await api.patch('/user/profile', { picture: pictureUrl })
+            await get().checkAuth()
+            toast.success('เปลี่ยนรูปโปรไฟล์สำเร็จ')
+            return true
+        } catch {
+            toast.error('อัปโหลดรูปไม่สำเร็จ')
+            return false
+        } finally {
+            set({ isUploadingAvatar: false })
+        }
+    },
+    updateProfile: async (data) => {
+        set({ isSavingProfile: true })
+        try {
+            await api.patch('/user/profile', data)
+            await get().checkAuth()
+            toast.success('แก้ไขข้อมูลสำเร็จ')
+            return true
+        } catch {
+            toast.error('บันทึกไม่สำเร็จ')
+            return false
+        } finally {
+            set({ isSavingProfile: false })
+        }
+    },
+    addPassword: async (newPassword) => {
+        set({ isSavingPassword: true })
+        try {
+            await api.put('/user/add-password', { new_password: newPassword })
+            await get().checkAuth()
+            toast.success('ตั้งรหัสผ่านสำเร็จ')
+            return true
+        } catch {
+            toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่')
+            return false
+        } finally {
+            set({ isSavingPassword: false })
+        }
+    },
+    changePassword: async (oldPassword, newPassword) => {
+        set({ isSavingPassword: true })
+        try {
+            await api.put('/user/change-password', {
+                old_password: oldPassword,
+                new_password: newPassword,
+            })
+            toast.success('เปลี่ยนรหัสผ่านสำเร็จ')
+            return true
+        } catch (error: unknown) {
+            const err = error instanceof AxiosError ? error : null;
+            const msg = err?.response?.data?.message
+            if (msg === "can't not use old password as new password") {
+                toast.error('ไม่สามารถใช้รหัสผ่านเดิมได้')
+            } else if (msg === 'password is incorrect') {
+                toast.error('รหัสผ่านปัจจุบันไม่ถูกต้อง')
+            } else {
+                toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่')
+            }
+            return false
+        } finally {
+            set({ isSavingPassword: false })
+        }
+    },
 }))

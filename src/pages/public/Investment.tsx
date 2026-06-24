@@ -8,6 +8,7 @@ import {
   QrCode,
   ShieldCheck,
   CheckCircle2,
+  Download,
   X,
   Loader2,
 } from "lucide-react";
@@ -25,7 +26,7 @@ const ContractModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
       <div className="bg-card w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[80vh]">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h3 className="font-bold text-foreground">สัญญาการลงทุน</h3>
-          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg transition-colors cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -39,7 +40,7 @@ const ContractModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
           <p>7. การลงทุนมีความเสี่ยง ผู้สนับสนุนควรพิจารณาอย่างรอบคอบก่อนตัดสินใจ</p>
         </div>
         <div className="p-4 border-t border-border">
-          <button onClick={onClose} className="w-full py-2.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity">
+          <button onClick={onClose} className="w-full py-2.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity cursor-pointer">
             รับทราบ
           </button>
         </div>
@@ -50,28 +51,31 @@ const ContractModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 
 const Investment = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { slug } = useParams();
 
   const [step, setStep] = useState<Step>(1);
   const [agreed, setAgreed] = useState(false);
-  const [amount, setAmount] = useState<string>("5,000");
+  const [amount, setAmount] = useState<string>("");
+  const [completedInvestmentId, setCompletedInvestmentId] = useState<number | null>(null);
   const [showContract, setShowContract] = useState(false);
+  const [isPrintingPDF, setIsPrintingPDF] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15 * 60);
 
   const pollingRef = useRef<number | null>(null);
 
   const { authUser } = useAuthStore();
-  const { currentPublicProject, fetchPublicProjectById } = usePublicProjectStore();
+  const { currentPublicProject, fetchPublicProjectBySlug, fetchPublicProjectById } = usePublicProjectStore();
   const { createInvestment, getInvestmentById, isSubmitting, investmentData, clearInvestmentData } = useInvestmentStore();
 
   const project = currentPublicProject;
 
   useEffect(() => {
-    if (id) {
-      fetchPublicProjectById(Number(id));
+    if (slug) {
+      if (/^\d+$/.test(slug)) fetchPublicProjectById(Number(slug));
+      else fetchPublicProjectBySlug(slug);
     }
-  }, [id, fetchPublicProjectById]);
+  }, [slug, fetchPublicProjectBySlug, fetchPublicProjectById]);
 
   // Guard: ต้องยืนยันตัวตน / ไม่ใช่เจ้าของ / ไม่ใช่ admin
   useEffect(() => {
@@ -82,15 +86,15 @@ const Investment = () => {
 
     if (isAdmin) {
       toast.error('ผู้ดูแลระบบไม่สามารถลงทุนได้');
-      navigate(`/projects/${id}`, { replace: true });
+      navigate(`/projects/${slug}`, { replace: true });
     } else if (isOwner) {
       toast.error('เจ้าของโปรเจกต์ไม่สามารถลงทุนในโปรเจกต์ของตัวเองได้');
-      navigate(`/projects/${id}`, { replace: true });
+      navigate(`/projects/${slug}`, { replace: true });
     } else if (!kycApproved) {
       toast.error('กรุณายืนยันตัวตนด้วยบัตรประชาชนก่อนลงทุน', { duration: 4000 });
       navigate('/booster/profile?tab=verify', { replace: true });
     }
-  }, [project, authUser, id, navigate]);
+  }, [project, authUser, slug, navigate]);
 
   // Timer countdown
   useEffect(() => {
@@ -109,10 +113,18 @@ const Investment = () => {
       pollingRef.current = window.setInterval(async () => {
         try {
           const response = await getInvestmentById(investmentData.investment_id);
-          if (response?.data?.investment?.status === 'verified' || response?.data?.status === 'verified') {
+          const status = response?.data?.investment?.status || response?.data?.status;
+          if (status === 'verified') {
             if (pollingRef.current) clearInterval(pollingRef.current);
+            setCompletedInvestmentId(investmentData.investment_id);
             setStep(4);
             clearInvestmentData();
+          } else if (status === 'rejected') {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+            toast.error('การชำระเงินไม่สำเร็จ หรือ QR Code หมดอายุ กรุณาทำรายการใหม่');
+            clearInvestmentData();
+            setTimeLeft(15 * 60);
+            setStep(2);
           }
         } catch (error) {
           console.error("Polling error:", error);
@@ -130,6 +142,12 @@ const Investment = () => {
   const revenueShare = project?.profit_share_pct || 0;
   const minAmount = project?.min_invest_amount || 1000;
   const remaining = Math.max(0, (project?.funding_goal || 0) - (project?.current_funding || 0));
+  // ถ้าระดมทุนถึง softcap แล้ว → ยกเว้นขั้นต่ำ เพื่อให้ลงทุน remaining ที่เหลือได้
+  const softcap = project?.softcap || 0;
+  const currentFunding = project?.current_funding || 0;
+  const isSoftcapReached = softcap > 0 && currentFunding >= softcap;
+  const MIN_PAYMENT_GATEWAY = 20; // PromptPay QR ต้องการขั้นต่ำ 20 บาท
+  const effectiveMinAmount = Math.max(isSoftcapReached ? 1 : minAmount, MIN_PAYMENT_GATEWAY);
   // เพดานต่อรายการของ payment gateway (Stripe จำกัดที่ ~999,999.99 — ตั้ง 500,000 ตามมาตรฐาน fintech ไทย)
   const MAX_PER_TRANSACTION = 500_000;
   const maxAmount = Math.min(
@@ -141,6 +159,37 @@ const Investment = () => {
   const platformFeeRate = (project?.platform_fee || 5) / 100;
   const vatRate = 0.07;
 
+  const presetAmounts = (() => {
+    // Palette of round numbers covering common investment scales
+    const NICE = [500, 1000, 2000, 3000, 5000, 7000, 10000, 15000, 20000, 30000, 50000, 70000, 100000, 150000, 200000, 300000, 500000];
+    const candidates = NICE.filter(v => v > effectiveMinAmount && v < maxAmount);
+    const COUNT = 3; // presets after minAmount (total = 4 + สูงสุด)
+
+    let picks: number[];
+    if (candidates.length >= COUNT) {
+      // Evenly distributed by index across the candidate list
+      picks = Array.from({ length: COUNT }, (_, i) =>
+        candidates[Math.round((i + 1) * (candidates.length - 1) / COUNT)]
+      );
+      picks = [...new Set(picks)];
+    } else if (candidates.length > 0) {
+      picks = candidates;
+    } else {
+      // Range too tight — linear fallback rounded to sensible magnitude
+      const rawStep = (maxAmount - effectiveMinAmount) / (COUNT + 1);
+      const mag = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1))));
+      const step = Math.max(1000, Math.round(rawStep / mag) * mag);
+      const start = Math.ceil((effectiveMinAmount + 1) / step) * step;
+      picks = [];
+      for (let v = start; v < maxAmount && picks.length < COUNT; v += step) picks.push(v);
+    }
+
+    // แสดง minAmount เป็น preset แรกเฉพาะเมื่อ minAmount <= maxAmount
+    // (กรณี softcap ถึงแล้วและ remaining < minAmount → ไม่แสดง minAmount)
+    const leadingPreset = minAmount <= maxAmount ? minAmount : null;
+    return leadingPreset ? [leadingPreset, ...picks] : picks;
+  })();
+
   const parsedAmount = parseInt(amount.replace(/,/g, "")) || 0;
   const fee = parsedAmount * platformFeeRate;
   const vat = fee * vatRate;
@@ -150,8 +199,28 @@ const Investment = () => {
     if (!authUser) return "—";
     const fn = typeof authUser.first_name === 'string' ? authUser.first_name : '';
     const ln = typeof authUser.last_name === 'string' ? authUser.last_name : '';
-    return `${fn} ${ln}`.trim() || typeof authUser.name === 'string' ? authUser.name as string : '—';
+    return `${fn} ${ln}`.trim() || (typeof authUser.name === 'string' ? authUser.name as string : '—');
   })();
+
+  const handleDownloadContract = async () => {
+    if (!completedInvestmentId) return;
+    setIsPrintingPDF(true);
+    try {
+      const res = await import('../../services/api').then(m => m.default.get(
+        `/investments/${completedInvestmentId}/contract`,
+        { responseType: 'text' }
+      ));
+      const blob = new Blob([res.data as string], { type: 'text/html; charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) { toast.error('กรุณาอนุญาต popup เพื่อดาวน์โหลด PDF'); URL.revokeObjectURL(url); return; }
+      win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url); });
+    } catch {
+      toast.error('ไม่สามารถโหลดสัญญาได้');
+    } finally {
+      setIsPrintingPDF(false);
+    }
+  };
 
   const handleNextStep1 = () => {
     if (!agreed) {
@@ -169,8 +238,8 @@ const Investment = () => {
   };
 
   const handleNextStep2 = () => {
-    if (parsedAmount < minAmount) {
-      toast.error(`จำนวนเงินขั้นต่ำคือ ฿${minAmount.toLocaleString()}`);
+    if (parsedAmount < effectiveMinAmount) {
+      toast.error(`จำนวนเงินขั้นต่ำคือ ฿${effectiveMinAmount.toLocaleString()}`);
       return;
     }
     if (parsedAmount > maxAmount) {
@@ -181,10 +250,10 @@ const Investment = () => {
   };
 
   const handleConfirmInvestment = async () => {
-    if (!authUser || !id) return;
+    if (!authUser || !project?.id) return;
 
     const success = await createInvestment({
-      project_id: Number(id),
+      project_id: project.id,
       amount: parsedAmount,
     });
 
@@ -202,7 +271,7 @@ const Investment = () => {
 
   return (
     <div className="h-full min-h-screen w-full flex-1 bg-[url('/bg-investment.png')] bg-cover bg-center bg-no-repeat bg-fixed flex flex-col pt-24 relative before:absolute before:inset-0 before:bg-white/30 before:pointer-events-none">
-      <Toaster position="top-right" />
+      <Toaster position="top-center" containerStyle={{ top: 80 }} />
       <ContractModal isOpen={showContract} onClose={() => setShowContract(false)} />
 
       {/* Confirmation Modal */}
@@ -247,14 +316,14 @@ const Investment = () => {
             <div className="p-4 border-t border-border bg-background/50 flex gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 py-3 rounded-xl border border-border bg-card text-foreground font-semibold hover:bg-muted transition-colors"
+                className="flex-1 py-3 rounded-xl border border-border bg-card text-foreground font-semibold hover:bg-muted transition-colors cursor-pointer"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={handleConfirmInvestment}
                 disabled={isSubmitting}
-                className="flex-1 py-3 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : null}
                 ยืนยันการลงทุน
@@ -271,7 +340,7 @@ const Investment = () => {
             <div className="mb-8">
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors mb-6"
+                className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors mb-6 cursor-pointer"
               >
                 <ArrowLeft size={18} /> กลับ
               </button>
@@ -364,7 +433,7 @@ const Investment = () => {
                         <p>เงินลงทุนจะถูกปล่อยตาม Milestone ที่ผ่านการตรวจสอบตามเงื่อนไขของโปรเจคต์เท่านั้น</p>
                         <button
                           onClick={() => setShowContract(true)}
-                          className="mt-2 text-primary hover:underline font-medium flex items-center gap-1"
+                          className="mt-2 text-primary hover:underline font-medium flex items-center gap-1 cursor-pointer"
                         >
                           <FileText size={14} /> อ่านสัญญาเพิ่มเติม &gt;
                         </button>
@@ -395,7 +464,7 @@ const Investment = () => {
 
                   <button
                     onClick={handleNextStep1}
-                    className="w-full py-3.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
+                    className="w-full py-3.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 cursor-pointer"
                   >
                     ยอมรับและดำเนินการต่อ
                   </button>
@@ -419,25 +488,25 @@ const Investment = () => {
                             const val = e.target.value.replace(/[^0-9]/g, "");
                             setAmount(val ? Number(val).toLocaleString() : "");
                            }}
-                          placeholder={`ขั้นต่ำ ${minAmount.toLocaleString()}`}
+                          placeholder={isSoftcapReached ? `สูงสุด ${maxAmount.toLocaleString()}` : `ขั้นต่ำ ${minAmount.toLocaleString()}`}
                           className="w-full pl-10 pr-4 py-5 rounded-[20px] border-2 border-[#E9ECEF] focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none transition-all placeholder:text-[#ADB5BD] font-bold text-2xl text-foreground"
                         />
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-3">
-                      {[1000, 5000, 10000, 50000].map(val => (
+                      {presetAmounts.map(val => (
                         <button
                           key={val}
                           onClick={() => setAmount(val.toLocaleString())}
-                          className="px-6 py-3 border border-border rounded-[14px] font-bold text-foreground bg-white hover:border-primary hover:text-primary transition-all shadow-sm hover:shadow-md active:scale-95"
+                          className="px-6 py-3 border border-border rounded-[14px] font-bold text-foreground bg-white hover:border-primary hover:text-primary transition-all shadow-sm hover:shadow-md active:scale-95 cursor-pointer"
                         >
                           ฿{val.toLocaleString()}
                         </button>
                       ))}
                       <button
                         onClick={() => setAmount(maxAmount.toLocaleString())}
-                        className="px-6 py-3 border border-primary/30 rounded-[14px] font-bold text-primary bg-primary/5 hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
+                        className="px-6 py-3 border border-primary/30 rounded-[14px] font-bold text-primary bg-primary/5 hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         สูงสุด
                       </button>
@@ -473,7 +542,7 @@ const Investment = () => {
 
                     <button
                       onClick={handleNextStep2}
-                      className="w-full py-3.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 mt-4"
+                      className="w-full py-3.5 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 mt-4 cursor-pointer"
                     >
                       ดำเนินการชำระเงิน
                     </button>
@@ -484,55 +553,86 @@ const Investment = () => {
               {/* Step 3: Payment UI */}
               {step === 3 && (
                 <div className="animate-in fade-in slide-in-from-right-8 duration-500">
-                  <div className="flex flex-col items-center py-4">
-                    <div className="w-full max-w-sm border-2 border-dashed border-primary/20 rounded-3xl p-6 sm:p-8 bg-background flex flex-col items-center shadow-sm text-center">
-                      <div className="mb-4 text-center w-full">
-                        <img
-                          src={investmentData?.qr_code_image_url || '/img-payment-qr.png'}
-                          alt="QR Code"
-                          className="w-[80%] mx-auto object-contain rounded-lg aspect-square mb-2 bg-white"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237C4DDB%22%20stroke-width%3D%221%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%2218%22%20height%3D%2218%22%20rx%3D%222%22%20ry%3D%222%22%3E%3C%2Frect%3E%3Crect%20x%3D%227%22%20y%3D%227%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%2214%22%20y%3D%227%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%227%22%20y%3D%2214%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3Crect%20x%3D%2214%22%20y%3D%2214%22%20width%3D%223%22%20height%3D%223%22%3E%3C%2Frect%3E%3C%2Fsvg%3E';
-                          }}
-                        />
-                        <h3 className="font-bold text-sm text-foreground mb-1">สแกน QR Code เพื่อชำระเงิน</h3>
-                        <p className="font-black text-2xl text-primary font-mono tracking-tight">
-                          ฿{(investmentData?.total_amount || parsedAmount).toLocaleString()}
+                  <div className="flex flex-col items-center py-2">
+
+                    {/* PromptPay QR Card */}
+                    <div className="w-full max-w-[300px] rounded-2xl overflow-hidden shadow-xl border border-border">
+
+                      {/* ── Header: THAI QR PAYMENT ── */}
+                      <div className="bg-[#1a3a6b] px-4 py-3 flex items-center gap-3">
+                        <div className="bg-white rounded-full w-9 h-9 flex items-center justify-center flex-shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#1a3a6b]">
+                            <path d="M12 2L2 7h20L12 2zM4 9v9h2V9H4zm5 0v9h2V9H9zm4 0v9h2V9h-2zm5 0v9h2V9h-2zM2 20h20v2H2z"/>
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-black text-[12px] tracking-widest uppercase leading-none">THAI QR PAYMENT</p>
+                        </div>
+                      </div>
+
+                      {/* ── PromptPay label ── */}
+                      <div className="bg-white pt-4 pb-3 flex items-center justify-center">
+                        <p className="text-[#003f9c] font-black text-[14px] tracking-wide">ชำระผ่าน PromptPay</p>
+                      </div>
+
+                      {/* ── QR Code ── */}
+                      <div className="bg-white px-5 pb-3">
+                        <div className="border border-[#1a3a6b]/15 rounded-xl overflow-hidden p-2 bg-white">
+                          <img
+                            src={investmentData?.qr_code_image_url || '/img-payment-qr.png'}
+                            alt="PromptPay QR Code"
+                            className="w-full object-contain aspect-square"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Crect%20width%3D%2240%22%20height%3D%2240%22%20fill%3D%22%23f9fafb%22%2F%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22%231a3a6b%22%20stroke-width%3D%222%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%20fill%3D%22%231a3a6b%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%222%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22%231a3a6b%22%20stroke-width%3D%222%22%2F%3E%3Crect%20x%3D%2227%22%20y%3D%225%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%20fill%3D%22%231a3a6b%22%2F%3E%3Crect%20x%3D%222%22%20y%3D%2224%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22%231a3a6b%22%20stroke-width%3D%222%22%2F%3E%3Crect%20x%3D%225%22%20y%3D%2227%22%20width%3D%228%22%20height%3D%228%22%20rx%3D%221%22%20fill%3D%22%231a3a6b%22%2F%3E%3C%2Fsvg%3E';
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* ── Merchant + Amount ── */}
+                      <div className="bg-white px-5 pb-4 text-center space-y-0.5">
+                        <p className="font-black text-[#1a3a6b] text-[15px] tracking-widest uppercase">FLYUP</p>
+                        <p className="font-bold text-foreground text-[20px]">
+                          {(investmentData?.total_amount || parsedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })} THB
                         </p>
-                        <p className="text-xs text-muted-foreground mt-2 font-medium">
-                          ใช้งานได้ภายใน <span className="text-error">{formatTime(timeLeft)}</span> นาที
-                        </p>
+                      </div>
+
+                      {/* ── Detail rows ── */}
+                      <div className="bg-[#f5f7fa] border-t border-border px-5 py-3 space-y-1.5">
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-muted-foreground">โปรเจกต์</span>
+                          <span className="font-semibold text-foreground text-right max-w-[60%] truncate">{projectTitle}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-muted-foreground">ผู้สนับสนุน</span>
+                          <span className="font-semibold text-foreground text-right max-w-[60%] truncate">{userName}</span>
+                        </div>
                         {investmentData?.reference_number && (
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            Ref: {investmentData.reference_number}
-                          </p>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-muted-foreground">Ref</span>
+                            <span className="font-mono text-muted-foreground">{investmentData.reference_number}</span>
+                          </div>
                         )}
                       </div>
 
-                      <div className="w-full bg-muted/50 rounded-xl p-4 text-xs space-y-2.5 mb-4 text-left border border-border/50">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">ชื่อโปรเจกต์</span>
-                          <span className="font-semibold text-foreground">{projectTitle}</span>
+                      {/* ── Status bar ── */}
+                      <div className="bg-[#1a3a6b] px-4 py-2.5 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Loader2 size={12} className="animate-spin text-blue-200" />
+                          <span className="text-blue-200 text-[10px]">รอการชำระเงิน...</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">ผู้สนับสนุน</span>
-                          <span className="font-semibold text-foreground">{userName}</span>
+                        <div>
+                          <span className="text-blue-200 text-[10px]">หมดอายุใน </span>
+                          <span className="text-white font-bold text-[12px]">{formatTime(timeLeft)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">รับเงินโดย</span>
-                          <span className="font-semibold text-foreground text-right leading-tight">FlyUp<br /><span className="text-[10px] text-muted-foreground font-normal">ธนาคารกสิกรไทย</span></span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-3 py-1.5 rounded-full font-semibold mb-6">
-                        <ShieldCheck size={14} /> ปลอดภัยด้วยระบบ Escrow
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Loader2 size={14} className="animate-spin text-primary" />
-                        <span>กำลังรอการชำระเงิน...</span>
                       </div>
                     </div>
+
+                    {/* Escrow badge */}
+                    <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-3 py-1.5 rounded-full font-semibold mt-4">
+                      <ShieldCheck size={14} /> ปลอดภัยด้วยระบบ Escrow
+                    </div>
+
                   </div>
                 </div>
               )}
@@ -547,7 +647,7 @@ const Investment = () => {
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-foreground mb-2 text-transparent bg-clip-text bg-[image:var(--gradient-primary)]">การลงทุนสำเร็จ!</h1>
               <p className="text-muted-foreground text-sm leading-relaxed mb-8 px-4">
-                ขอบคุณที่ร่วมสนับสนุนโปรเจกต์ของนักศึกษา ระบบได้ส่งหลักฐานการยืนยันไปยังอีเมล์ของคุณเรียบร้อยแล้ว
+                ขอบคุณที่ร่วมสนับสนุนโปรเจกต์ของนักศึกษา ระบบได้ส่งหลักฐานการยืนยันไปยังอีเมลของคุณเรียบร้อยแล้ว
               </p>
 
               <div className="bg-muted/50 rounded-2xl p-4 border border-border/50 text-left mb-8 space-y-2.5 text-sm mx-auto max-w-sm">
@@ -566,11 +666,22 @@ const Investment = () => {
               </div>
 
               <button
-                onClick={() => navigate(`/projects/${id}`)}
-                className="w-full py-4 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/30 uppercase tracking-widest text-sm"
+                onClick={() => navigate(`/projects/${slug}`)}
+                className="w-full py-4 bg-primary text-white-foreground rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/30 uppercase tracking-widest text-sm cursor-pointer"
               >
                 กลับสู่หน้าโปรเจกต์
               </button>
+
+              {completedInvestmentId && (
+                <button
+                  onClick={handleDownloadContract}
+                  disabled={isPrintingPDF}
+                  className="w-full mt-3 py-3.5 bg-background hover:bg-muted border border-border text-foreground rounded-xl font-semibold flex items-center justify-center gap-2 text-sm transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  {isPrintingPDF ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  {isPrintingPDF ? 'กำลังเตรียม PDF...' : 'ดาวน์โหลดสัญญา (PDF)'}
+                </button>
+              )}
             </div>
           </div>
         )}

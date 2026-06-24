@@ -1,9 +1,15 @@
-import { useCallback, useEffect } from 'react'
+﻿import { useCallback, useEffect } from 'react'
+import api from '../services/api'
 import { useAuthStore } from '../store/useAuthStore'
 import { useNotificationStore, type Notification } from '../store/useNotificationStore'
 import { useBoosterStore } from '../store/useBoosterStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePublicProjectStore } from '../store/usePublicProjectStore'
+import { useAdminBadgeStore } from '../store/useAdminBadgeStore'
+import { usePioneerBadgeStore } from '../store/usePioneerBadgeStore'
+import { useBoosterBadgeStore } from '../store/useBoosterBadgeStore'
+import { useAdminStore } from '../store/useAdminStore'
+import { useMilestoneStore } from '../store/useMilestoneStore'
 
 const useNotificationSSE = () => {
     const { authUser, checkAuth } = useAuthStore()
@@ -44,7 +50,13 @@ const useNotificationSSE = () => {
                 break
             }
 
-            case 'milestone': {
+            case 'milestone_submitted': {
+                useAdminStore.getState().fetchPendingMilestones()
+                break
+            }
+
+            case 'milestone':
+            case 'milestone_rejected': {
                 const pid = notif.related_id
                 if (!pid) break
                 const pubState = usePublicProjectStore.getState()
@@ -55,6 +67,16 @@ const useNotificationSSE = () => {
                 if ((pioneerState.currentProject.id ?? 0) === pid) {
                     pioneerState.loadCurrentProject(pid)
                 }
+                const milestoneState = useMilestoneStore.getState()
+                if (milestoneState.milestones.length > 0) {
+                    useMilestoneStore.getState().fetchMilestones(String(pid))
+                }
+                break
+            }
+
+            case 'profit': {
+                useBoosterStore.getState().fetchMyInvestments()
+                useProjectStore.getState().fetchMyProjects()
                 break
             }
 
@@ -65,6 +87,7 @@ const useNotificationSSE = () => {
                 if (pubState.currentPublicProject?.id === pid) {
                     pubState.fetchPublicProjectById(pid)
                 }
+                useBoosterStore.getState().fetchMyInvestments()
                 break
             }
         }
@@ -73,25 +96,48 @@ const useNotificationSSE = () => {
     useEffect(() => {
         if (!authUser) return
 
-        const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream`
-        const es = new EventSource(url, { withCredentials: true })
+        let es: EventSource | null = null
+        let cancelled = false
 
-        es.onmessage = (e: MessageEvent) => {
-            try {
-                const notif = JSON.parse(e.data) as Notification
-                if (!notif?.id) return
-                addNotification(notif)
-                handleRefresh(notif)
-            } catch {
-                // ignore ping / non-JSON events
-            }
+        // Fetch a short-lived one-time SSE token (60s TTL, deleted on first use)
+        // so the main JWT never appears in browser history or server logs
+        api.post('/notifications/sse-token')
+            .then((res: { data?: { token?: string } }) => {
+                if (cancelled) return
+                const sseToken: string = res.data?.token ?? ''
+                if (!sseToken) return
+
+                const url = `${import.meta.env.VITE_BASE_URL}/notifications/stream?sse_token=${encodeURIComponent(sseToken)}`
+                es = new EventSource(url)
+
+                es.onmessage = (e: MessageEvent) => {
+                    try {
+                        const notif = JSON.parse(e.data) as Notification
+                        if (!notif?.id) return
+                        addNotification(notif)
+                        handleRefresh(notif)
+                        if (authUser?.role === 'admin') {
+                            useAdminBadgeStore.getState().fetchBadges()
+                        } else if (authUser?.role === 'pioneer') {
+                            usePioneerBadgeStore.getState().fetchBadges()
+                        } else if (authUser?.role?.toLowerCase() === 'booster') {
+                            useBoosterBadgeStore.getState().fetchBadges()
+                        }
+                    } catch {
+                        // ignore ping / non-JSON events
+                    }
+                }
+
+                es.onerror = () => {
+                    // EventSource auto-reconnects
+                }
+            })
+            .catch(() => { /* ignore auth errors */ })
+
+        return () => {
+            cancelled = true
+            es?.close()
         }
-
-        es.onerror = () => {
-            // EventSource auto-reconnects
-        }
-
-        return () => es.close()
     }, [authUser, addNotification, handleRefresh])
 }
 

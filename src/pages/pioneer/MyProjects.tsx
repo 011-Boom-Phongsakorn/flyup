@@ -5,14 +5,17 @@ import { useProjectStore } from "../../store/useProjectStore";
 import useCreateProjectGuard from "../../hooks/useCreateProjectGuard";
 import Swal from "sweetalert2";
 
-type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled" | "executing";
+type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled" | "executing" | "pending_cancel" | "suspended";
 
 const stateLabels: { type: StateType | "all"; label: string }[] = [
   { type: "funding", label: "กำลังระดมทุน" },
+  { type: "executing", label: "กำลังดำเนินการ" },
   { type: "pending_review", label: "รอการตรวจสอบ" },
   { type: "draft", label: "แบบร่าง" },
-  { type: "closed", label: "เสร็จสิ้น" },
+  { type: "pending_cancel", label: "รอยืนยันยกเลิก" },
   { type: "cancelled", label: "ถูกยกเลิก" },
+  { type: "suspended", label: "ถูกระงับ" },
+  { type: "closed", label: "เสร็จสิ้น" },
 ];
 
 const stateTextMap: Record<StateType, string> = {
@@ -22,15 +25,19 @@ const stateTextMap: Record<StateType, string> = {
   closed: "เสร็จสิ้น",
   cancelled: "ถูกยกเลิก",
   executing: "กำลังดำเนินการ",
+  pending_cancel: "รอยืนยันการยกเลิก",
+  suspended: "ถูกระงับ",
 };
 
 const stateBadgeClass: Record<StateType, string> = {
   funding: "bg-[#8B5CF6] text-white",
   closed: "bg-[#8B5CF6] text-white",
   pending_review: "bg-[#F1F3F5] text-[#495057]",
-  draft: "bg-white border border-border text-[#495057]",
+  draft: "bg-slate-100 text-slate-500",
   cancelled: "bg-[#EF4444] text-white",
   executing: "bg-[#3B82F6] text-white",
+  pending_cancel: "bg-[#F59E0B] text-white",
+  suspended: "bg-orange-100 text-orange-700",
 };
 
 const MyProjects = () => {
@@ -49,7 +56,7 @@ const MyProjects = () => {
 
   const stateCounts = useMemo(() => {
     const counts: Record<StateType, number> = {
-      funding: 0, pending_review: 0, draft: 0, closed: 0, cancelled: 0, executing: 0
+      funding: 0, pending_review: 0, draft: 0, closed: 0, cancelled: 0, executing: 0, pending_cancel: 0, suspended: 0
     };
     projects.forEach(p => {
       if (p.state in counts) counts[p.state]++;
@@ -72,9 +79,9 @@ const MyProjects = () => {
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PAGE_SIZE));
   const pagedProjects = filteredProjects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleView = (id: number, state: StateType) => {
+  const handleView = (id: number, state: StateType, slug?: string) => {
     const useDetail = state === 'funding' || state === 'executing' || state === 'closed';
-    if (useDetail) navigate(`/projects/${id}`);
+    if (useDetail) navigate(`/projects/${slug || id}`);
     else navigate(`/preview/${id}`, { state: { from: '/pioneer/dashboard/projects' } });
   };
   const handleEdit = (id: number) => navigate(`/project/overview/${id}`);
@@ -224,7 +231,7 @@ const MyProjects = () => {
               <div
                 key={project.id}
                 className="bg-white border border-border rounded-[16px] p-[20px] flex gap-[20px] shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => handleView(project.id, project.state)}
+                onClick={() => handleView(project.id, project.state, project.slug)}
               >
                 {/* Thumbnail */}
                 <div className="w-[64px] h-[64px] bg-[#E1E4E8] rounded-[12px] shrink-0 mt-[4px] overflow-hidden">
@@ -265,8 +272,16 @@ const MyProjects = () => {
                             <span>{progress}%</span>
                           </div>
                           <div className="h-[6px] w-full bg-[#E9D5FF] rounded-full overflow-hidden">
-                            <div className="h-full bg-[#8B5CF6] rounded-full" style={{ width: `${progress}%` }} />
+                            <div className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full" style={{ width: `${progress}%` }} />
                           </div>
+                        </div>
+                      )}
+
+                      {/* Pending cancel info */}
+                      {project.state === 'pending_cancel' && (
+                        <div className="flex items-center gap-[6px] mt-[4px]">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          <span className="text-[12px] text-[#F59E0B] font-medium">อยู่ระหว่างรอ Admin ยืนยันการยกเลิก</span>
                         </div>
                       )}
 

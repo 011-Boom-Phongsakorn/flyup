@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Lock, Upload, Clock, CheckCircle, XCircle, Pencil, X, Loader2, Save } from "lucide-react";
+import { Lock, Upload, Clock, CheckCircle, XCircle, Pencil, X, Loader2, Save, Plus, Star } from "lucide-react";
 
 const THAI_BANKS = [
   "ธนาคารกรุงเทพ (BBL)",
@@ -16,11 +16,37 @@ const THAI_BANKS = [
   "ธนาคารยูโอบี (UOB)",
 ];
 import { useAuthStore } from "../../store/useAuthStore";
+import { useSelfVerificationStore } from "../../store/useSelfVerificationStore";
 import toast from "react-hot-toast";
-import api from "../../services/api";
+
+const SELECT_STYLE = "border border-border rounded-[8px] px-[12px] py-[10px] pr-[32px] text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_10px_center]";
+const INPUT_STYLE = "border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors";
+
+type BankFormState = { bank_name: string; account_name: string; account_number: string };
+
+const BankFormFields = ({ form, setForm }: { form: BankFormState; setForm: React.Dispatch<React.SetStateAction<BankFormState>> }) => (
+  <div className="flex flex-col gap-[12px]">
+    <div className="flex flex-col gap-[6px]">
+      <label className="text-[13px] font-medium text-foreground">ธนาคาร <span className="text-error">*</span></label>
+      <select value={form.bank_name} onChange={(e) => setForm(p => ({ ...p, bank_name: e.target.value }))} className={SELECT_STYLE}>
+        <option value="">-- เลือกธนาคาร --</option>
+        {THAI_BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
+      </select>
+    </div>
+    <div className="flex flex-col gap-[6px]">
+      <label className="text-[13px] font-medium text-foreground">ชื่อบัญชี <span className="text-error">*</span></label>
+      <input value={form.account_name} onChange={(e) => setForm(p => ({ ...p, account_name: e.target.value }))} className={INPUT_STYLE} />
+    </div>
+    <div className="flex flex-col gap-[6px]">
+      <label className="text-[13px] font-medium text-foreground">เลขบัญชี <span className="text-error">*</span></label>
+      <input value={form.account_number} onChange={(e) => setForm(p => ({ ...p, account_number: e.target.value.replace(/\D/g, '') }))} inputMode="numeric" className={INPUT_STYLE} />
+    </div>
+  </div>
+);
 
 const VerifyTab = () => {
-  const { authUser, checkAuth } = useAuthStore();
+  const { authUser, checkAuth, updateProfile } = useAuthStore();
+  const { uploadVerificationDocument, submitIdVerify, submitStudentVerify, addBankAccount, updateBankAccount, setDefaultBankAccount } = useSelfVerificationStore();
 
   const derivedStudentCode =
     authUser?.student_profile?.student_code ??
@@ -62,17 +88,17 @@ const VerifyTab = () => {
   const [studentFile, setStudentFile] = useState<File | null>(null);
   const [idCardFile, setIdCardFile] = useState<File | null>(null);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
-  const [bankForm, setBankForm] = useState({
-    bank_name: authUser?.bank_account?.bank_name ?? "",
-    account_name: authUser?.bank_account?.account_name ?? "",
-    account_number: authUser?.bank_account?.account_number ?? "",
-  });
-  const [bankSnapshot, setBankSnapshot] = useState({ ...bankForm });
-  const [isBankEditing, setIsBankEditing] = useState(!authUser?.bank_account?.id);
+  const emptyBankForm = { bank_name: "", account_name: "", account_number: "" };
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState(emptyBankForm);
+  const [isSavingAdd, setIsSavingAdd] = useState(false);
+  const [editingBankId, setEditingBankId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState(emptyBankForm);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [settingDefaultId, setSettingDefaultId] = useState<number | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(studentCardLocked);
   const [acceptAccuracy, setAcceptAccuracy] = useState(studentCardLocked);
   const [isSavingStudent, setIsSavingStudent] = useState(false);
-  const [isSavingBank, setIsSavingBank] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -85,11 +111,6 @@ const VerifyTab = () => {
       "";
     setStudentForm({
       student_code: code,
-    });
-    setBankForm({
-      bank_name: authUser?.bank_account?.bank_name ?? "",
-      account_name: authUser?.bank_account?.account_name ?? "",
-      account_number: authUser?.bank_account?.account_number ?? "",
     });
     const scStatus = authUser?.student_card_verification?.status ?? "";
     if (scStatus) {
@@ -129,100 +150,81 @@ const VerifyTab = () => {
     try {
       let studentCardUrl = storedStudentCardUrl;
       if (studentFile) {
-        const fd = new FormData();
-        fd.append("file", studentFile);
-        const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        studentCardUrl = res.data.data.url;
+        const url = await uploadVerificationDocument(studentFile);
+        if (!url) return;
+        studentCardUrl = url;
       }
 
       let idCardUrl = storedIdCardUrl;
       if (idCardFile) {
-        const fd = new FormData();
-        fd.append("file", idCardFile);
-        const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        idCardUrl = res.data.data.url;
+        const url = await uploadVerificationDocument(idCardFile);
+        if (!url) return;
+        idCardUrl = url;
       }
 
       let selfieUrl = storedSelfieUrl;
       if (selfieFile) {
-        const fd = new FormData();
-        fd.append("file", selfieFile);
-        const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        selfieUrl = res.data.data.url;
+        const url = await uploadVerificationDocument(selfieFile);
+        if (!url) return;
+        selfieUrl = url;
       }
 
-      await api.patch("/user/profile", {
-        student_code: studentForm.student_code || undefined,
-      });
+      await updateProfile({ student_code: studentForm.student_code || undefined });
 
       if (!studentCardLocked) {
-        await api.post("/user/student-verify", {
+        const ok = await submitStudentVerify({
           student_card_url: studentCardUrl,
           declare_truth: acceptAccuracy,
           accept_pioneer_terms: acceptTerms,
         });
+        if (!ok) return;
       }
 
       if (!idCardLocked) {
-        await api.post("/user/id-verify", {
+        const status = await submitIdVerify({
           id_card_url: idCardUrl,
           selfie_url: selfieUrl,
           declare_truth: acceptAccuracy,
         });
+        if (!status) return;
       }
 
-      await checkAuth();
       toast.success("ส่งข้อมูลยืนยันตัวตนแล้ว รอ admin อนุมัติ");
-    } catch {
-      toast.error("เกิดข้อผิดพลาด");
     } finally {
       setIsSavingStudent(false);
     }
   };
 
-  const handleBankEdit = () => {
-    setBankSnapshot({ ...bankForm });
-    setIsBankEditing(true);
-  };
-
-  const handleBankCancel = () => {
-    setBankForm({ ...bankSnapshot });
-    setIsBankEditing(false);
-  };
-
-  const handleBankSubmit = async () => {
-    if (!baseRequired.first_name || !baseRequired.last_name || !baseRequired.phone) {
-      toast.error("กรุณากรอกข้อมูลส่วนตัว (ชื่อ นามสกุล เบอร์โทร) ในแท็บโปรไฟล์ก่อน");
-      return;
+  const handleAddBank = async () => {
+    if (!addForm.bank_name || !addForm.account_name || !addForm.account_number) {
+      toast.error("กรุณากรอกข้อมูลให้ครบ"); return;
     }
-    setIsSavingBank(true);
+    setIsSavingAdd(true);
     try {
-      if (authUser?.bank_account?.id) {
-        await api.patch(`/user/update-bank/${authUser.bank_account.id}`, {
-          bank_name: bankForm.bank_name || undefined,
-          account_name: bankForm.account_name || undefined,
-          account_number: bankForm.account_number || undefined,
-        });
-      } else {
-        await api.post("/user/add-bank", {
-          bank_name: bankForm.bank_name || undefined,
-          account_name: bankForm.account_name || undefined,
-          account_number: bankForm.account_number || undefined,
-        });
+      const ok = await addBankAccount(addForm);
+      if (ok) {
+        setAddForm(emptyBankForm);
+        setShowAddForm(false);
       }
-      await checkAuth();
-      setIsBankEditing(false);
-      toast.success("บันทึกข้อมูลบัญชีสำเร็จ");
-    } catch (err: unknown) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      if (message === "account number already exists") {
-        toast.error("เลขบัญชีนี้มีในระบบแล้ว กรุณาใช้เลขบัญชีอื่น");
-      } else {
-        toast.error("เกิดข้อผิดพลาด");
-      }
-    } finally {
-      setIsSavingBank(false);
+    } finally { setIsSavingAdd(false); }
+  };
+
+  const handleEditBank = async (id: number) => {
+    if (!editForm.bank_name || !editForm.account_name || !editForm.account_number) {
+      toast.error("กรุณากรอกข้อมูลให้ครบ"); return;
     }
+    setIsSavingEdit(true);
+    try {
+      const ok = await updateBankAccount(id, editForm);
+      if (ok) setEditingBankId(null);
+    } finally { setIsSavingEdit(false); }
+  };
+
+  const handleSetDefault = async (id: number) => {
+    setSettingDefaultId(id);
+    try {
+      await setDefaultBankAccount(id);
+    } finally { setSettingDefaultId(null); }
   };
 
   const studentCardPreview = studentFile
@@ -305,6 +307,7 @@ const VerifyTab = () => {
                 </div>
               )}
               <input
+                data-testid="verify-studentcard-input"
                 type="file"
                 accept="image/*,.pdf"
                 className="hidden"
@@ -350,6 +353,7 @@ const VerifyTab = () => {
                 </div>
               )}
               <input
+                data-testid="verify-idcard-input"
                 type="file"
                 accept="image/*,.pdf"
                 className="hidden"
@@ -396,6 +400,7 @@ const VerifyTab = () => {
                 </div>
               )}
               <input
+                data-testid="verify-selfie-input"
                 type="file"
                 accept="image/*"
                 className="hidden"
@@ -445,6 +450,7 @@ const VerifyTab = () => {
 
         {!bothLocked && (
           <button
+            data-testid="verify-submit-btn"
             onClick={handleStudentSubmit}
             disabled={isSavingStudent}
             className="w-full bg-primary hover:bg-primary-hover text-white py-[12px] rounded-[10px] text-[14px] font-medium transition-colors disabled:opacity-50 cursor-pointer"
@@ -461,78 +467,92 @@ const VerifyTab = () => {
       </div>
 
       {/* ยืนยันบัญชี */}
-      <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col gap-[20px]">
+      <div className="bg-white border border-border rounded-[16px] p-[24px] flex flex-col gap-[16px]">
         <div className="flex items-center gap-[8px]">
           <Lock size={18} className="text-foreground" />
           <h2 className="font-semibold text-foreground">ยืนยันบัญชี</h2>
-          {authUser?.bank_account?.id && (
-            <span className="ml-auto text-[12px] text-green-600 bg-green-50 border border-green-200 px-[8px] py-[2px] rounded-full">ผูกบัญชีแล้ว</span>
-          )}
-          {authUser?.bank_account?.id && !isBankEditing && (
-            <button
-              onClick={handleBankEdit}
-              className="flex items-center gap-[6px] px-[12px] py-[6px] rounded-[8px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors cursor-pointer"
-            >
-              <Pencil size={13} /> แก้ไข
-            </button>
-          )}
+          <button
+            data-testid="bank-add-open-btn"
+            onClick={() => { setShowAddForm(true); setEditingBankId(null); }}
+            className="ml-auto flex items-center gap-[6px] px-[12px] py-[6px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors cursor-pointer"
+          >
+            <Plus size={14} /> เพิ่มบัญชี
+          </button>
         </div>
 
-        <div className="flex flex-col gap-[6px]">
-          <label className="text-[13px] font-medium text-foreground">ธนาคาร <span className="text-error">*</span></label>
-          {isBankEditing ? (
-            <select
-              value={bankForm.bank_name}
-              onChange={(e) => setBankForm((prev) => ({ ...prev, bank_name: e.target.value }))}
-              className="border border-border rounded-[8px] px-[12px] py-[10px] pr-[32px] text-[14px] outline-none focus:border-primary transition-colors bg-white cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_10px_center]"
-            >
-              <option value="">-- เลือกธนาคาร --</option>
-              {THAI_BANKS.map((bank) => (
-                <option key={bank} value={bank}>{bank}</option>
-              ))}
-            </select>
-          ) : (
-            <input value={bankForm.bank_name || "-"} disabled className="border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] bg-[#F8F9FA] text-muted-foreground cursor-not-allowed" />
-          )}
-        </div>
+        {/* รายการบัญชี */}
+        {(authUser?.bank_accounts ?? []).length === 0 && !showAddForm && (
+          <p className="text-[13px] text-muted-foreground text-center py-[8px]">ยังไม่มีบัญชีธนาคาร</p>
+        )}
 
-        {[
-          { key: "account_name", label: "ชื่อบัญชี" },
-          { key: "account_number", label: "เลขบัญชี" },
-        ].map(({ key, label }) => (
-          <div key={key} className="flex flex-col gap-[6px]">
-            <label className="text-[13px] font-medium text-foreground">{label} <span className="text-error">*</span></label>
-            <input
-              value={bankForm[key as keyof typeof bankForm]}
-              onChange={(e) => setBankForm((prev) => ({ ...prev, [key]: e.target.value }))}
-              disabled={!isBankEditing}
-              className={isBankEditing
-                ? "border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] outline-none focus:border-primary transition-colors"
-                : "border border-border rounded-[8px] px-[12px] py-[10px] text-[14px] bg-[#F8F9FA] text-muted-foreground cursor-not-allowed"
-              }
-            />
+        {(authUser?.bank_accounts ?? []).map((acc) => (
+          <div key={acc.id} className="border border-border rounded-[12px] p-[16px] flex flex-col gap-[12px]">
+            {editingBankId === acc.id ? (
+              <>
+                <BankFormFields form={editForm} setForm={setEditForm} />
+                <div className="flex gap-[8px] justify-end">
+                  <button data-testid="bank-edit-cancel-btn" onClick={() => setEditingBankId(null)} disabled={isSavingEdit} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] border border-border text-[13px] font-medium hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer">
+                    <X size={13} /> ยกเลิก
+                  </button>
+                  <button data-testid="bank-edit-save-btn" onClick={() => handleEditBank(acc.id!)} disabled={isSavingEdit} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors disabled:opacity-50 cursor-pointer">
+                    {isSavingEdit ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                    {isSavingEdit ? "กำลังบันทึก..." : "บันทึก"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-start justify-between gap-[12px]">
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex items-center gap-[6px]">
+                    <span className="text-[14px] font-semibold text-foreground">{acc.bank_name}</span>
+                    {acc.is_default && (
+                      <span className="flex items-center gap-[3px] text-[11px] text-yellow-600 bg-yellow-50 border border-yellow-200 px-[8px] py-[2px] rounded-full font-medium">
+                        <Star size={10} fill="currentColor" /> บัญชีหลัก
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[13px] text-muted-foreground">{acc.account_name}</span>
+                  <span className="text-[13px] text-muted-foreground">{acc.account_number}</span>
+                </div>
+                <div className="flex items-center gap-[6px] flex-shrink-0">
+                  {!acc.is_default && (
+                    <button
+                      data-testid={`bank-set-default-btn-${acc.id}`}
+                      onClick={() => handleSetDefault(acc.id!)}
+                      disabled={settingDefaultId === acc.id}
+                      className="flex items-center gap-[5px] px-[10px] py-[6px] rounded-[8px] border border-border text-[12px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {settingDefaultId === acc.id ? <Loader2 size={12} className="animate-spin" /> : <Star size={12} />}
+                      ตั้งเป็นหลัก
+                    </button>
+                  )}
+                  <button
+                    data-testid={`bank-edit-open-btn-${acc.id}`}
+                    onClick={() => { setEditingBankId(acc.id!); setEditForm({ bank_name: acc.bank_name ?? "", account_name: acc.account_name ?? "", account_number: acc.account_number ?? "" }); setShowAddForm(false); }}
+                    className="flex items-center gap-[5px] px-[10px] py-[6px] rounded-[8px] border border-border text-[12px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors cursor-pointer"
+                  >
+                    <Pencil size={12} /> แก้ไข
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
 
-        {isBankEditing && (
-          <div className="flex gap-[8px] justify-end">
-            {authUser?.bank_account?.id && (
-              <button
-                onClick={handleBankCancel}
-                disabled={isSavingBank}
-                className="flex items-center gap-[6px] px-[16px] py-[9px] rounded-[8px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <X size={14} /> ยกเลิก
+        {/* ฟอร์มเพิ่มบัญชีใหม่ */}
+        {showAddForm && (
+          <div className="border border-primary/30 rounded-[12px] p-[16px] flex flex-col gap-[12px] bg-primary/5">
+            <p className="text-[13px] font-semibold text-foreground">บัญชีใหม่</p>
+            <BankFormFields form={addForm} setForm={setAddForm} />
+            <div className="flex gap-[8px] justify-end">
+              <button data-testid="bank-add-cancel-btn" onClick={() => { setShowAddForm(false); setAddForm(emptyBankForm); }} disabled={isSavingAdd} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] border border-border text-[13px] font-medium hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer">
+                <X size={13} /> ยกเลิก
               </button>
-            )}
-            <button
-              onClick={handleBankSubmit}
-              disabled={isSavingBank}
-              className="flex items-center gap-[6px] px-[16px] py-[9px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              {isSavingBank ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {isSavingBank ? "กำลังบันทึก..." : authUser?.bank_account?.id ? "บันทึก" : "เพิ่มบัญชี"}
-            </button>
+              <button data-testid="bank-add-save-btn" onClick={handleAddBank} disabled={isSavingAdd} className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors disabled:opacity-50 cursor-pointer">
+                {isSavingAdd ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                {isSavingAdd ? "กำลังเพิ่ม..." : "เพิ่มบัญชี"}
+              </button>
+            </div>
           </div>
         )}
       </div>

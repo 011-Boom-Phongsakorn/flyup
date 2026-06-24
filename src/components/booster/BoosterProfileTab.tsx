@@ -1,11 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Pencil, Camera, Phone, Mail, MapPin, X, Loader2, Save } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
-import toast from "react-hot-toast";
-import api from "../../services/api";
 
 const BoosterProfileTab = () => {
-  const { authUser, checkAuth } = useAuthStore();
+  const { authUser, uploadAvatar, updateProfile, isUploadingAvatar, isSavingProfile } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     first_name: (authUser?.first_name as string) ?? "",
@@ -15,23 +13,21 @@ const BoosterProfileTab = () => {
     bio: (authUser?.bio as string) ?? "",
   });
   const [snapshot, setSnapshot] = useState({ ...form });
-  const [isSaving, setIsSaving] = useState(false);
-  const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const initialized = useRef(false);
 
-  useEffect(() => {
-    if (!initialized.current && authUser) {
-      setForm({
-        first_name: (authUser?.first_name as string) ?? "",
-        last_name: (authUser?.last_name as string) ?? "",
-        phone: (authUser?.phone as string) ?? "",
-        address: (authUser?.address as string) ?? "",
-        bio: (authUser?.bio as string) ?? "",
-      });
-      initialized.current = true;
-    }
-  }, [authUser]);
+  // sync ฟอร์มจาก authUser ครั้งแรกที่โหลดเสร็จ (เผื่อ mount ตอน authUser ยังเป็น null)
+  // ตั้งค่า state ระหว่าง render ตามแนวทางของ React แทนการใช้ useEffect + setState
+  const [hasSyncedForm, setHasSyncedForm] = useState(false);
+  if (!hasSyncedForm && authUser) {
+    setHasSyncedForm(true);
+    setForm({
+      first_name: (authUser.first_name as string) ?? "",
+      last_name: (authUser.last_name as string) ?? "",
+      phone: (authUser.phone as string) ?? "",
+      address: (authUser.address as string) ?? "",
+      bio: (authUser.bio as string) ?? "",
+    });
+  }
 
   const initials = `${form.first_name[0] ?? ""}${form.last_name[0] ?? ""}`.toUpperCase() || "?";
 
@@ -52,45 +48,19 @@ const BoosterProfileTab = () => {
   const handlePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIsUploadingPicture(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const uploadRes = await api.post("/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      const pictureUrl: string = uploadRes.data.data.url;
-      await api.patch("/user/profile", { picture: pictureUrl });
-      initialized.current = false;
-      await checkAuth();
-      toast.success("เปลี่ยนรูปโปรไฟล์สำเร็จ");
-    } catch {
-      toast.error("อัปโหลดรูปไม่สำเร็จ");
-    } finally {
-      setIsUploadingPicture(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+    await uploadAvatar(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await api.patch("/user/profile", {
-        first_name: form.first_name,
-        last_name: form.last_name,
-        phone: form.phone,
-        address: form.address || undefined,
-        bio: form.bio || undefined,
-      });
-      initialized.current = false;
-      await checkAuth();
-      setIsEditing(false);
-      toast.success("แก้ไขข้อมูลสำเร็จ");
-    } catch {
-      toast.error("บันทึกไม่สำเร็จ");
-    } finally {
-      setIsSaving(false);
-    }
+    const ok = await updateProfile({
+      first_name: form.first_name,
+      last_name: form.last_name,
+      phone: form.phone,
+      address: form.address || undefined,
+      bio: form.bio || undefined,
+    });
+    if (ok) setIsEditing(false);
   };
 
   const inputCls = isEditing
@@ -110,13 +80,14 @@ const BoosterProfileTab = () => {
             </div>
           )}
           <button
+            data-testid="profile-avatar-btn"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isUploadingPicture}
+            disabled={isUploadingAvatar}
             className="absolute bottom-0 right-0 w-[22px] h-[22px] bg-primary rounded-full flex items-center justify-center disabled:opacity-60 cursor-pointer"
           >
             <Camera size={12} className="text-white" />
           </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePictureChange} />
+          <input data-testid="profile-avatar-input" ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePictureChange} />
         </div>
         <div className="flex-1">
           <p className="font-semibold text-foreground">{authUser?.first_name as string} {authUser?.last_name as string}</p>
@@ -124,6 +95,7 @@ const BoosterProfileTab = () => {
         </div>
         {!isEditing && (
           <button
+            data-testid="profile-edit-btn"
             onClick={handleEdit}
             className="flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors cursor-pointer"
           >
@@ -173,19 +145,21 @@ const BoosterProfileTab = () => {
       {isEditing && (
         <div className="flex gap-[8px] justify-end">
           <button
+            data-testid="profile-cancel-btn"
             onClick={handleCancel}
-            disabled={isSaving}
+            disabled={isSavingProfile}
             className="flex items-center gap-[6px] px-[16px] py-[9px] rounded-[8px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F1F3F5] transition-colors disabled:opacity-50 cursor-pointer"
           >
             <X size={14} /> ยกเลิก
           </button>
           <button
+            data-testid="profile-save-btn"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSavingProfile}
             className="flex items-center gap-[6px] px-[16px] py-[9px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors disabled:opacity-50 cursor-pointer"
           >
-            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            {isSaving ? "กำลังบันทึก..." : "บันทึก"}
+            {isSavingProfile ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {isSavingProfile ? "กำลังบันทึก..." : "บันทึก"}
           </button>
         </div>
       )}
