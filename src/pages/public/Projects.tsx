@@ -64,7 +64,7 @@ const Projects = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('q') || '';
   });
-  const [sortOrder, setSortOrder] = useState<'latest' | 'oldest' | 'ending_soon' | 'popular'>(() => {
+  const [sortOrder] = useState<'latest' | 'oldest' | 'ending_soon' | 'popular'>(() => {
     const params = new URLSearchParams(window.location.search);
     const sort = params.get('sort');
     if (sort === 'oldest' || sort === 'ending_soon' || sort === 'popular') return sort;
@@ -95,17 +95,8 @@ const Projects = () => {
     { key: 'recommended', label: 'แนะนำ',                   icon: Star,      color: 'text-amber-500' },
   ] as const;
 
-  const SORT_OPTIONS = [
-    { key: 'latest',      label: 'ล่าสุด' },
-    { key: 'oldest',      label: 'เก่าสุด' },
-    { key: 'ending_soon', label: 'ใกล้หมดเวลา' },
-    { key: 'popular',     label: 'ยอดนิยม' },
-  ] as const;
-
   const activeSectionOption = SECTION_OPTIONS.find(s => s.key === section) ?? null;
-  const dropdownLabel = activeSectionOption
-    ? activeSectionOption.label
-    : ({ latest: 'ล่าสุด', oldest: 'เก่าสุด', ending_soon: 'ใกล้หมดเวลา', popular: 'ยอดนิยม' } as const)[sortOrder];
+  const dropdownLabel = activeSectionOption ? activeSectionOption.label : 'เลือกหมวดหมู่';
 
   const categoryList = useMemo(() => {
     const allOption = { name: 'ทั้งหมด', icon: LayoutGrid };
@@ -148,15 +139,19 @@ const Projects = () => {
     if (!isNaN(min)) result = result.filter(p => (p.funding_goal ?? 0) >= min);
     if (!isNaN(max)) result = result.filter(p => (p.funding_goal ?? 0) <= max);
 
-    result.sort((a, b) => {
-      if (sortOrder === 'oldest') return a.id - b.id;
-      if (sortOrder === 'ending_soon') return getDaysLeft(a) - getDaysLeft(b);
-      if (sortOrder === 'popular') return (b.current_funding ?? 0) - (a.current_funding ?? 0);
-      return b.id - a.id; // latest
-    });
+    // หมวดหมู่พิเศษ (section) มาจาก endpoint ที่ backend เรียงลำดับมาให้แล้ว
+    // ไม่ควร sort ทับ ไม่งั้นจะขัดกับ label ที่บอกว่าเรียงตามอะไร
+    if (!section) {
+      result.sort((a, b) => {
+        if (sortOrder === 'oldest') return a.id - b.id;
+        if (sortOrder === 'ending_soon') return getDaysLeft(a) - getDaysLeft(b);
+        if (sortOrder === 'popular') return (b.current_funding ?? 0) - (a.current_funding ?? 0);
+        return b.id - a.id; // latest
+      });
+    }
 
     return result;
-  }, [sourceProjects, activeCategory, searchQuery, sortOrder, minGoal, maxGoal]);
+  }, [sourceProjects, activeCategory, searchQuery, sortOrder, minGoal, maxGoal, section]);
 
   return (
     <div className="bg-background min-h-screen pb-20 font-sans text-foreground mt-[100px]">
@@ -216,17 +211,6 @@ const Projects = () => {
               {isSortDropdownOpen && (
                 <div className="absolute top-13 md:top-12 left-0 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden z-20">
                   <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">เรียงตาม</div>
-                  {SORT_OPTIONS.map(opt => (
-                    <div
-                      key={opt.key}
-                      onClick={() => { setSortOrder(opt.key); setSection(''); setIsSortDropdownOpen(false); }}
-                      className={`px-4 py-2.5 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap ${!section && sortOrder === opt.key ? 'text-primary font-medium bg-primary-light' : ''}`}
-                    >
-                      {opt.label}
-                    </div>
-                  ))}
-                  <div className="mx-3 my-1 border-t border-border" />
-                  <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">หมวดหมู่พิเศษ</div>
                   {SECTION_OPTIONS.map(opt => {
                     const Icon = opt.icon;
                     return (
