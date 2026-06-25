@@ -214,6 +214,7 @@ const Investment = () => {
       const blob = new Blob([res.data as string], { type: 'text/html; charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const win = window.open(url, '_blank');
+      console.log('Opened contract window:', win);
       if (!win) { toast.error('กรุณาอนุญาต popup เพื่อดาวน์โหลด PDF'); URL.revokeObjectURL(url); return; }
       win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url); });
     } catch {
@@ -224,9 +225,10 @@ const Investment = () => {
   };
 
   const handleSaveQrCode = async () => {
-    const fileName = `flyup-qr-${investmentData?.reference_number || Date.now()}.png`;
-
-    // qr_code_base64 เป็น data URI ที่ backend generate เอง ดาวน์โหลดได้ตรงๆ ไม่ติด CORS
+    if (!investmentData) return;
+  setIsSavingQr(true);
+  const fileName = `promptpay-${investmentData?.reference_number}.png`;
+  try {
     if (investmentData?.qr_code_base64) {
       const a = document.createElement('a');
       a.href = investmentData.qr_code_base64;
@@ -236,34 +238,24 @@ const Investment = () => {
       a.remove();
       return;
     }
+    const res = await fetch(investmentData.qr_code_image_url);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    window.open(investmentData.qr_code_image_url, '_blank');
+  } finally {
+    setIsSavingQr(false);
+  }
+};
 
-    const qrUrl = investmentData?.qr_code_image_url || '/img-payment-qr.png';
-    setIsSavingQr(true);
-    try {
-      const res = await fetch(qrUrl);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      // ภาพ QR อยู่ต่าง origin และ server ไม่เปิด CORS ให้ fetch() อ่านไฟล์ได้
-      // จึงเปิดรูปในแท็บใหม่แทน เพื่อให้ผู้ใช้กดค้าง/คลิกขวาบันทึกเองได้
-      const opened = window.open(qrUrl, '_blank');
-      toast.error(
-        opened
-          ? 'ไม่สามารถบันทึกอัตโนมัติได้ — เปิดรูปในแท็บใหม่ให้แล้ว กดค้างที่รูปเพื่อบันทึก'
-          : 'ไม่สามารถบันทึกอัตโนมัติได้ กรุณากดค้างที่รูป QR ด้านบนเพื่อบันทึก'
-      );
-    } finally {
-      setIsSavingQr(false);
-    }
-  };
-
+ console.log("investmentData:", investmentData);
   const handleNextStep1 = () => {
     if (!agreed) {
       toast.error("กรุณากด ยอมรับสัญญาการลงทุนและเงื่อนไข", {
