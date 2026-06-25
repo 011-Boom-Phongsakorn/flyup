@@ -59,6 +59,7 @@ const Investment = () => {
   const [completedInvestmentId, setCompletedInvestmentId] = useState<number | null>(null);
   const [showContract, setShowContract] = useState(false);
   const [isPrintingPDF, setIsPrintingPDF] = useState(false);
+  const [isSavingQr, setIsSavingQr] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15 * 60);
 
@@ -219,6 +220,47 @@ const Investment = () => {
       toast.error('ไม่สามารถโหลดสัญญาได้');
     } finally {
       setIsPrintingPDF(false);
+    }
+  };
+
+  const handleSaveQrCode = async () => {
+    const fileName = `flyup-qr-${investmentData?.reference_number || Date.now()}.png`;
+
+    // qr_code_base64 เป็น data URI ที่ backend generate เอง ดาวน์โหลดได้ตรงๆ ไม่ติด CORS
+    if (investmentData?.qr_code_base64) {
+      const a = document.createElement('a');
+      a.href = investmentData.qr_code_base64;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
+
+    const qrUrl = investmentData?.qr_code_image_url || '/img-payment-qr.png';
+    setIsSavingQr(true);
+    try {
+      const res = await fetch(qrUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      // ภาพ QR อยู่ต่าง origin และ server ไม่เปิด CORS ให้ fetch() อ่านไฟล์ได้
+      // จึงเปิดรูปในแท็บใหม่แทน เพื่อให้ผู้ใช้กดค้าง/คลิกขวาบันทึกเองได้
+      const opened = window.open(qrUrl, '_blank');
+      toast.error(
+        opened
+          ? 'ไม่สามารถบันทึกอัตโนมัติได้ — เปิดรูปในแท็บใหม่ให้แล้ว กดค้างที่รูปเพื่อบันทึก'
+          : 'ไม่สามารถบันทึกอัตโนมัติได้ กรุณากดค้างที่รูป QR ด้านบนเพื่อบันทึก'
+      );
+    } finally {
+      setIsSavingQr(false);
     }
   };
 
@@ -579,7 +621,7 @@ const Investment = () => {
                       <div className="bg-white px-5 pb-3">
                         <div className="border border-[#1a3a6b]/15 rounded-xl overflow-hidden p-2 bg-white">
                           <img
-                            src={investmentData?.qr_code_image_url || '/img-payment-qr.png'}
+                            src={investmentData?.qr_code_base64 || investmentData?.qr_code_image_url || '/img-payment-qr.png'}
                             alt="PromptPay QR Code"
                             className="w-full object-contain aspect-square"
                             onError={(e) => {
@@ -627,6 +669,16 @@ const Investment = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Save QR Code */}
+                    <button
+                      onClick={handleSaveQrCode}
+                      disabled={isSavingQr}
+                      className="w-full max-w-[300px] flex items-center justify-center gap-2 py-2.5 mt-3 border border-border rounded-xl text-sm font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSavingQr ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                      {isSavingQr ? 'กำลังบันทึก...' : 'บันทึก QR Code'}
+                    </button>
 
                     {/* Escrow badge */}
                     <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-3 py-1.5 rounded-full font-semibold mt-4">
