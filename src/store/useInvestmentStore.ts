@@ -13,6 +13,7 @@ export interface InvestmentData {
   investment_id: number;
   reference_number: string;
   qr_code_image_url: string;
+  qr_code_base64?: string;
   expires_at: string;
   total_amount: number;
   title: string;
