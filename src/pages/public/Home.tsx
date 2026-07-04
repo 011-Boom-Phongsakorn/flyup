@@ -79,7 +79,6 @@ const HERO_WORDS = ['โปรเจกต์ที่ใช่', 'นวัต�
 
 const Home = () => {
   const { authUser } = useAuthStore();
-  const hideCreateBtn = authUser?.role === 'booster' || authUser?.role === 'admin';
   const { createWithGuard, isCreating } = useCreateProjectGuard();
 
   const [heroWordIdx, setHeroWordIdx] = useState(0);
@@ -161,7 +160,7 @@ const Home = () => {
               </p>
 
               <div className="flex flex-wrap gap-4 items-center">
-                {!hideCreateBtn ? (
+                {authUser?.role !== 'booster' && authUser?.role !== 'admin' && (
                   <button
                     onClick={handleCreateProject}
                     disabled={isCreating}
@@ -178,12 +177,7 @@ const Home = () => {
                       </>
                     )}
                   </button>
-                ) : authUser?.role === 'pioneer' ? (
-                  <Link to="/dashboard" className="bg-primary hover:bg-primary-hover text-white-foreground px-8 py-3 rounded-full font-medium transition-all shadow-lg shadow-primary/30 flex items-center gap-2">
-                    ไปที่โปรเจกต์ของฉัน <ChevronRight size={18} />
-                  </Link>
-                ) : null
-                }
+                )}
                 <Link data-testid="home-browse-projects" to="/projects" className="bg-background hover:bg-muted text-foreground px-8 py-3 rounded-full font-medium transition-colors border border-border shadow-sm inline-block">
                   สำรวจโปรเจกต์
                 </Link>
