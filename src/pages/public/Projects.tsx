@@ -211,6 +211,15 @@ const Projects = () => {
               {isSortDropdownOpen && (
                 <div className="absolute top-13 md:top-12 left-0 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden z-20">
                   <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">เรียงตาม</div>
+                  {section && (
+                    <div
+                      onClick={() => { setSection(''); setIsSortDropdownOpen(false); }}
+                      className="px-4 py-2.5 text-sm cursor-pointer hover:bg-muted/30 whitespace-nowrap flex items-center gap-2 text-muted-foreground"
+                    >
+                      <LayoutGrid size={13} />
+                      ทั้งหมด
+                    </div>
+                  )}
                   {SECTION_OPTIONS.map(opt => {
                     const Icon = opt.icon;
                     return (

@@ -126,9 +126,9 @@ const Step1Basics = () => {
   const handleCoverImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      toast.error('อนุญาตเฉพาะไฟล์ PNG และ JPEG เท่านั้น');
+      toast.error('อนุญาตเฉพาะไฟล์ PNG, JPEG และ WEBP เท่านั้น');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -167,11 +167,11 @@ const Step1Basics = () => {
     if (!files) return;
 
     const currentImages = currentProject?.files || [];
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     const validFiles = Array.from(files).filter(file => allowedTypes.includes(file.type));
 
     if (validFiles.length !== files.length) {
-      toast.error("อนุญาตเฉพาะไฟล์ PNG และ JPEG เท่านั้น");
+      toast.error("อนุญาตเฉพาะไฟล์ PNG, JPEG และ WEBP เท่านั้น");
     }
     if (validFiles.length === 0) return;
 
@@ -540,12 +540,12 @@ const Step1Basics = () => {
                   hidden
                   ref={coverImageRef}
                   onChange={handleCoverImageChange}
-                  accept="image/png, image/jpeg, image/jpg"
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
                 />
                 <div className="flex flex-col items-center gap-[14px] justify-center mb-3 text-primary text-[12px]">
                   <Upload size={24} />
                   <p>อัปโหลดรูปปกโปรเจกต์</p>
-                  <p>JPG, PNG, JPEG (สูงสุด 5MB)</p>
+                  <p>JPG, PNG, JPEG, WEBP (สูงสุด 5MB)</p>
                 </div>
               </div>
             )}
@@ -566,12 +566,12 @@ const Step1Basics = () => {
                 hidden
                 ref={additionalImagesRef}
                 onChange={handleMultipleFilesChange}
-                accept="image/png, image/jpeg, image/jpg"
+                accept="image/png, image/jpeg, image/jpg, image/webp"
               />
               <div className="flex flex-col items-center gap-[14px] justify-center mb-3 text-primary text-[12px]">
                 <Upload className="" size={24} />
                 <p>อัปโหลดรูปโปรเจกต์</p>
-                <p>JPG, PNG, JPEG (สูงสุด 5MB)</p>
+                <p>JPG, PNG, JPEG, WEBP (สูงสุด 5MB)</p>
               </div>
             </div>
 
