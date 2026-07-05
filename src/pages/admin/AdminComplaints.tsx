@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Loader2, MessageSquareWarning, CheckCircle, XCircle, Clock, X, ExternalLink, TriangleAlert } from 'lucide-react'
+import { Loader2, MessageSquareWarning, CheckCircle, XCircle, Clock, X, ExternalLink, TriangleAlert, Link2, FileText, ZoomIn } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useComplaintStore, type Complaint, type ComplaintStatus, COMPLAINT_THRESHOLD } from '../../store/useComplaintStore'
 import { useAdminBadgeStore } from '../../store/useAdminBadgeStore'
@@ -67,6 +67,101 @@ const ResolveModal = ({
                 </div>
             </div>
         </div>
+    )
+}
+
+const isImageUrl = (url: string) =>
+    /\.(png|jpg|jpeg|webp|gif)(\?.*)?$/i.test(url) || /\/image\/upload\//i.test(url)
+
+const isPdfUrl = (url: string) => /\.pdf(\?.*)?$/i.test(url)
+
+const getFilename = (url: string) => {
+    try { return decodeURIComponent(url.split('/').pop()?.split('?')[0] ?? url) } catch { return url }
+}
+
+const EvidenceSection = ({ urls }: { urls: string[] }) => {
+    const [lightbox, setLightbox] = useState<string | null>(null)
+    const images = urls.filter(isImageUrl)
+    const pdfs = urls.filter(u => !isImageUrl(u) && isPdfUrl(u))
+    const links = urls.filter(u => !isImageUrl(u) && !isPdfUrl(u))
+
+    return (
+        <>
+            <div className="mb-4">
+                <p className="text-[13px] font-semibold text-foreground mb-2">
+                    หลักฐานประกอบ
+                    <span className="text-[11px] font-normal text-muted-foreground ml-1">({urls.length} รายการ)</span>
+                </p>
+
+                <div className="flex flex-col gap-2">
+                    {/* Images */}
+                    {images.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                            {images.map((url, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setLightbox(url)}
+                                    className="relative aspect-video rounded-lg overflow-hidden border border-border bg-muted/30 hover:opacity-90 transition-opacity group cursor-pointer"
+                                >
+                                    <img src={url} alt={`หลักฐาน ${i + 1}`} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+                                        <ZoomIn size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* PDFs */}
+                    {pdfs.map((url, i) => (
+                        <a
+                            key={i}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-muted/30 transition-colors text-[13px] text-foreground group"
+                        >
+                            <FileText size={15} className="text-red-500 shrink-0" />
+                            <span className="flex-1 truncate">{getFilename(url)}</span>
+                            <ExternalLink size={13} className="text-muted-foreground group-hover:text-primary shrink-0" />
+                        </a>
+                    ))}
+
+                    {/* Links */}
+                    {links.map((url, i) => (
+                        <a
+                            key={i}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-muted/30 transition-colors text-[13px] text-primary group"
+                        >
+                            <Link2 size={15} className="shrink-0" />
+                            <span className="flex-1 truncate">{url}</span>
+                            <ExternalLink size={13} className="text-muted-foreground group-hover:text-primary shrink-0" />
+                        </a>
+                    ))}
+                </div>
+            </div>
+
+            {/* Lightbox */}
+            {lightbox && (
+                <div
+                    className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4"
+                    onClick={() => setLightbox(null)}
+                >
+                    <button className="absolute top-4 right-4 text-white hover:text-gray-300" onClick={() => setLightbox(null)}>
+                        <X size={24} />
+                    </button>
+                    <img
+                        src={lightbox}
+                        alt="หลักฐาน"
+                        className="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
+        </>
     )
 }
 
@@ -172,6 +267,10 @@ const DetailModal = ({
                     </p>
                 </div>
 
+                {complaint.evidence_urls && complaint.evidence_urls.length > 0 && (
+                    <EvidenceSection urls={complaint.evidence_urls} />
+                )}
+
                 {complaint.admin_note && (
                     <div className="mb-4">
                         <p className="text-[13px] font-semibold text-foreground mb-2">หมายเหตุจากผู้ตรวจ</p>
@@ -206,7 +305,7 @@ const DetailModal = ({
 }
 
 const AdminComplaints = () => {
-    const { complaints, isLoading, isSubmitting, fetchAdminList, resolveComplaint, rejectComplaint } = useComplaintStore()
+    const { complaints, isLoading, isSubmitting, fetchAdminList, resolveComplaint, rejectComplaint, fetchAdminDetail, selected: detailData, clearSelected } = useComplaintStore()
     const fetchBadges = useAdminBadgeStore((s) => s.fetchBadges)
     const [tab, setTab] = useState<ComplaintStatus | 'all'>('open')
     const [search, setSearch] = useState('')
@@ -217,6 +316,21 @@ const AdminComplaints = () => {
         fetchAdminList(tab)
     }, [tab, fetchAdminList])
 
+    const handleOpenDetail = (c: Complaint) => {
+        setSelected(c)
+        fetchAdminDetail(c.id)
+    }
+
+    const handleCloseDetail = () => {
+        setSelected(null)
+        clearSelected()
+    }
+
+    // merge evidence_urls จาก detail API เข้ากับข้อมูล list
+    const displayComplaint = selected
+        ? (detailData?.id === selected.id ? { ...selected, evidence_urls: detailData.evidence_urls } : selected)
+        : null
+
     const handleSubmitNote = async (note: string) => {
         if (!selected || !modalMode) return
         const ok = modalMode === 'resolve'
@@ -225,6 +339,7 @@ const AdminComplaints = () => {
         if (ok) {
             setModalMode(null)
             setSelected(null)
+            clearSelected()
             fetchBadges()
         }
     }
@@ -282,7 +397,7 @@ const AdminComplaints = () => {
                         return (
                             <div
                                 key={c.id}
-                                onClick={() => setSelected(c)}
+                                onClick={() => handleOpenDetail(c)}
                                 className="grid grid-cols-[2fr_1.5fr_1.5fr_80px_120px_130px] px-4 py-3 items-center border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
                             >
                                 <div className="flex flex-col gap-0.5 pr-3">
@@ -314,7 +429,7 @@ const AdminComplaints = () => {
                                 </div>
                                 <div className="flex justify-center">
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); setSelected(c) }}
+                                        onClick={(e) => { e.stopPropagation(); handleOpenDetail(c) }}
                                         className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/70 text-[12px] font-medium text-foreground transition-colors whitespace-nowrap"
                                     >
                                         ดูรายละเอียด
@@ -326,10 +441,10 @@ const AdminComplaints = () => {
                 )}
             </div>
 
-            {selected && !modalMode && (
+            {displayComplaint && !modalMode && (
                 <DetailModal
-                    complaint={selected}
-                    onClose={() => setSelected(null)}
+                    complaint={displayComplaint}
+                    onClose={handleCloseDetail}
                     onResolve={() => setModalMode('resolve')}
                     onReject={() => setModalMode('reject')}
                 />

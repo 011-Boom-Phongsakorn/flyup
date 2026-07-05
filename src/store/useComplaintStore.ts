@@ -13,6 +13,7 @@ export interface Complaint {
     body: string
     status: ComplaintStatus
     admin_note: string
+    evidence_urls?: string[] | null
     resolved_at?: string | null
     created_at: string
     total_reports: number
@@ -39,7 +40,7 @@ interface ComplaintStore {
     isSubmitting: boolean
 
     // user-side
-    fileComplaint: (projectId: number, subject: string, body: string) => Promise<boolean>
+    fileComplaint: (projectId: number, subject: string, body: string, evidenceUrls?: string[]) => Promise<boolean>
     fetchMyComplaints: () => Promise<void>
 
     // admin-side
@@ -56,10 +57,15 @@ export const useComplaintStore = create<ComplaintStore>((set, get) => ({
     isLoading: false,
     isSubmitting: false,
 
-    fileComplaint: async (projectId, subject, body) => {
+    fileComplaint: async (projectId, subject, body, evidenceUrls) => {
         set({ isSubmitting: true })
         try {
-            await api.post('/complaints', { project_id: projectId, subject, body })
+            await api.post('/complaints', {
+                project_id: projectId,
+                subject,
+                body,
+                ...(evidenceUrls && evidenceUrls.length > 0 && { evidence_urls: evidenceUrls }),
+            })
             toast.success('ส่งคำร้องเรียนสำเร็จ ทีมงานจะตรวจสอบและติดต่อกลับ')
             return true
         } catch (error) {
