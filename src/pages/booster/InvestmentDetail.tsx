@@ -22,7 +22,7 @@ const getMilestoneStatus = (s: string) => {
   switch (s) {
     case 'paid':       return { label: 'โอนเงินแล้ว',      cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
     case 'approved':   return { label: 'Admin อนุมัติแล้ว', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-    case 'active':     return { label: 'กำลังดำเนินการ',    cls: 'bg-primary/5 text-primary border-primary/20' };
+    case 'active':     return { label: 'กำลังดำเนินการ',    cls: 'bg-accent/5 text-accent border-accent/20' };
     case 'submitted':  return { label: 'ส่งงานแล้ว',        cls: 'bg-amber-50 text-amber-700 border-amber-200' };
     case 'rejected':
     case 'failed':     return { label: 'ถูกปฏิเสธ',         cls: 'bg-red-50 text-red-600 border-red-200' };
@@ -40,7 +40,7 @@ const InvestmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { currentInvestment, isDetailLoading: isInvLoading, fetchInvestmentById, requestRefund } = useBoosterStore();
+  const { currentInvestment, isDetailLoading: isInvLoading, fetchInvestmentById, requestRefund, profitPayouts, fetchProfitPayouts } = useBoosterStore();
   const { updates, threads, faqs, fetchAll } = useProjectDetailStore();
 
   const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
@@ -96,6 +96,10 @@ const InvestmentDetail = () => {
     if (projectId) fetchAll(projectId);
   }, [currentInvestment?.project_id, fetchAll]);
 
+  useEffect(() => {
+    fetchProfitPayouts();
+  }, [fetchProfitPayouts]);
+
   if (isInvLoading || !currentInvestment) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -117,6 +121,9 @@ const InvestmentDetail = () => {
   const description = project?.description || '';
   const milestones = [...(project?.milestones ?? [])].sort((a, b) => a.phase_no - b.phase_no);
   const profitShare = inv.profit_share_pct || project?.profit_share_pct || 0;
+  const totalProfit = profitPayouts
+    .filter(p => p.project_id === inv.project_id && p.status === 'confirmed')
+    .reduce((sum, p) => sum + p.amount, 0);
   const slug = (project as { slug?: string } | null)?.slug || inv.project_id;
 
   const getMediaType = (t: string | string[]): string => Array.isArray(t) ? t[0] : t;
@@ -251,7 +258,7 @@ const InvestmentDetail = () => {
                            <div className="hidden md:flex flex-col items-center shrink-0">
                              <div className={`w-[48px] h-[48px] rounded-2xl flex items-center justify-center font-bold text-[18px] shadow-sm transition-all z-10 ${
                                done    ? 'bg-emerald-500 text-white shadow-emerald-200' :
-                               current ? 'bg-primary text-white shadow-primary/20 ring-4 ring-primary/10' :
+                               current ? 'bg-accent text-white shadow-accent/20 ring-4 ring-accent/10' :
                                          'bg-white border-2 border-border text-gray-400'
                              }`}>
                                {done ? <CheckCircle2 size={22} /> : phaseNumber}
@@ -261,7 +268,7 @@ const InvestmentDetail = () => {
                              )}
                            </div>
                            <div className={`flex-1 mb-[20px] bg-white border rounded-[16px] p-[20px] shadow-sm flex flex-col gap-[16px] ${
-                             current ? 'border-primary/30 shadow-primary/5' :
+                             current ? 'border-accent/30 shadow-accent/5' :
                              done    ? 'border-emerald-200' : 'border-border'
                            }`}>
                              <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-[12px]">
@@ -355,6 +362,17 @@ const InvestmentDetail = () => {
                     <span className="text-muted-foreground font-semibold">ยอดชำระสุทธิ</span>
                     <span className="font-bold text-[16px] text-foreground">฿{(inv.net_amount || inv.amount)?.toLocaleString()}</span>
                 </div>
+                <div className="flex flex-col gap-[6px] mt-2 border-t border-dashed border-border pt-3">
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">กำไรที่ได้รับ</span>
+                        <span className={`font-semibold ${totalProfit > 0 ? 'text-emerald-600' : 'text-foreground'}`}>
+                            ฿{totalProfit.toLocaleString()}
+                        </span>
+                    </div>
+                    {totalProfit === 0 && (
+                        <p className="text-[11px] text-muted-foreground text-right">ยังไม่มีกำไรจ่าย — รอโปรเจกต์สร้างรายได้</p>
+                    )}
+                </div>
              </div>
 
              <button
@@ -391,11 +409,11 @@ const InvestmentDetail = () => {
                    return (
                      <div key={m.id} className="flex gap-3">
                        <div className="flex flex-col items-center mt-1">
-                         <div className={`w-3 h-3 rounded-full flex-shrink-0 ${done ? 'bg-emerald-500' : current ? 'bg-primary' : 'bg-gray-300'}`} />
+                         <div className={`w-3 h-3 rounded-full flex-shrink-0 ${done ? 'bg-emerald-500' : current ? 'bg-accent' : 'bg-gray-300'}`} />
                          {!isLast && <div className="w-[1px] flex-1 bg-border mt-1" />}
                        </div>
                        <div className="flex-1 pb-4">
-                         <p className={`text-[13px] font-medium leading-snug ${done ? 'text-emerald-600' : current ? 'text-primary' : 'text-foreground'}`}>
+                         <p className={`text-[13px] font-medium leading-snug ${done ? 'text-emerald-600' : current ? 'text-accent' : 'text-foreground'}`}>
                            Phase {m.phase_no}: {m.title}
                          </p>
                          <p className="text-[12px] text-muted-foreground mt-1">

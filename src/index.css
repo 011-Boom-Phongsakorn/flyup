@@ -30,6 +30,15 @@
     --color-warning: #F5A623;
     --color-error: #DC2626;
 
+    /* Chart colors */
+    --chart-1: #7c3aed;
+    --chart-2: #06b6d4;
+    --chart-3: #10b981;
+    --chart-4: #f59e0b;
+    --chart-5: #ef4444;
+    --chart-6: #8b5cf6;
+    --chart-grid: #f0f0f0;
+
     /* Gradients */
 
     /* 1. Gradient Primary: ชมพูไปม่วง (Linear) */
