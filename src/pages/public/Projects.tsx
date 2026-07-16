@@ -345,7 +345,11 @@ const Projects = () => {
         ) : filteredProjects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             {filteredProjects.map((project) => {
-              const ProjectCategoryIcon = getCategoryIcon(project.category);
+              const rawCat = project.category as unknown;
+              const categoryName = typeof rawCat === 'string'
+                ? rawCat
+                : (rawCat as { name?: string } | null)?.name ?? null;
+              const ProjectCategoryIcon = getCategoryIcon(categoryName);
               const progress = getProgress(project);
               const daysLeft = daysLeftOf(project);
               const isHot = progress >= 70;
@@ -383,10 +387,10 @@ const Projects = () => {
                   <div className="p-4 md:p-5 flex flex-col flex-1">
                     <div className="flex justify-between items-start mb-2 gap-2">
                       <h3 className="text-base md:text-lg font-bold line-clamp-1 flex-1">{project.title}</h3>
-                      {project.category && (
+                      {categoryName && (
                         <span className="flex items-center gap-1 text-xs font-medium text-primary bg-primary-light border border-primary/20 px-2 py-1 rounded-full whitespace-nowrap">
                           <ProjectCategoryIcon size={12} />
-                          {project.category}
+                          {categoryName}
                         </span>
                       )}
                     </div>
