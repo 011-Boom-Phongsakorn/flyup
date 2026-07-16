@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Users, Loader2 } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import { useAuthStore } from "../store/useAuthStore"
@@ -11,11 +12,13 @@ interface GoogleRoleModalProps {
 
 const GoogleRoleModal = ({ open, onClose }: GoogleRoleModalProps) => {
     const { selectRole, isSelectingRole } = useAuthStore()
+    const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
 
     if (!open) return null
 
-    const handleSelect = async (role: UserRole) => {
-        const success = await selectRole(role)
+    const handleConfirm = async () => {
+        if (!selectedRole) return
+        const success = await selectRole(selectedRole)
         if (success) {
             onClose()
         }
@@ -40,8 +43,8 @@ const GoogleRoleModal = ({ open, onClose }: GoogleRoleModalProps) => {
                     <button
                         type="button"
                         disabled={isSelectingRole}
-                        onClick={() => handleSelect('pioneer')}
-                        className="flex flex-col items-center justify-center h-[132px] border-[2px] border-border rounded-[12px] gap-[10px] p-[16px] cursor-pointer transition-all duration-200 hover:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => setSelectedRole('pioneer')}
+                        className={`flex flex-col items-center justify-center h-[132px] border-[2px] rounded-[12px] gap-[10px] p-[16px] cursor-pointer transition-all duration-200 hover:border-accent disabled:opacity-50 disabled:cursor-not-allowed ${selectedRole === 'pioneer' ? 'border-accent' : 'border-border'}`}
                     >
                         <div className="w-[48px] h-[48px] flex justify-center items-center rounded-full bg-background">
                             <Users size={16} />
@@ -54,8 +57,8 @@ const GoogleRoleModal = ({ open, onClose }: GoogleRoleModalProps) => {
                     <button
                         type="button"
                         disabled={isSelectingRole}
-                        onClick={() => handleSelect('booster')}
-                        className="flex flex-col items-center justify-center h-[132px] border-[2px] border-border rounded-[12px] gap-[10px] p-[16px] cursor-pointer transition-all duration-200 hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => setSelectedRole('booster')}
+                        className={`flex flex-col items-center justify-center h-[132px] border-[2px] rounded-[12px] gap-[10px] p-[16px] cursor-pointer transition-all duration-200 hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed ${selectedRole === 'booster' ? 'border-primary' : 'border-border'}`}
                     >
                         <div className="w-[48px] h-[48px] flex justify-center items-center rounded-full bg-background">
                             <Users size={16} />
@@ -66,12 +69,19 @@ const GoogleRoleModal = ({ open, onClose }: GoogleRoleModalProps) => {
                         </div>
                     </button>
                 </div>
-                {isSelectingRole && (
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground text-[14px]">
-                        <Loader2 size={16} className="animate-spin" />
-                        <span>กำลังตั้งค่า...</span>
-                    </div>
-                )}
+                <button
+                    type="button"
+                    disabled={!selectedRole || isSelectingRole}
+                    onClick={handleConfirm}
+                    className="flex items-center justify-center gap-2 h-[40px] w-full bg-primary text-white text-[14px] rounded-[8px] cursor-pointer hover:bg-primary-hover transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isSelectingRole ? (
+                        <>
+                            <Loader2 size={16} className="animate-spin" />
+                            <span>กำลังตั้งค่า...</span>
+                        </>
+                    ) : <span>ยืนยัน</span>}
+                </button>
             </div>
         </div>
     )
