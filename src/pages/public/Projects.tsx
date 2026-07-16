@@ -53,7 +53,7 @@ const Projects = () => {
 
   const {
     publicProjects, endingProjects, newProjects, executingProjects, recommendedProjects,
-    categories, isLoading, fetchPublicProjects, fetchHomeProjects, fetchCategories,
+    categories, isLoading, isFetchError, fetchPublicProjects, fetchHomeProjects, fetchCategories,
   } = usePublicProjectStore();
 
   const [activeCategory, setActiveCategory] = useState(() => {
@@ -152,6 +152,22 @@ const Projects = () => {
 
     return result;
   }, [sourceProjects, activeCategory, searchQuery, sortOrder, minGoal, maxGoal, section]);
+
+  if (isFetchError) {
+    return (
+      <div className="bg-background min-h-screen flex flex-col items-center justify-center gap-4 text-center px-4 mt-[100px]">
+        <div className="text-5xl">⚠️</div>
+        <h2 className="text-xl font-bold text-foreground">ขออภัย ระบบขัดข้องชั่วคราว</h2>
+        <p className="text-muted-foreground text-sm max-w-sm">และกำลังกลับมาให้บริการเร็วๆ นี้</p>
+        <button
+          onClick={() => section ? fetchHomeProjects() : fetchPublicProjects()}
+          className="mt-2 px-6 py-2.5 bg-primary text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
+        >
+          ลองใหม่อีกครั้ง
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background min-h-screen pb-20 font-sans text-foreground mt-[100px]">
