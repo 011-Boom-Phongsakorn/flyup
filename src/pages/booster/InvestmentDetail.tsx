@@ -370,7 +370,7 @@ const InvestmentDetail = () => {
                <div className="w-full mt-3 bg-amber-50 border border-amber-200 text-amber-700 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium text-[14px]">
                    <Clock size={16} /> <span>กำลังดำเนินการขอคืนเงิน</span>
                </div>
-             ) : inv.status !== 'refunded' && inv.status !== 'cancelled' && (
+             ) : (inv.status === 'funding' || (inv.status === 'verified' && (project?.state === 'failed' || project?.state === 'cancelled'))) && (
                <button
                  onClick={() => setShowRefundModal(true)}
                  className="w-full mt-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors text-[14px] cursor-pointer"
