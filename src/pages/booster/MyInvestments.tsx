@@ -183,8 +183,10 @@ function InvestmentRow({ group, onShowAll }: { group: GroupedInvestment; onShowA
     project && project.funding_goal > 0
       ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
       : 0;
-  const milestoneCount = project?.milestones?.filter(m => m.status === 'completed').length ?? 0;
-  const totalMilestones = project?.milestones?.length ?? 0;
+  const sortedMilestones = [...(project?.milestones ?? [])].sort((a, b) => a.phase_no - b.phase_no);
+  const totalMilestones = sortedMilestones.length;
+  const milestoneCount = sortedMilestones.filter(m => m.status === 'paid' || m.status === 'approved').length;
+  const currentMilestone = sortedMilestones.find(m => m.status === 'active' || m.status === 'submitted');
   const latestDate = [...group.all]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
   const dateStr = new Date(latestDate.created_at).toLocaleDateString('th-TH', {
@@ -221,17 +223,31 @@ function InvestmentRow({ group, onShowAll }: { group: GroupedInvestment; onShowA
         <p className="text-sm text-muted-foreground mb-2">
           ลงทุน ฿{group.totalAmount.toLocaleString()} · {dateStr}
         </p>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className="bg-muted px-2.5 py-1 rounded-full">
             ส่วนแบ่งกำไร {inv.profit_share_pct || project?.profit_share_pct || 0}%
           </span>
-          {totalMilestones > 0 && (
-            <span className="bg-muted px-2.5 py-1 rounded-full">Milestone: {milestoneCount}/{totalMilestones}</span>
-          )}
-          {progress > 0 && (
-            <span className="bg-muted px-2.5 py-1 rounded-full">ความคืบหน้า {progress}%</span>
-          )}
+          {currentMilestone ? (
+            <span className="bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded-full font-semibold">
+              Phase {currentMilestone.phase_no}: {currentMilestone.title}
+            </span>
+          ) : totalMilestones > 0 ? (
+            <span className="bg-muted px-2.5 py-1 rounded-full">
+              Milestone {milestoneCount}/{totalMilestones} เสร็จแล้ว
+            </span>
+          ) : null}
         </div>
+        {projectState === 'funding' && progress > 0 && (
+          <div className="mt-2">
+            <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
+              <span>ความคืบหน้าการระดมทุน</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -309,20 +325,24 @@ function Pagination({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 const MyInvestments = () => {
-  const { investments, isLoading, fetchMyInvestments } = useBoosterStore();
+  const { investments, isLoading, fetchMyInvestments, profitPayouts, fetchProfitPayouts } = useBoosterStore();
   const [activeTab, setActiveTab] = useState('all');
   const [page, setPage] = useState(1);
   const [modalGroup, setModalGroup] = useState<GroupedInvestment | null>(null);
 
   useEffect(() => { fetchMyInvestments(); }, [fetchMyInvestments]);
+  useEffect(() => { fetchProfitPayouts(); }, [fetchProfitPayouts]);
 
   const stats = useMemo(() => {
     const valid = investments.filter(i => i.status !== 'cancelled');
     return {
       totalAmount: valid.reduce((s, i) => s + (i.amount || 0), 0),
       projectCount: new Set(valid.map(i => i.project_id)).size,
+      totalProfit: profitPayouts
+        .filter(p => p.status === 'confirmed')
+        .reduce((s, p) => s + p.amount, 0),
     };
-  }, [investments]);
+  }, [investments, profitPayouts]);
 
   const groups = useMemo(() => groupInvestments(investments), [investments])
 
@@ -357,7 +377,7 @@ const MyInvestments = () => {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm text-muted-foreground">ลงทุนรวม</span>
@@ -371,6 +391,13 @@ const MyInvestments = () => {
             <TrendingUp size={16} className="text-muted-foreground" />
           </div>
           <p className="text-2xl font-bold text-foreground">{stats.projectCount}</p>
+        </div>
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-muted-foreground">กำไรที่ได้รับรวม</span>
+            <Wallet size={16} className="text-muted-foreground" />
+          </div>
+          <p className="text-2xl font-bold text-emerald-600">฿{stats.totalProfit.toLocaleString()}</p>
         </div>
       </div>
 

@@ -10,10 +10,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useBoosterStore } from '../../store/useBoosterStore'
 
-const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+const MONTHS_TH = Array.from({ length: 12 }, (_, i) =>
+  new Intl.DateTimeFormat('th-TH', { month: 'short' }).format(new Date(2000, i, 1))
+)
 
-
-const PIE_COLORS = ['#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6']
+const cssVar = (name: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 
 function fmtBaht(v: number) {
   return `฿${v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -190,18 +192,18 @@ const toggleProject = (name: string) =>
                 <AreaChart data={monthlyData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="boosterGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                      <stop offset="5%" style={{ stopColor: 'var(--chart-1)' }} stopOpacity={0.3} />
+                      <stop offset="95%" style={{ stopColor: 'var(--chart-1)' }} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={cssVar('--chart-grid')} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `฿${(v % 1000 === 0 ? (v/1000).toFixed(0) : (v/1000).toFixed(1))}k` : `฿${v}`} />
                   <Tooltip
                     formatter={(v) => [fmtBaht(Number(v ?? 0)), 'ลงทุน']}
-                    contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--color-border)' }}
                   />
-                  <Area type="monotone" dataKey="amount" stroke="#7c3aed" strokeWidth={2} fill="url(#boosterGrad)" />
+                  <Area type="monotone" dataKey="amount" stroke={cssVar('--chart-1')} strokeWidth={2} fill="url(#boosterGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -235,9 +237,9 @@ const toggleProject = (name: string) =>
                       {portfolioData.map((d, i) => (
                         <Cell
                           key={i}
-                          fill={PIE_COLORS[i % PIE_COLORS.length]}
+                          style={{ fill: `var(--chart-${(i % 6) + 1})` }}
                           opacity={selectedProject && selectedProject !== d.name ? 0.3 : 1}
-                          stroke={selectedProject === d.name ? '#1e1e1e' : 'none'}
+                          stroke={selectedProject === d.name ? cssVar('--color-foreground') : 'none'}
                           strokeWidth={selectedProject === d.name ? 2 : 0}
                         />
                       ))}
@@ -262,7 +264,7 @@ const toggleProject = (name: string) =>
                         }`}
                       >
                         <div className="flex items-center gap-1.5">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: `var(--chart-${(i % 6) + 1})` }} />
                           <span className={`truncate max-w-[120px] ${isSelected ? 'font-semibold text-primary' : 'text-foreground'}`}>
                             {d.name}
                           </span>
