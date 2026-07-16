@@ -99,6 +99,7 @@ interface PublicProjectState {
   platformStats: PlatformStats | null;
   isLoading: boolean;
   isDetailLoading: boolean;
+  isFetchError: boolean;
 
   fetchPublicProjects: () => Promise<void>;
   fetchHomeProjects: () => Promise<void>;
@@ -122,9 +123,10 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
   platformStats: null,
   isLoading: false,
   isDetailLoading: false,
+  isFetchError: false,
 
   fetchPublicProjects: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, isFetchError: false });
     try {
       const res = await api.get('/projects');
       const projectsRaw: PublicProject[] = res.data?.data ?? [];
@@ -135,13 +137,14 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
       set({ publicProjects: projects });
     } catch (error) {
       console.error('fetchPublicProjects:', error);
+      set({ isFetchError: true });
     } finally {
       set({ isLoading: false });
     }
   },
 
   fetchHomeProjects: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, isFetchError: false });
     try {
       const [recRes, newRes, endRes, execRes] = await Promise.all([
         api.get('/projects/recommend'),
@@ -166,6 +169,7 @@ export const usePublicProjectStore = create<PublicProjectState>((set) => ({
       });
     } catch (error) {
       console.error('fetchHomeProjects:', error);
+      set({ isFetchError: true });
     } finally {
       set({ isLoading: false });
     }
