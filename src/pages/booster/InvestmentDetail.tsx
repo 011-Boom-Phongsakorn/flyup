@@ -333,7 +333,7 @@ const InvestmentDetail = () => {
              <div className="flex flex-col gap-[12px] text-[13px] border-t border-border pt-[16px]">
                 <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">เลขอ้างอิง</span>
-                    <span className="font-semibold text-foreground">INV-{inv.id}</span>
+                    <span className="font-semibold text-foreground">{inv.reference_number ?? `INV-${inv.id}`}</span>
                 </div>
                 <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">วันที่ทำรายการ</span>
