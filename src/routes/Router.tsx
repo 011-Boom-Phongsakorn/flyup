@@ -196,11 +196,13 @@ const Router = () => {
                             <Route path='/pioneer/dashboard/projects/:projectId/milestones' element={<MilestonePage />} />
                             <Route path='/pioneer/profile' element={<Profile />} />
                         </Route>
+                        {/* flow สร้างโปรเจกต์: Overview (สรุป/เริ่ม) -> step/1-5 (กรอกข้อมูลทีละขั้น) -> preview (ดูตัวอย่างก่อนส่ง) */}
                         <Route element={<MainLayout />}>
                             <Route path='/preview/:projectId' element={<Preview />} />
                             <Route path='/preview/:projectId/milestones' element={<PreviewMilestoneDetail />} />
                             <Route path='/project/overview/:projectId' element={<ProjectOverview />} />
                             <Route path='/project/guide' element={<ProjectGuide />} />
+                            {/* ProjectStageLayout ครอบ Step1-5 ไว้ด้วย Stepper เดียวกัน — index (ไม่ระบุเลข step) จะ redirect ไป step 1 เสมอ */}
                             <Route path='/project/overview/:projectId/step' element={<ProjectStageLayout />}>
                                 <Route index element={<Navigate to="1" replace />} />
                                 <Route path='1' element={<Step1Basics />} />

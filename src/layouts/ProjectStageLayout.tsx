@@ -9,8 +9,10 @@ const ProjectStageLayout = () => {
   const { projectId } = useParams();
   const { loadCurrentProject } = useProjectStore();
 
+  // ดึงหมายเลข step ปัจจุบัน (1-5) จากท้าย URL เพื่อบอก Stepper ว่าควร highlight step ไหน
   const currentStepNum = Number(location.pathname.split('/').pop()) || 1;
 
+  // โหลดข้อมูลโปรเจกต์เข้า store ทุกครั้งที่ projectId เปลี่ยน (เช่น พึ่งสร้างใหม่ หรือรีเฟรชหน้า)
   useEffect(() => {
     if (projectId) {
       loadCurrentProject(Number(projectId));

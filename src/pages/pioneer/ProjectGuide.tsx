@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router'
 import { ArrowLeft, BookOpen } from 'lucide-react'
 
+// รายการหัวข้อของสารบัญ (sidebar TOC) — id ต้องตรงกับ id ของแต่ละ <section> ด้านล่างเพื่อให้ scrollTo ทำงานได้
 const SECTIONS = [
   { id: 'intro',      label: 'เริ่มต้นสร้างโปรเจกต์' },
   { id: 'basics',     label: '1. ข้อมูลพื้นฐาน' },
@@ -11,9 +12,14 @@ const SECTIONS = [
   { id: 'tips',       label: 'เคล็ดลับจากผู้สำเร็จ' },
 ]
 
+// เลื่อนหน้าไปยัง section ที่ระบุแบบ smooth scroll (ใช้เมื่อคลิกหัวข้อในสารบัญ)
 const scrollTo = (id: string) => {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
+
+// ด้านล่างเป็น presentational components ล้วนๆ (ไม่มี state/logic) สำหรับจัดรูปแบบเนื้อหาคู่มือให้เขียนซ้ำน้อยลง:
+// H2/H3/P = หัวข้อ/พารากราฟมาตรฐาน, Callout = คำคมแบบมีเส้นคั่นซ้าย, TipBox/WarnBox = กล่องเคล็ดลับ/คำเตือนสีเขียว/เหลือง,
+// Checklist = รายการลิสต์มีเลขวงกลม, Divider = เส้นคั่นระหว่าง section
 
 const H2 = ({ id, children }: { id: string; children: React.ReactNode }) => (
   <h2 id={id} className="text-[26px] font-black text-foreground leading-tight scroll-mt-24">{children}</h2>

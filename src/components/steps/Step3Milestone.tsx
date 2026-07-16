@@ -8,10 +8,12 @@ import { useParams, useSearchParams } from 'react-router'
 const Step3Milestone = () => {
   const { projectId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
+  // Phase ที่กำลังแก้ไข (1-4) เก็บไว้ใน query string (?phase=) เพื่อรีเฟรชหน้าแล้วยังอยู่ phase เดิม
   const phaseParam = Number(searchParams.get('phase') ?? '1')
-  const activePhase = Math.min(Math.max(phaseParam - 1, 0), 3)
+  const activePhase = Math.min(Math.max(phaseParam - 1, 0), 3) // clamp ให้อยู่ในช่วง index 0-3 เสมอ
   const setActivePhase = (idx: number) => setSearchParams({ phase: String(idx + 1) }, { replace: true })
-  const pendingFocusIdx = useRef<number | null>(null)
+  const pendingFocusIdx = useRef<number | null>(null) // index ของ criteria input ที่ต้อง focus หลัง re-render (เช่นกด Enter เพิ่มบรรทัดใหม่)
+  // snapshot ของแต่ละ phase ตอนโหลดครั้งแรก/บันทึกล่าสุด ใช้เทียบว่าข้อมูล phase นั้นเปลี่ยนจริงไหมก่อนยิง API
   const savedSnapshot = useRef<Record<number, string>>(
     Object.fromEntries(
       useProjectStore.getState().currentProject.milestones.map((m, i) => [i, JSON.stringify(m)])
@@ -20,6 +22,8 @@ const Step3Milestone = () => {
 
   const storageKey = `milestone-touched-${projectId}`
 
+  // เก็บว่า phase ไหนที่ผู้ใช้เคย "แตะ" แล้วบ้าง (ใช้โชว์ error สีแดงเฉพาะ phase ที่เคยเข้าไปแก้ แล้วข้อมูลยังไม่ครบ)
+  // เก็บใน sessionStorage เพื่อให้จำสถานะได้แม้ผู้ใช้ refresh หน้า
   const [touchedPhases, setTouchedPhases] = useState<Set<number>>(() => {
     try {
       const stored = sessionStorage.getItem(`milestone-touched-${projectId}`)
@@ -29,6 +33,7 @@ const Step3Milestone = () => {
     }
   })
 
+  // บันทึกว่า phase นี้ถูกแตะแล้ว ทั้งใน state และ sessionStorage
   const markTouched = (idx: number) => {
     setTouchedPhases(prev => {
       const next = new Set(prev).add(idx)
@@ -37,27 +42,31 @@ const Step3Milestone = () => {
     })
   }
 
+  // เช็คว่า milestone นี้กรอกข้อมูลจำเป็นครบหรือยัง (title, description, duration, และมี criteria อย่างน้อย 1 ข้อ)
   const isPhaseIncomplete = (m: Milestone) =>
     !m.title?.trim() || !m.description?.trim() || !m.duration || m.criteria.every(c => !c.trim())
 
+  // สลับ phase: mark ว่า phase เดิมถูกแตะแล้ว, save phase เดิมถ้ามีการแก้ไข, แล้วค่อยเปลี่ยนไป phase ใหม่
   const handlePhaseChange = (newIdx: number) => {
     markTouched(activePhase)
     savePhaseIfChanged(activePhase)
     setActivePhase(newIdx)
   }
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const videoInputRef = useRef<HTMLInputElement>(null)
-  const descriptionRef = useRef<HTMLTextAreaElement>(null)
-  const criteriaRefs = useRef<(HTMLInputElement | null)[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null) // input file ที่ซ่อนไว้ สำหรับไฟล์ประกอบ (รูป/pdf/excel)
+  const videoInputRef = useRef<HTMLInputElement>(null) // input file ที่ซ่อนไว้ สำหรับวิดีโอ
+  const descriptionRef = useRef<HTMLTextAreaElement>(null) // ใช้ปรับความสูง textarea คำอธิบายอัตโนมัติ
+  const criteriaRefs = useRef<(HTMLInputElement | null)[]>([]) // เก็บ ref ของ input เกณฑ์แต่ละข้อ เพื่อ focus ข้อใหม่หลังกด Enter
   // ✅ ดึง currentProject มาก่อน แล้วค่อยเข้าถึง milestones
   const { currentProject, updateMilestone, saveMilestonePhase, setSaveStatus, uploadFile } = useProjectStore()
 
+  // แสดงสถานะ "บันทึกแล้ว" ชั่วคราวแล้วเปลี่ยนกลับเป็น idle หลังจาก 2.5 วิ
   const triggerSaved = () => {
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 2500);
   };
 
+  // บันทึก milestone phase ขึ้น backend เฉพาะเมื่อข้อมูลต่างจาก snapshot ล่าสุด (กันยิง API ซ้ำโดยไม่จำเป็น)
   const savePhaseIfChanged = async (phaseIndex: number) => {
     if (!projectId) return;
     const milestone = useProjectStore.getState().currentProject.milestones[phaseIndex]
@@ -69,8 +78,9 @@ const Step3Milestone = () => {
     triggerSaved();
   };
   const fundingGoal = currentProject.fundingGoal || 0
-  const phasePercents = [0.15, 0.20, 0.30, 0.35]
+  const phasePercents = [0.15, 0.20, 0.30, 0.35] // สัดส่วนงบประมาณคงที่ของแต่ละ phase (รวมกันได้ 100%)
 
+  // ระยะเวลาของ milestone แก้ไม่ได้แล้วเมื่อโปรเจกต์พ้นสถานะ draft/pending_review
   const isDurationLocked = !!currentProject.state &&
     currentProject.state !== 'draft' &&
     currentProject.state !== 'pending_review'
@@ -97,8 +107,8 @@ const Step3Milestone = () => {
   })()
   const activePhaseDates = phaseDates[activePhase]
   const showDates = (currentProject.campaignDuration || 0) > 0 && (currentData.duration || 0) > 0
-  const maxTotalDays = (currentProject.projectDuration || 0) * 30
-  const usedDays = currentProject.milestones.reduce((sum, m) => sum + (m.duration || 0), 0)
+  const maxTotalDays = (currentProject.projectDuration || 0) * 30 // แปลงระยะเวลาโปรเจกต์จากเดือนเป็นวัน (ประมาณ 30 วัน/เดือน)
+  const usedDays = currentProject.milestones.reduce((sum, m) => sum + (m.duration || 0), 0) // รวมวันที่ทุก phase ใช้ไปแล้ว
   const remainingDays = maxTotalDays - usedDays
   const isOverLimit = maxTotalDays > 0 && usedDays > maxTotalDays
 
