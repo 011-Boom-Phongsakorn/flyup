@@ -38,6 +38,7 @@ export interface BoosterInvestment {
   platform_fee?: number;
   vat?: number;
   net_amount?: number;
+  reference_number?: string;
   status: string;
   profit_share_pct?: number;
   slip_image: string | null;
@@ -119,12 +120,13 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
       const res = await api.get('/investments');
       const data = res.data?.data ?? res.data?.investments ?? [];
       
-      type RawInvestment = BoosterInvestment & { total_amount?: number; CreatedAt?: string; vat_amount?: number };
+      type RawInvestment = BoosterInvestment & { total_amount?: number; CreatedAt?: string; vat_amount?: number; principal_amount?: number };
       let investmentsArray = Array.isArray(data) ? data.map((inv: RawInvestment) => ({
         ...inv,
         amount: inv.amount ?? inv.total_amount ?? 0,
         created_at: inv.created_at ?? inv.CreatedAt ?? '',
         vat: inv.vat ?? inv.vat_amount ?? 0,
+        net_amount: inv.net_amount ?? inv.principal_amount,
       })) : [];
 
       try {
@@ -169,6 +171,7 @@ export const useBoosterStore = create<BoosterStoreState>((set) => ({
           amount: data.amount ?? data.total_amount ?? 0,
           created_at: data.created_at ?? data.CreatedAt ?? '',
           vat: data.vat ?? data.vat_amount ?? 0,
+          net_amount: data.net_amount ?? data.principal_amount,
         };
       }
       set({ currentInvestment: data });
