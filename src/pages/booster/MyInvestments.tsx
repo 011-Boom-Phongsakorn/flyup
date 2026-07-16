@@ -191,6 +191,12 @@ function InvestmentRow({ group, onShowAll }: { group: GroupedInvestment; onShowA
     day: 'numeric', month: 'short', year: 'numeric',
   });
   const isMultiple = group.all.length > 1;
+  const projectState = inv.project?.state
+  const canRefund =
+    inv.status !== 'refund_pending' &&
+    inv.status !== 'refunded' &&
+    inv.status !== 'cancelled' &&
+    (projectState === 'failed' || projectState === 'cancelled')
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -238,16 +244,24 @@ function InvestmentRow({ group, onShowAll }: { group: GroupedInvestment; onShowA
         {isMultiple ? (
           <button
             onClick={() => onShowAll(group)}
-            className="px-4 py-2 bg-primary text-white-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+            className={`px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer ${
+              canRefund
+                ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+                : 'bg-primary text-white-foreground'
+            }`}
           >
-            รายละเอียด
+            {canRefund ? 'ขอเงินคืน' : 'รายละเอียด'}
           </button>
         ) : (
           <Link
             to={`/booster/investments/${inv.id}`}
-            className="px-4 py-2 bg-primary text-white-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
+            className={`px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity ${
+              canRefund
+                ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+                : 'bg-primary text-white-foreground'
+            }`}
           >
-            รายละเอียด
+            {canRefund ? 'ขอเงินคืน' : 'รายละเอียด'}
           </Link>
         )}
       </div>
