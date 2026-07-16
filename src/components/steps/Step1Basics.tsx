@@ -12,20 +12,29 @@ const Step1Basics = () => {
     fetchCategories, uploadFile, attachProjectMedia, fetchProjectMedia, deleteProjectMedia,
   } = useProjectStore()
 
+  // เปิด/ปิด dropdown เลือกหมวดหมู่
   const [isOpen, setIsOpen] = useState(false)
+  // field ตัวเลขที่กำลัง focus อยู่ตอนนี้ (ใช้ตัดสินว่าจะโชว์ raw string หรือ format คอมม่า)
   const [activeField, setActiveField] = useState<string | null>(null)
 
+  // format ตัวเลขเป็น string มีคอมม่า เช่น 10000 -> "10,000"
   const formatNum = (n: number) => n > 0 ? n.toLocaleString('th-TH') : '';
+  // แปลง string ที่มีคอมม่ากลับเป็นตัวเลข
   const parseNum = (s: string) => Number(s.replace(/,/g, '')) || 0;
+  // เลือกค่าที่จะแสดงใน input: ถ้ากำลังพิมพ์ field นี้อยู่ให้โชว์ raw number, ถ้าไม่ได้ focus ให้โชว์แบบ format แล้ว
   const numVal = (field: string, n: number) => activeField === field ? (n > 0 ? String(n) : '') : formatNum(n);
 
+  // โปรเจกต์ถูกล็อกแก้ไขไม่ได้แล้ว เมื่อพ้นสถานะ draft/pending_review (เช่นเข้าสู่รอบระดมทุนแล้ว)
   const isLocked = !!currentProject.state &&
     currentProject.state !== 'draft' &&
     currentProject.state !== 'pending_review';
   const lockedInputCls = 'border border-border bg-[#F3F4F6] h-[38px] px-[12px] rounded-[6px] text-muted-foreground cursor-not-allowed opacity-70';
 
+  // รายการหมวดหมู่ทั้งหมดที่ดึงมาจาก API สำหรับ dropdown
   const [allCategories, setAllCategories] = useState<{ id: number; name: string }[]>([]);
 
+  // state ฟอร์มฉบับ local ที่ผูกกับ input ตรงๆ (แก้ไขได้ทันทีโดยไม่ต้องรอ API)
+  // แล้วค่อย sync ขึ้น store/API ตอน blur ผ่าน handleAutoSave
   const [localData, setLocalData] = useState(() => ({
     title: currentProject.title || '',
     description: currentProject.description || '',
@@ -71,6 +80,7 @@ const Step1Basics = () => {
     }
   }, [localData.description]);
 
+  // โหลดรายการหมวดหมู่ครั้งเดียวตอน mount
   useEffect(() => {
     fetchCategories().then(setAllCategories);
   }, [fetchCategories]);
@@ -80,11 +90,14 @@ const Step1Basics = () => {
   const additionalImagesRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
+  // แสดงสถานะ "บันทึกแล้ว" ชั่วคราวแล้วเปลี่ยนกลับเป็น idle หลังจาก 2.5 วิ
   const triggerSaved = () => {
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 2500);
   };
 
+  // auto-save field เดี่ยวๆ ตอน blur: เทียบค่าเก่า-ใหม่ก่อน ถ้าไม่เปลี่ยนก็ไม่ยิง request
+  // อัปเดต store ทันที (optimistic) แล้วค่อยยิง API ถ้ามี projectId แล้ว (โปรเจกต์ถูกสร้างแล้ว)
   const handleAutoSave = async (field: keyof Project, newValue: string | number) => {
     const oldValue = currentProject?.[field as keyof typeof currentProject];
     const isSame = typeof newValue === 'string'
@@ -103,6 +116,7 @@ const Step1Basics = () => {
     triggerSaved();
   };
 
+  // upload ไฟล์สื่อ (รูป/วิดีโอ) ขึ้น server เป็น 3 ขั้นตอน: upload ไฟล์ -> ผูกกับโปรเจกต์ -> ดึง media list กลับมาเพื่อเอา id ใน DB
   const uploadMediaToServer = async (file: File): Promise<{ url: string; mediaId?: number } | null> => {
     if (!projectId) return null;
     try {
@@ -123,6 +137,7 @@ const Step1Basics = () => {
     }
   };
 
+  // เลือกรูปปก: validate type/size -> โชว์ blob preview ทันที -> upload จริงใน background -> แทนที่ด้วย server URL
   const handleCoverImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -156,12 +171,15 @@ const Step1Basics = () => {
     }
   };
 
+  // ลบรูปปก ทั้งใน state และยิงอัปเดตขึ้น server (ส่งค่าว่างไปเคลียร์)
   const removeCoverImage = async () => {
     updateProjectInfo({ coverImage: null });
     if (projectId) await updateProject(Number(projectId), { coverImage: '' });
     triggerSaved();
   };
 
+  // เลือกรูปประกอบหลายรูป (สูงสุดรวม 5 รูป): validate type + จำกัดจำนวนที่เหลือ
+  // โชว์ blob preview ของทุกไฟล์ก่อน แล้ว upload ทีละไฟล์ใน background
   const handleMultipleFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -205,6 +223,7 @@ const Step1Basics = () => {
     if (additionalImagesRef.current) additionalImagesRef.current.value = "";
   };
 
+  // หลัง upload เสร็จ: เอา server URL + mediaId มาแทนที่ blob URL ตัวเดิมใน currentProject.files
   const set_replaceFileUrl = (blobUrl: string, serverUrl: string, name: string, mediaId?: number) => {
     URL.revokeObjectURL(blobUrl);
     useProjectStore.setState((state) => ({
@@ -254,6 +273,7 @@ const Step1Basics = () => {
     }
   };
 
+  // ลบรูปประกอบตาม index: revoke blob url, เอาออกจาก state, แล้วลบใน DB ถ้ามี media id แล้ว
   const removeImage = async (index: number) => {
     const currentImages = currentProject?.files || [];
     const targetImage = currentImages[index];
@@ -268,6 +288,7 @@ const Step1Basics = () => {
     triggerSaved();
   };
 
+  // ลบวิดีโอ: เคลียร์ state/input ก่อน แล้วลบใน DB ถ้ามี media id แล้ว
   const removeVideo = async () => {
     const vid = currentProject?.video;
     updateProjectInfo({ video: null });

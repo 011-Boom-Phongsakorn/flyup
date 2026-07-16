@@ -12,12 +12,15 @@ const Preview = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { projectId } = useParams();
+    // path ที่จะกลับไปตอนกด "ออกจากดูตัวอย่าง" — ถ้าไม่ได้ส่ง state.from มา ให้กลับไปหน้ารายการโปรเจกต์เป็นค่า default
     const fromPath = (location.state as { from?: string } | null)?.from ?? '/pioneer/dashboard/projects';
     const { currentProject, loadCurrentProject, projects, fetchMyProjects } = useProjectStore();
     const { updates, faqs, threads, investorCount, fetchAll } = useProjectDetailStore();
     const { authUser } = useAuthStore();
-    const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story');
+    const [activeTab, setActiveTab] = useState<'story' | 'milestone' | 'update' | 'comment' | 'question'>('story'); // แท็บที่กำลังเปิดดูอยู่ในฝั่งซ้าย
 
+    // โหลดข้อมูลโปรเจกต์ + ข้อมูลประกอบ (update/faq/comment/จำนวนผู้ลงทุน) เมื่อเข้าหน้านี้ หรือ projectId เปลี่ยน
+    // และดึงรายการโปรเจกต์ของตัวเองมาด้วย เพื่อนับจำนวนโปรเจกต์ที่ทำสำเร็จแล้ว (แสดงในโปรไฟล์ผู้สร้าง)
     useEffect(() => {
         if (projectId) {
             loadCurrentProject(Number(projectId));
@@ -36,6 +39,8 @@ const Preview = () => {
 
     const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
     const formatThDate = (d: Date) => `${d.getDate()} ${thMonths[d.getMonth()]} ${d.getFullYear()}`;
+    // คำนวณช่วงวันที่คาดว่าโปรเจกต์จะเริ่ม-จบ โดยประมาณจากวันนี้ + ระยะเวลาโปรเจกต์ (เดือน)
+    // ใช้แค่แสดงตัวอย่างในหน้า preview เท่านั้น (โปรเจกต์จริงยังไม่เริ่มนับจนกว่าจะระดมทุนสำเร็จ)
     const getProjectDateRange = () => {
         if (!currentProject.projectDuration) return 'ยังไม่ได้กำหนด';
         const start = new Date();
@@ -50,7 +55,7 @@ const Preview = () => {
         ...(currentProject.video ? [{ type: 'video' as const, url: currentProject.video.url, name: currentProject.video.name }] : []),
         ...(currentProject.files ?? []).map(f => ({ type: 'image' as const, url: f.url, name: f.name })),
     ];
-    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [selectedIndex, setSelectedIndex] = useState(0); // index ของสื่อ (รูป/วิดีโอ) ที่กำลังแสดงเป็นภาพหลัก
     const selected = mediaList[selectedIndex] ?? null;
 
     return (

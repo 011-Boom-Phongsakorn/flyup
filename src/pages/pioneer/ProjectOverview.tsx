@@ -10,6 +10,7 @@ interface StageItems {
   isComplete: (p: Project, projectId?: string) => boolean;
 }
 
+// รายการการ์ดสรุปแต่ละ step (1-4) พร้อมเงื่อนไขเช็คว่ากรอกครบหรือยัง — ใช้แสดงไอคอนติ๊กเขียวในหน้า overview นี้
 const step: StageItems[] = [
   {
     icon: CircleCheckBig,
@@ -47,15 +48,18 @@ const ProjectOverview = () => {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const { currentProject, loadCurrentProject, submitProject } = useProjectStore()
-  const [showModal, setShowModal] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showModal, setShowModal] = useState(false) // เปิด/ปิด modal ยืนยันส่งโปรเจกต์
+  const [isSubmitting, setIsSubmitting] = useState(false) // กันกดส่งซ้ำระหว่างรอ API ตอบกลับ
 
+  // โหลดข้อมูลโปรเจกต์เข้า store ทุกครั้งที่ projectId เปลี่ยน (เช่น เข้าหน้านี้ครั้งแรก หรือรีเฟรชหน้า)
   useEffect(() => {
     if (projectId) loadCurrentProject(Number(projectId));
   }, [projectId, loadCurrentProject]);
 
+  // ปุ่ม "ส่งคำขอสร้างโปรเจกต์" กดได้ก็ต่อเมื่อทั้ง 4 step กรอกข้อมูลครบทุกอัน
   const canSubmit = step.every(s => s.isComplete(currentProject, projectId))
 
+  // ยิง submit โปรเจกต์ไป backend เพื่อรอ Admin อนุมัติ แล้วพากลับไปหน้ารายการโปรเจกต์ถ้าสำเร็จ
   const handleSubmit = async () => {
     setIsSubmitting(true)
     const ok = await submitProject(projectId!)

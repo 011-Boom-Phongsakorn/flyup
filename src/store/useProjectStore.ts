@@ -203,6 +203,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // โหลดโปรเจกต์เดี่ยวจาก backend มาเติมลง currentProject ทั้งก้อน (ใช้ตอนเข้าหน้า Step 1-5 / Overview / Preview)
+    // ต้อง map field name จาก backend (snake_case) เป็น store (camelCase) และแปลง media/stories/milestones ที่เก็บแยกตารางให้กลับมาเป็นรูปเดียวกับ currentProject
     loadCurrentProject: async (id) => {
         set({ isLoading: true });
         try {
@@ -311,6 +313,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // auto-save partial update (patch) ขึ้น backend — ใช้ตอน blur ของ input ต่างๆ ใน Step1Basics/Step2Story
     updateProject: async (id, data) => {
         // map store field names → API field names
         const payload: Record<string, unknown> = {};
@@ -346,6 +349,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // ดึงรายการโปรเจกต์ทั้งหมดของ pioneer คนนี้ (ใช้ในหน้า MyProjects) พร้อมแนบรูป thumbnail แรกของแต่ละโปรเจกต์
     fetchMyProjects: async () => {
         set({ isLoading: true });
         try {
@@ -377,6 +381,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // ลบโปรเจกต์แบบ draft ทิ้งทั้งหมด — ต้องลบ milestones/stories/media (child records) ก่อน แล้วค่อยลบตัวโปรเจกต์เอง
+    // เพื่อไม่ให้ backend ปฏิเสธการลบเพราะติด foreign key constraint
     deleteProject: async (id) => {
         try {
             // ลบ milestones ก่อน
@@ -410,6 +416,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // บันทึกเนื้อหา story (เรื่องราวของโปรเจกต์): ถ้ามี storyId แล้วให้ patch อัปเดต ถ้ายังไม่มีให้สร้างใหม่ครั้งแรก
+    // ป้องกันสร้างซ้ำซ้อนด้วย _savingStory flag เพราะ onUpdate ของ editor อาจยิงมาถี่ๆ ก่อนที่ storyId แรกจะเซ็ตเสร็จ
     saveStory: async (projectId, html?: string) => {
         const { currentProject } = get();
         const content = html ?? currentProject.story;
@@ -440,6 +448,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // บันทึก milestone phase เดียวขึ้น backend (ต้องมี id อยู่แล้วจาก pre-create ตอน createProject)
     saveMilestonePhase: async (_projectId, phaseIndex) => {
         const { currentProject } = get();
         const m = currentProject.milestones[phaseIndex];
@@ -482,6 +491,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // สร้างโปรเจกต์ draft ใหม่ในระบบ (เรียกจาก useCreateProjectGuard หลังผ่านการเช็คเงื่อนไข)
+    // ถ้า backend บอกว่ายังไม่ยืนยันตัวตน จะเด้ง SweetAlert พาไปหน้ายืนยันตัวตนแทนการสร้าง error เฉยๆ
     createProject: async () => {
         set({ isCreating: true });
         try {
@@ -540,6 +551,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // ยกเลิกโปรเจกต์ draft ทันที (ต่างจาก submitCancelRequest ที่ใช้กับโปรเจกต์ที่เข้าสู่การระดมทุนแล้ว ต้องรอ Admin อนุมัติ)
     updateProjectStatus: async (projectId) => {
         try {
             await api.patch(`/pioneer/projects/${projectId}/cancel`);
@@ -550,6 +562,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // ส่งโปรเจกต์ (state: draft) ไปรอ Admin ตรวจสอบ — จะ fail ถ้า pioneer มีโปรเจกต์ active อยู่แล้ว (รับได้ทีละโปรเจกต์)
     submitProject: async (projectId) => {
         try {
             await api.patch(`/pioneer/projects/${projectId}/submit`);
@@ -565,6 +578,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // ส่งคำขอยกเลิกโปรเจกต์ที่ผ่านการอนุมัติ/ระดมทุนไปแล้ว (ต้องรอ Admin พิจารณาอนุมัติการยกเลิกอีกที)
     submitCancelRequest: async (projectId, data) => {
         try {
             await api.patch(`/pioneer/projects/${projectId}/submit-cancel`, data);
@@ -585,6 +599,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // ─── FAQ: CRUD คำถามที่พบบ่อยของโปรเจกต์ (ใช้ใน Step2Story) ───
     fetchFaqs: async (projectId) => {
         try {
             const res = await api.get(`/projects/${projectId}/faqs`);
@@ -650,6 +665,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // ─── Updates: CRUD ประกาศความคืบหน้าของโปรเจกต์ (ใช้ใน Step5Updates) ───
     fetchProjectUpdates: async (projectId) => {
         set({ isLoadingUpdates: true });
         try {
@@ -718,6 +734,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // ดึงรายการหมวดหมู่ทั้งหมดสำหรับ dropdown เลือกหมวดหมู่ใน Step1Basics
     fetchCategories: async () => {
         try {
             const res = await api.get('/categories');
@@ -727,6 +744,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // อัปโหลดไฟล์ดิบ (รูป/วิดีโอ/เอกสาร) ขึ้น Cloudinary ผ่าน backend endpoint /upload — คืน url + type ที่ backend ตรวจจับให้
     uploadFile: async (file) => {
         try {
             const formData = new FormData();
@@ -742,15 +760,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    // ผูก URL ของไฟล์ที่ upload แล้วเข้ากับโปรเจกต์ (บันทึกลง media table ของโปรเจกต์นี้)
     attachProjectMedia: async (projectId, url, type) => {
         await api.post(`/pioneer/projects/${projectId}/media`, [{ url, type: [type] }]);
     },
 
+    // ดึงรายการ media ทั้งหมดของโปรเจกต์ — ใช้หา id ของ media ที่เพิ่ง attach ไป (attachProjectMedia ไม่คืน id กลับมาตรงๆ)
     fetchProjectMedia: async (projectId) => {
         const res = await api.get(`/pioneer/projects/${projectId}/media`);
         return res.data?.data ?? [];
     },
 
+    // ลบ media ตาม id ออกจากโปรเจกต์ (ใช้ตอนผู้ใช้กดลบรูป/วิดีโอ)
     deleteProjectMedia: async (mediaId) => {
         await api.delete(`/pioneer/projects/media/${mediaId}`);
     },

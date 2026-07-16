@@ -10,9 +10,10 @@ interface StepItems {
   id: number;
   title: string;
   icon: LucideIcon;
-  isComplete: (p: Project, projectId?: string) => boolean;
+  isComplete: (p: Project, projectId?: string) => boolean; // เช็คว่า step นี้กรอกข้อมูลครบหรือยัง (ใช้โชว์ไอคอน ✓)
 }
 
+// รายการ step หลัก (1-4) ที่ต้องกรอกครบก่อนจะส่งคำขอสร้างโปรเจกต์ได้
 const baseSteps: StepItems[] = [
   {
     id: 1,
@@ -46,6 +47,7 @@ const baseSteps: StepItems[] = [
   },
 ];
 
+// step ที่ 5 (อัปเดต) จะไม่มีวันติ๊กว่า "เสร็จแล้ว" — เป็นแค่ช่องทางแจ้งข่าวต่อเนื่องระหว่าง funding
 const updateStep: StepItems = {
   id: 5,
   title: 'อัปเดต',
@@ -58,6 +60,7 @@ const Stepper = ({ currentStep }: StepperProps) => {
   const navigate = useNavigate();
   const currentProject = useProjectStore(s => s.currentProject);
 
+  // โปรเจกต์เข้าสู่รอบระดมทุนแล้วหรือยัง (พ้นสถานะ draft/pending_review) — ถ้าใช่ให้โชว์ step 5 (อัปเดต) เพิ่ม
   const isFundingOrLater = !!currentProject.state &&
     currentProject.state !== 'draft' &&
     currentProject.state !== 'pending_review';
@@ -67,6 +70,7 @@ const Stepper = ({ currentStep }: StepperProps) => {
   const halfW = 100 / (2 * n);   // % offset to center of first/last step
   const gapW = 100 / n;           // % width of each segment gap
 
+  // เช็คทีละ step ว่ากรอกข้อมูลครบหรือยัง เพื่อใช้ตัดสินว่าจุดไหนโชว์ไอคอน ✓ (เสร็จแล้ว) แทนไอคอนปกติ
   const completionList = steps.map(s => s.isComplete(currentProject, projectId));
 
   return (

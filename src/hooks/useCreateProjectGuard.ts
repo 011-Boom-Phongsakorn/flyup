@@ -8,12 +8,14 @@ const useCreateProjectGuard = () => {
     const { authUser } = useAuthStore()
     const { createProject, isCreating } = useProjectStore()
 
+    // เช็คเงื่อนไขก่อนอนุญาตให้สร้างโปรเจกต์: ต้องยืนยันตัวตนนักศึกษา (บัตรนักศึกษา + บัตรประชาชน) และผูกบัญชีธนาคารแล้ว
     const createWithGuard = async () => {
         const studentApproved =
             authUser?.student_card_verification?.status === 'approved' &&
             authUser?.id_card_verification?.status === 'approved'
         const hasBank = (authUser?.bank_accounts?.length ?? 0) > 0
 
+        // ถ้ายังไม่ครบเงื่อนไข แจ้งเตือนด้วย SweetAlert แล้วเสนอทางลัดไปหน้ายืนยันตัวตน
         if (!studentApproved || !hasBank) {
             const missing: string[] = []
             if (!studentApproved) missing.push('ยืนยันตัวตนนักศึกษา')
@@ -34,6 +36,7 @@ const useCreateProjectGuard = () => {
             return null
         }
 
+        // เงื่อนไขครบแล้ว: สร้างโปรเจกต์ draft ใหม่ แล้วพาไปหน้า overview เพื่อเริ่มกรอกขั้นตอน Step 1-5
         const id = await createProject()
         if (id) navigate(`/project/overview/${id}`)
         return id

@@ -67,42 +67,48 @@ const Step2Story = () => {
     faqs, isSavingFaq, fetchFaqs, addFaq, editFaq, deleteFaq, uploadFile,
   } = useProjectStore()
 
+  // FAQ ให้แก้ไขได้เฉพาะโปรเจกต์ที่ผ่านการอนุมัติแล้ว (draft/funding/executing เท่านั้น)
   const showFaqSection = ['draft', 'funding', 'executing'].includes(currentProject.state ?? '')
 
+  // แสดงสถานะ "บันทึกแล้ว" ชั่วคราวแล้วเปลี่ยนกลับเป็น idle หลังจาก 2.5 วิ
   const triggerSaved = () => {
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 2500);
   };
-  const [isMenuExpanded, setIsMenuExpanded] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [mediaUrlInputOpen, setMediaUrlInputOpen] = useState(false)
-  const [mediaUrl, setMediaUrl] = useState('')
-  const [risks, setRisks] = useState(currentProject.risks || '')
-  const risksRef = useRef<HTMLTextAreaElement>(null)
-  const hasInitializedRef = useRef(false)
+  const [isMenuExpanded, setIsMenuExpanded] = useState(false) // เปิด/ปิด floating toolbar เวลา cursor อยู่บรรทัดว่าง
+  const [dropdownOpen, setDropdownOpen] = useState(false) // เปิด/ปิด dropdown เลือก block type (Paragraph/Heading/Subheading)
+  const [mediaUrlInputOpen, setMediaUrlInputOpen] = useState(false) // เปิด/ปิดช่องกรอก URL สื่อ (รูป/youtube) ใน toolbar
+  const [mediaUrl, setMediaUrl] = useState('') // ค่าที่พิมพ์ในช่องกรอก media URL
+  const [risks, setRisks] = useState(currentProject.risks || '') // ข้อความ "ความเสี่ยงของโปรเจกต์" ผูกกับ textarea ด้านล่าง editor
+  const risksRef = useRef<HTMLTextAreaElement>(null) // ใช้ปรับความสูง textarea ความเสี่ยงอัตโนมัติตามเนื้อหา
+  const hasInitializedRef = useRef(false) // กันไม่ให้ sync risks/editor content จาก store ซ้ำมากกว่า 1 ครั้ง
 
   // FAQ state
-  const [faqForm, setFaqForm] = useState({ question: '', answer: '' })
-  const [editingFaqId, setEditingFaqId] = useState<number | null>(null)
-  const [editFaqForm, setEditFaqForm] = useState({ question: '', answer: '' })
+  const [faqForm, setFaqForm] = useState({ question: '', answer: '' }) // ฟอร์มเพิ่ม FAQ ใหม่
+  const [editingFaqId, setEditingFaqId] = useState<number | null>(null) // id ของ FAQ ที่กำลังแก้ไขอยู่ (null = ไม่มี)
+  const [editFaqForm, setEditFaqForm] = useState({ question: '', answer: '' }) // ฟอร์มแก้ไข FAQ ที่เลือกไว้
 
+  // โหลดรายการ FAQ จาก API เมื่อเงื่อนไข showFaqSection เป็นจริงและมี projectId แล้ว
   useEffect(() => {
     if (showFaqSection && projectId) {
       fetchFaqs(projectId)
     }
   }, [showFaqSection, projectId, fetchFaqs])
 
+  // เพิ่ม FAQ ใหม่เข้าโปรเจกต์ แล้วเคลียร์ฟอร์มถ้าสำเร็จ
   const handleAddFaq = async () => {
     if (!projectId) return
     const ok = await addFaq(projectId, faqForm)
     if (ok) setFaqForm({ question: '', answer: '' })
   }
 
+  // บันทึกการแก้ไข FAQ ตาม id แล้วปิดโหมดแก้ไขถ้าสำเร็จ
   const handleUpdateFaq = async (id: number) => {
     const ok = await editFaq(id, editFaqForm)
     if (ok) setEditingFaqId(null)
   }
 
+  // ลบ FAQ ตาม id
   const handleDeleteFaq = async (id: number) => {
     await deleteFaq(id)
   }
@@ -114,10 +120,11 @@ const Step2Story = () => {
   // ✅ State สำหรับ custom floating menu
   const [showFloatingMenu, setShowFloatingMenu] = useState(false)
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
-  const editorContainerRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editorContainerRef = useRef<HTMLDivElement>(null) // container ของ editor ทั้งก้อน ใช้คำนวณตำแหน่ง floating menu และเช็ค focus
+  const fileInputRef = useRef<HTMLInputElement>(null) // input file ที่ซ่อนไว้ สำหรับอัปโหลดรูปเข้า editor
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null) // เก็บ timer ไว้ clear เวลา debounce การ save เนื้อหา story
 
+  // สร้าง Tiptap editor instance พร้อม extension: StarterKit (พื้นฐาน), CustomImage (รูปที่ลิงก์/align ได้), Youtube, Placeholder
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -137,6 +144,7 @@ const Step2Story = () => {
         emptyEditorClass: 'is-editor-empty',
       }),
     ],
+    // ทุกครั้งที่เนื้อหาเปลี่ยน: ปิดเมนูค้างๆ แล้ว debounce บันทึกเนื้อหาขึ้น store + backend (รอ 500ms หลังพิมพ์หยุด)
     onUpdate: ({ editor }) => {
       setIsMenuExpanded(false)
       setDropdownOpen(false)

@@ -10,25 +10,29 @@ const Step5Updates = () => {
     updates, isLoadingUpdates: isLoading, isSavingUpdate: isSaving,
     fetchProjectUpdates, addProjectUpdate, editProjectUpdate, deleteProjectUpdate,
   } = useProjectStore()
-  const [form, setForm] = useState({ title: '', content: '' })
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [editForm, setEditForm] = useState({ title: '', content: '' })
+  const [form, setForm] = useState({ title: '', content: '' }) // ฟอร์มสร้างอัปเดตใหม่
+  const [editingId, setEditingId] = useState<number | null>(null) // id ของอัปเดตที่กำลังแก้ไขอยู่ (null = ไม่มี)
+  const [editForm, setEditForm] = useState({ title: '', content: '' }) // ฟอร์มแก้ไขอัปเดตที่เลือกไว้
 
+  // โหลดรายการอัปเดตของโปรเจกต์นี้จาก API เมื่อมี projectId
   useEffect(() => {
     if (projectId) fetchProjectUpdates(projectId)
   }, [projectId, fetchProjectUpdates])
 
+  // สร้างอัปเดตใหม่ แล้วเคลียร์ฟอร์มถ้าสำเร็จ
   const handleCreate = async () => {
     if (!projectId) return
     const ok = await addProjectUpdate(projectId, form)
     if (ok) setForm({ title: '', content: '' })
   }
 
+  // บันทึกการแก้ไขอัปเดตตาม id แล้วปิดโหมดแก้ไขถ้าสำเร็จ
   const handleEdit = async (id: number) => {
     const ok = await editProjectUpdate(id, editForm)
     if (ok) setEditingId(null)
   }
 
+  // ลบอัปเดตตาม id
   const handleDelete = async (id: number) => {
     await deleteProjectUpdate(id)
   }

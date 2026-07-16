@@ -9,6 +9,7 @@ const Step4Agreement = () => {
   const { projectId } = useParams();
   const { currentProject, submitProject } = useProjectStore();
 
+  // ต้องมีครบ 4 milestone และแต่ละอันกรอก title/description/duration ครบ ถึงจะกดส่งคำขอได้
   const allMilestonesComplete = currentProject.milestones?.length === 4 &&
     currentProject.milestones.every(m => !!m.title && !!m.description && m.duration > 0);
 

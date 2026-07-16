@@ -28,6 +28,8 @@ const DOC_EXT_MAP: Record<string, string> = {
 
 type FileKind = "image" | "video" | "document" | "unknown";
 
+// เดาประเภทไฟล์จาก URL: เช็คนามสกุลไฟล์ก่อน (เชื่อถือได้สุด) แล้วค่อย fallback ไปดู path ของ Cloudinary
+// (เพราะไฟล์ที่ไม่ใช่รูป เช่น PDF บางครั้งถูก upload ผ่าน endpoint /image/upload/ ของ Cloudinary ทำให้เดาจาก path เพียงอย่างเดียวผิดได้)
 function detectFileKind(url: string): { kind: FileKind; ext: string; filename: string; docType?: string } {
   try {
     const pathname = new URL(url).pathname;
@@ -59,6 +61,7 @@ const thMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค
 const formatThDate = (d: Date) => `${d.getDate()} ${thMonths[d.getMonth()]} ${d.getFullYear() + 543}`;
 
 // ─── Media Renderer ─────────────────────────────────────────────────────────
+// แสดงไฟล์แนบให้เหมาะกับประเภท: รูป -> <img>, วิดีโอ -> <video>, เอกสาร -> การ์ดดาวน์โหลด, อื่นๆ -> ลิงก์ดาวน์โหลดทั่วไป
 function MediaRenderer({ url }: { url: string }) {
   const file = detectFileKind(url);
 
@@ -129,13 +132,13 @@ function PioneerMilestoneCard({
   estimatedDates: { start: Date; end: Date } | null;
   defaultOpen: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const phasePercents = [0.15, 0.20, 0.30, 0.35];
+  const [isOpen, setIsOpen] = useState(defaultOpen); // เปิด/ปิดรายละเอียดของการ์ด phase นี้ (การ์ดแรกเปิดไว้เป็น default)
+  const phasePercents = [0.15, 0.20, 0.30, 0.35]; // สัดส่วนงบประมาณคงที่ของแต่ละ phase (ต้องตรงกับ Step3Milestone.tsx)
   const amount = fundingGoal > 0 ? fundingGoal * phasePercents[phaseIndex] : 0;
   const criteria = (milestone.criteria ?? []).filter((c) => c.trim());
   const hasDates = estimatedDates && milestone.duration > 0 && campaignDuration > 0;
 
-  // Collect all media URLs (non-blob)
+  // Collect all media URLs (non-blob) — ตัด blob: ออกเพราะเป็น preview ชั่วคราวที่ยัง upload ไม่เสร็จ ไม่ควรโชว์ในหน้า preview นี้
   const allMediaUrls: string[] = [
     ...(milestone.files ?? []).filter((f) => f.url && !f.url.startsWith("blob:")).map((f) => f.url),
     ...(milestone.videos ?? []).filter((v) => v.url && !v.url.startsWith("blob:")).map((v) => v.url),
@@ -270,6 +273,7 @@ export default function PreviewMilestoneDetail() {
   const navigate = useNavigate();
   const { currentProject, loadCurrentProject } = useProjectStore();
 
+  // โหลดข้อมูลโปรเจกต์เข้า store เมื่อเข้าหน้านี้ แล้วเลื่อนกลับไปบนสุดของหน้า
   useEffect(() => {
     if (projectId) {
       loadCurrentProject(Number(projectId));
@@ -277,6 +281,7 @@ export default function PreviewMilestoneDetail() {
     }
   }, [projectId, loadCurrentProject]);
 
+  // เอาเฉพาะ milestone ที่กรอกชื่อไว้แล้ว (ยังไม่กรอกแปลว่ายังไม่ถูกใช้งาน) พร้อมจำ index (phase) เดิมไว้
   const activeMilestones = (currentProject.milestones ?? [])
     .map((m, i) => ({ m, phaseIndex: i }))
     .filter(({ m }) => m.title);
@@ -285,7 +290,7 @@ export default function PreviewMilestoneDetail() {
   const fundingGoal = currentProject.fundingGoal || 0;
   const campaignDuration = currentProject.campaignDuration || 0;
 
-  // Compute phase dates
+  // Compute phase dates — ประมาณวันเริ่ม/จบของแต่ละ phase ต่อเนื่องกันไป โดยเริ่มนับจากวันนี้ + ระยะเวลาระดมทุน
   const phaseDates = (() => {
     const result: { start: Date; end: Date }[] = [];
     let cursor = new Date();
