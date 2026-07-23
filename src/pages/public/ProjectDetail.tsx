@@ -639,7 +639,7 @@ function ProjectDetail() {
                   <span className="text-[14px] font-bold text-foreground leading-tight">
                     {project?.owner_profile ? `${project.owner_profile.first_name} ${project.owner_profile.last_name}` : '—'}
                   </span>
-                  <span className="text-[12px] text-muted-foreground">{project?.owner_profile?.university || '—'}</span>
+                  <span className="text-[12px] text-muted-foreground">{(typeof project?.owner_profile?.university === 'string' ? project.owner_profile.university : (project?.owner_profile?.university as unknown as { name_th?: string } | null)?.name_th) || '—'}</span>
                 </div>
               </div>
               {project?.owner_profile?.bio && (

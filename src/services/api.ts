@@ -38,7 +38,13 @@ instance.interceptors.response.use(
     const original = error.config;
     const status = error.response?.status;
 
-    if (status !== 401 || original._retry || original.url?.includes("/auth/refresh") || original.url?.includes("/user/signout")) {
+    const isAuthEntrypoint = original.url?.includes("/auth/refresh") ||
+      original.url?.includes("/user/signout") ||
+      original.url?.includes("/signin") ||
+      original.url?.includes("/signup") ||
+      original.url?.includes("/auth/google");
+
+    if (status !== 401 || original._retry || isAuthEntrypoint) {
       return Promise.reject(error);
     }
 
