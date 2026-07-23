@@ -131,7 +131,11 @@ const Projects = () => {
     }
 
     if (activeCategory !== 'ทั้งหมด') {
-      result = result.filter(p => p.category === activeCategory);
+      result = result.filter(p => {
+        const rawCat = p.category as unknown;
+        const catName = typeof rawCat === 'string' ? rawCat : (rawCat as { name?: string } | null)?.name;
+        return catName === activeCategory;
+      });
     }
 
     const min = parseFloat(minGoal.replace(/,/g, ''));
