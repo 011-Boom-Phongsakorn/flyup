@@ -89,7 +89,7 @@ const Login = () => {
                         </div>
                     </div>
                 </div>
-                <form data-testid="login-form" onSubmit={handleSubmit} className="flex flex-col gap-[27px]">
+                <form data-testid="login-form" onSubmit={handleSubmit} noValidate className="flex flex-col gap-[27px]">
                     <div className="flex flex-col gap-[16px]">
                         <div className="flex flex-col gap-[4px]">
                             <label className="text-[14px] text-foreground">อีเมล <span className="text-error">*</span></label>
