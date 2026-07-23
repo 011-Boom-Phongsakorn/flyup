@@ -133,6 +133,10 @@ function ProjectDetail() {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   })();
 
+  const categoryName = typeof project?.category === 'string'
+    ? project.category
+    : (project?.category as unknown as { name?: string } | null)?.name ?? null;
+
   const isAdmin = authUser?.role === 'admin';
   const isIdVerified = authUser?.id_card_verification?.status === 'approved';
   const hasBank = (authUser?.bank_accounts?.length ?? 0) > 0;
@@ -231,9 +235,9 @@ function ProjectDetail() {
         {/* Header */}
         <div className="flex flex-col gap-[10px] mb-[30px]">
           <div className="flex flex-wrap items-center gap-2">
-            {project?.category && (
-              <Link to={`/projects?category=${project.category}`} className="inline-flex w-fit items-center px-[12px] py-[4px] rounded-full border border-border bg-white text-[12px] font-medium text-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer">
-                {project.category}
+            {categoryName && (
+              <Link to={`/projects?category=${categoryName}`} className="inline-flex w-fit items-center px-[12px] py-[4px] rounded-full border border-border bg-white text-[12px] font-medium text-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer">
+                {categoryName}
               </Link>
             )}
             {project?.state === 'funding' && (
