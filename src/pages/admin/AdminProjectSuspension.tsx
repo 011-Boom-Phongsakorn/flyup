@@ -134,7 +134,8 @@ const AdminProjectSuspension = () => {
 
     const filtered = byTab.filter((p) => {
         const q = search.toLowerCase()
-        return p.title.toLowerCase().includes(q) || (p.category ?? '').toLowerCase().includes(q)
+        const categoryName = typeof p.category === 'string' ? p.category : (p.category as unknown as { name?: string } | null)?.name ?? ''
+        return p.title.toLowerCase().includes(q) || categoryName.toLowerCase().includes(q)
     })
 
     const activeCount   = projects.filter((p) => !TERMINAL.has(p.state) && p.state !== 'draft').length
@@ -193,7 +194,7 @@ const AdminProjectSuspension = () => {
                                     <span className="text-[11px] text-muted-foreground">ID: {p.id}</span>
                                 </div>
                                 <div className="h-14 flex justify-center items-center text-[12px] text-muted-foreground">
-                                    {p.category ?? '-'}
+                                    {(typeof p.category === 'string' ? p.category : (p.category as unknown as { name?: string } | null)?.name) ?? '-'}
                                 </div>
                                 <div className="h-14 flex flex-col justify-center items-center text-[12px]">
                                     <span className="font-semibold text-primary">฿{(p.funding_goal ?? 0).toLocaleString('th-TH')}</span>

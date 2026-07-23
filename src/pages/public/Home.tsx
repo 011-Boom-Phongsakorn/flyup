@@ -26,6 +26,8 @@ const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1498050108023-c5249f4
 const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; isNew?: boolean } }) => {
   const progress = getProgress(project);
   const daysLeft = getDaysLeft(project);
+  const rawCategory = project.category as unknown;
+  const categoryName = typeof rawCategory === 'string' ? rawCategory : (rawCategory as { name?: string } | null)?.name ?? null;
 
   return (
     <Link
@@ -51,9 +53,9 @@ const ProjectCard = ({ project }: { project: PublicProject & { isHot?: boolean; 
       <div className="p-4 flex flex-col flex-1">
         <div className="flex justify-between items-start gap-2 mb-1">
           <h3 className="text-lg font-bold line-clamp-1 flex-1">{project.title}</h3>
-          {project.category && (
+          {categoryName && (
             <span className="text-[10px] font-medium px-2.5 py-0.5 bg-white border border-gray-200 rounded-full text-gray-400 whitespace-nowrap">
-              {project.category}
+              {categoryName}
             </span>
           )}
         </div>

@@ -230,12 +230,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             const story = sortedStories.map((s) => s.body).join('');
             const storyId = sortedStories[0]?.id;
 
+            // Category บาง endpoint ส่งเป็น string บาง endpoint ส่งเป็น object {id, name} — normalize ให้เป็น string เสมอ
+            const rawCategory = d.category as unknown;
+            const categoryName = typeof rawCategory === 'string'
+                ? rawCategory
+                : (rawCategory as { name?: string } | null)?.name ?? '';
+
             // Resolve category id from name
             let categoryId = 0;
             try {
                 const catRes = await api.get('/categories');
                 const allCats: { id: number; name: string }[] = catRes.data?.data ?? [];
-                const matched = allCats.find(c => c.name === d.category);
+                const matched = allCats.find(c => c.name === categoryName);
                 categoryId = matched?.id ?? 0;
             } catch { /* ignore */ }
 
@@ -287,7 +293,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                 currentProject: {
                     title: d.title ?? '',
                     description: d.description ?? '',
-                    category: d.category ?? '',
+                    category: categoryName,
                     categoryId,
                     state: d.state ?? '',
                     fundingGoal: d.funding_goal ?? 0,
