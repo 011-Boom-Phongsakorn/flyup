@@ -10,6 +10,11 @@ const useCreateProjectGuard = () => {
 
     // เช็คเงื่อนไขก่อนอนุญาตให้สร้างโปรเจกต์: ต้องยืนยันตัวตนนักศึกษา (บัตรนักศึกษา + บัตรประชาชน) และผูกบัญชีธนาคารแล้ว
     const createWithGuard = async () => {
+        if (!authUser) {
+            navigate('/login')
+            return null
+        }
+
         const studentApproved =
             authUser?.student_card_verification?.status === 'approved' &&
             authUser?.id_card_verification?.status === 'approved'
