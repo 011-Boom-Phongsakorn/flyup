@@ -579,21 +579,10 @@ function ProjectDetail() {
                   </span>
                 </button>
                 <button
+                  disabled={isAdmin || isOwner}
                   onClick={() => {
                     if (!isLoggedIn) {
-                      toast.error('กรุณาเข้าสู่ระบบก่อนรายงาน', {
-                        id: 'report-login',
-                        position: 'top-center',
-                        duration: 3000,
-                        style: {
-                          borderRadius: '10px',
-                          background: 'var(--color-card)',
-                          color: 'var(--color-foreground)',
-                          fontSize: '14px',
-                          border: '1px solid var(--color-border)',
-                        },
-                        iconTheme: { primary: 'var(--color-error)', secondary: 'var(--color-white-foreground)' },
-                      });
+                      navigate('/login')
                       return;
                     }
                     if (hasComplained) {
