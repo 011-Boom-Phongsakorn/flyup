@@ -32,7 +32,7 @@ interface SelfVerificationStore {
 
 const bankErrorMessage = (err: unknown) => {
     const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-    return msg === 'account number already exists' ? 'เลขบัญชีนี้มีในระบบแล้ว' : 'เกิดข้อผิดพลาด'
+    return msg === 'account number already exists' ? 'เลขบัญชีนี้มีในระบบแล้ว' : 'กรุณากรอกเลขบัญชีให้ครบถ้วน'
 }
 
 export const useSelfVerificationStore = create<SelfVerificationStore>(() => ({
@@ -77,6 +77,7 @@ export const useSelfVerificationStore = create<SelfVerificationStore>(() => ({
             toast.success('เพิ่มบัญชีสำเร็จ')
             return true
         } catch (err) {
+
             toast.error(bankErrorMessage(err))
             return false
         }
