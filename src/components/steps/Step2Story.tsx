@@ -6,7 +6,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
 import Youtube from '@tiptap/extension-youtube'
-import { SquarePlay, List, ImageIcon, Plus, ChevronDown, Check, X, Link as LinkIcon, Maximize, AlignLeft, AlignRight, Unlink, HelpCircle, Trash2, Edit2 } from 'lucide-react'
+import { SquarePlay, List, ImageIcon, Plus, ChevronDown, Check, X, Link as LinkIcon, Maximize, Unlink, HelpCircle, Trash2, Edit2 } from 'lucide-react'
 import StepNavigation from "../StepNavigation"
 import { useProjectStore } from '../../store/useProjectStore'
 import { useParams } from 'react-router'
@@ -527,28 +527,6 @@ const Step2Story = () => {
                         title="Center & Full Width"
                       >
                         <Maximize size={18} />
-                      </button>
-                      <button
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          editor.chain().focus().updateAttributes('image', { align: 'left' }).run()
-                        }}
-                        className={`p-1.5 rounded-md hover:bg-gray-100 transition-colors ${editor.getAttributes('image').align === 'left' ? 'bg-gray-100 text-gray-900' : 'text-gray-500'}`}
-                        title="Align Left"
-                      >
-                        <AlignLeft size={18} />
-                      </button>
-                      <button
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          editor.chain().focus().updateAttributes('image', { align: 'right' }).run()
-                        }}
-                        className={`p-1.5 rounded-md hover:bg-gray-100 transition-colors ${editor.getAttributes('image').align === 'right' ? 'bg-gray-100 text-gray-900' : 'text-gray-500'}`}
-                        title="Align Right"
-                      >
-                        <AlignRight size={18} />
                       </button>
                     </div>
                   ) : (
