@@ -8,8 +8,9 @@ const YOUTUBE_EMBED_SRC = /^https:\/\/(www\.)?youtube(-nocookie)?\.com\/embed\//
 
 DOMPurify.addHook('uponSanitizeElement', (node, data) => {
   if (data.tagName === 'iframe') {
-    const src = (node as HTMLIFrameElement).getAttribute('src') || ''
-    if (!YOUTUBE_EMBED_SRC.test(src)) node.remove()
+    const el = node as HTMLIFrameElement
+    const src = el.getAttribute('src') || ''
+    if (!YOUTUBE_EMBED_SRC.test(src)) el.remove()
   }
 })
 
