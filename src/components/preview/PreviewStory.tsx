@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import DOMPurify from 'dompurify';
+import { sanitizeStoryHtml } from '../../lib/sanitizeStoryHtml';
 
 interface PreviewStoryProps {
   story?: string;
@@ -61,7 +62,7 @@ const PreviewStory = ({ story, risks }: PreviewStoryProps) => {
       <div className="flex-1 flex flex-col gap-[20px] min-w-0">
         <div
           className="prose prose-slate max-w-[800px] text-foreground text-[15px] leading-relaxed [&_h1]:text-[24px] [&_h1]:font-bold [&_h2]:text-[20px] [&_h2]:font-bold [&_h3]:text-[18px] [&_h3]:font-bold [&_h1]:mb-[12px] [&_h2]:mb-[12px] [&_h3]:mb-[12px] [&_p]:mb-[12px] [&_ul]:mb-[12px] [&_li]:mb-[4px] [&_img]:rounded-[12px] [&_img]:my-[20px]"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
+          dangerouslySetInnerHTML={{ __html: sanitizeStoryHtml(html) }}
           onClick={(e) => {
             const target = e.target as HTMLElement;
             const span = target.closest('[data-href]') as HTMLElement | null;
