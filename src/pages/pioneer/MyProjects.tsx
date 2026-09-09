@@ -29,6 +29,19 @@ const stateTextMap: Record<StateType, string> = {
   suspended: "ถูกระงับ",
 };
 
+// ลำดับความสำคัญตอนแสดงลิสต์: โปรเจกต์ที่ "ดำเนินการอยู่" (ระดมทุน/ดำเนินการ) ขึ้นก่อนเสมอ
+// ตามด้วยที่รอการตรวจสอบ/รอยืนยันยกเลิก, แบบร่าง, แล้วค่อยเป็นสถานะปิดจบ/ถูกระงับ/ถูกยกเลิกไว้ท้ายสุด
+const statePriority: Record<StateType, number> = {
+  funding: 0,
+  executing: 0,
+  pending_review: 1,
+  pending_cancel: 1,
+  draft: 2,
+  closed: 3,
+  suspended: 3,
+  cancelled: 4,
+};
+
 const stateBadgeClass: Record<StateType, string> = {
   funding: "bg-[#8B5CF6] text-white",
   closed: "bg-[#8B5CF6] text-white",
@@ -79,15 +92,18 @@ const MyProjects = () => {
   }, [projects]);
 
   const filteredProjects = useMemo(() => {
-    return projects.filter(p => {
-      const matchesFilter = activeFilter === "all" || p.state === activeFilter;
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch = q === "" ||
-        p.title.toLowerCase().includes(q) ||
-        (p.category?.name ?? "").toLowerCase().includes(q) ||
-        (p.description ?? "").toLowerCase().includes(q);
-      return matchesFilter && matchesSearch;
-    });
+    return projects
+      .filter(p => {
+        const matchesFilter = activeFilter === "all" || p.state === activeFilter;
+        const q = searchQuery.toLowerCase().trim();
+        const matchesSearch = q === "" ||
+          p.title.toLowerCase().includes(q) ||
+          (p.category?.name ?? "").toLowerCase().includes(q) ||
+          (p.description ?? "").toLowerCase().includes(q);
+        return matchesFilter && matchesSearch;
+      })
+      // sort แบบ stable: โปรเจกต์ที่ดำเนินการอยู่ขึ้นก่อน ภายใน priority เดียวกันคงลำดับเดิมไว้
+      .sort((a, b) => statePriority[a.state] - statePriority[b.state]);
   }, [projects, searchQuery, activeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PAGE_SIZE));
