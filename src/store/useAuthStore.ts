@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import api, { setStoredToken, clearStoredTokens } from '../services/api'
+import api, { getStoredToken, setStoredToken, clearStoredTokens } from '../services/api'
 import toast from 'react-hot-toast'
 import { AxiosError } from 'axios'
 
@@ -115,6 +115,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     isSavingProfile: false,
     isSavingPassword: false,
     checkAuth: async () => {
+        // ยังไม่เคย login (ไม่มี token เก็บไว้เลย) ไม่ต้องยิง /user/me
+        // เพราะ backend จะตอบ 401 "authorization token missing" ทุกครั้งอยู่แล้ว
+        if (!getStoredToken()) {
+            set({ authUser: null, isCheckingAuth: false })
+            return
+        }
         try {
             const response = await api.get('/user/me')
             set({ authUser: response?.data?.data })
@@ -137,8 +143,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             const message = data?.message;
             if (message === 'this email is already registered' || data === 'this email is already registered') {
                 toast.error('อีเมลนี้ถูกลงทะเบียนแล้ว')
-            } else if (message === `sorry!, the domain doesn't exist`) {
-                toast.error('ไม่รองรับมหาลัยนี้')
+            } else if (message === `sorry!, the domain doesn't exist` || message === 'domain not found' || (typeof message === 'string' && message.toLowerCase().includes('domain'))) {
+                toast.error('ไม่พบอีเมลมหาวิทยาลัยนี้ในระบบ กรุณาตรวจสอบอีเมลอีกครั้ง')
             } else {
                 toast.error(data?.error || 'เกิดข้อผิดพลาดบางอย่าง');
             }
