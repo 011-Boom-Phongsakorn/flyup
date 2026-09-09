@@ -80,8 +80,8 @@ const Step3Milestone = () => {
   const fundingGoal = currentProject.fundingGoal || 0
   const phasePercents = [0.15, 0.20, 0.30, 0.35] // สัดส่วนงบประมาณคงที่ของแต่ละ phase (รวมกันได้ 100%)
 
-  // ระยะเวลาของ milestone แก้ไม่ได้แล้วเมื่อโปรเจกต์พ้นสถานะ draft/pending_review
-  const isDurationLocked = !!currentProject.state &&
+  // Milestone แก้ไม่ได้แล้วเมื่อโปรเจกต์พ้นสถานะ draft/pending_review (เพิ่ม/ลบ/แก้ไขไม่ได้ทั้งหมด — read only)
+  const isLocked = !!currentProject.state &&
     currentProject.state !== 'draft' &&
     currentProject.state !== 'pending_review'
 
@@ -331,11 +331,18 @@ const Step3Milestone = () => {
         <div className="flex flex-col gap-[24px] animate-in fade-in slide-in-from-bottom-4 duration-500">
 
           {/* ส่วนที่ 2: หัวข้อ Milestone (วงกลมแสดงเลขและตามด้วยชื่อ) */}
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-semibold text-[14px]">
-              {activePhase + 1}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-semibold text-[14px]">
+                {activePhase + 1}
+              </div>
+              <h2 className="text-[16px] font-bold text-foreground">Milestone {activePhase + 1}</h2>
             </div>
-            <h2 className="text-[16px] font-bold text-foreground">Milestone {activePhase + 1}</h2>
+            {isLocked && (
+              <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-[10px] py-[4px] rounded-full">
+                🔒 ล็อกแล้ว — แก้ไขไม่ได้หลังเข้าสู่การระดมทุน
+              </span>
+            )}
           </div>
 
           {/* ส่วนที่ 3: ฟอร์มระบุข้อมูลทั่วไปของ Milestone นี้ */}
@@ -346,9 +353,13 @@ const Step3Milestone = () => {
               <input
                 type="text"
                 value={currentData.title}
-                onChange={(e) => handleChange('title', e.target.value)}
-                onBlur={() => { savePhaseIfChanged(activePhase) }}
-                className="w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-[14px]"
+                readOnly={isLocked}
+                onChange={(e) => !isLocked && handleChange('title', e.target.value)}
+                onBlur={() => { if (!isLocked) savePhaseIfChanged(activePhase) }}
+                className={isLocked
+                  ? "w-full h-[40px] px-3 bg-[#F3F4F6] border border-[#E5E7EB] rounded-[8px] outline-none text-[14px] text-muted-foreground cursor-not-allowed opacity-70"
+                  : "w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-[14px]"
+                }
               />
             </div>
 
@@ -359,13 +370,18 @@ const Step3Milestone = () => {
                 ref={descriptionRef}
                 rows={3}
                 value={currentData.description}
+                readOnly={isLocked}
                 onChange={(e) => {
+                  if (isLocked) return
                   handleChange('description', e.target.value)
                   e.target.style.height = 'auto'
                   e.target.style.height = e.target.scrollHeight + 'px'
                 }}
-                onBlur={() => { savePhaseIfChanged(activePhase) }}
-                className="w-full p-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none overflow-hidden text-[14px]"
+                onBlur={() => { if (!isLocked) savePhaseIfChanged(activePhase) }}
+                className={isLocked
+                  ? "w-full p-3 bg-[#F3F4F6] border border-[#E5E7EB] rounded-[8px] outline-none resize-none overflow-hidden text-[14px] text-muted-foreground cursor-not-allowed opacity-70"
+                  : "w-full p-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none overflow-hidden text-[14px]"
+                }
               />
             </div>
 
@@ -392,7 +408,7 @@ const Step3Milestone = () => {
                 type="number"
                 min={1}
                 value={currentData.duration || ''}
-                disabled={isDurationLocked}
+                disabled={isLocked}
                 onChange={(e) => handleChange('duration', Number(e.target.value))}
                 onBlur={() => {
                   const maxDays = (currentProject.projectDuration || 0) * 30;
@@ -409,12 +425,12 @@ const Step3Milestone = () => {
                   }
                   savePhaseIfChanged(activePhase);
                 }}
-                className={isDurationLocked
+                className={isLocked
                   ? "w-full h-[40px] px-3 bg-[#F3F4F6] border border-[#E5E7EB] rounded-[8px] outline-none text-[14px] text-muted-foreground cursor-not-allowed opacity-70"
                   : "w-full h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-[14px]"
                 }
               />
-              {isDurationLocked && <p className="text-[11px] text-amber-600">🔒 วันที่/ระยะเวลาแก้ไม่ได้หลังเข้าสู่การระดมทุน</p>}
+              {isLocked && <p className="text-[11px] text-amber-600">🔒 วันที่/ระยะเวลาแก้ไม่ได้หลังเข้าสู่การระดมทุน</p>}
               {showDates && activePhaseDates && (
                 <p className="text-[12px] text-muted-foreground">
                   เริ่ม {formatThDate(activePhaseDates.start)} — สิ้นสุด {formatThDate(activePhaseDates.end)}
@@ -448,19 +464,21 @@ const Step3Milestone = () => {
                 <label className="text-[14px] font-semibold text-foreground">เกณฑ์การยอมรับ <span className="text-error">*</span></label>
                 <span className="text-[12px] text-muted-foreground">ระบุสิ่งที่ต้องทำให้เสร็จใน Milestone นี้ (1-10 ข้อ)</span>
               </div>
-              <button
-                onClick={() => {
-                  if (currentData.criteria.length < 10) {
-                    handleChange('criteria', [...currentData.criteria, ''])
-                  } else {
-                    toast.error('คุณสามารถระบุเกณฑ์การยอมรับได้สูงสุด 10 ข้อ')
-                  }
-                }}
-                className="flex items-center space-x-2 bg-[#F3F4F6] text-foreground hover:bg-[#E5E7EB] px-3 py-1.5 rounded-[8px] text-[13px] font-medium transition-all cursor-pointer"
-              >
-                <Plus size={14} />
-                <span>เพิ่มเกณฑ์</span>
-              </button>
+              {!isLocked && (
+                <button
+                  onClick={() => {
+                    if (currentData.criteria.length < 10) {
+                      handleChange('criteria', [...currentData.criteria, ''])
+                    } else {
+                      toast.error('คุณสามารถระบุเกณฑ์การยอมรับได้สูงสุด 10 ข้อ')
+                    }
+                  }}
+                  className="flex items-center space-x-2 bg-[#F3F4F6] text-foreground hover:bg-[#E5E7EB] px-3 py-1.5 rounded-[8px] text-[13px] font-medium transition-all cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>เพิ่มเกณฑ์</span>
+                </button>
+              )}
             </div>
 
             <div className="flex flex-col gap-[12px]">
@@ -472,12 +490,15 @@ const Step3Milestone = () => {
                     ref={el => { criteriaRefs.current[cIdx] = el }}
                     type="text"
                     value={item}
+                    readOnly={isLocked}
                     onChange={(e) => {
+                      if (isLocked) return
                       const newCriteria = [...currentData.criteria];
                       newCriteria[cIdx] = e.target.value;
                       handleChange('criteria', newCriteria);
                     }}
                     onKeyDown={(e) => {
+                      if (isLocked) return
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         if (currentData.criteria.length < 10) {
@@ -491,6 +512,7 @@ const Step3Milestone = () => {
                       }
                     }}
                     onPaste={(e) => {
+                      if (isLocked) return
                       const text = e.clipboardData.getData('text');
                       const lines = text.split('\n').map(l => l.trim()).filter(l => l);
                       if (lines.length <= 1) return;
@@ -503,11 +525,14 @@ const Step3Milestone = () => {
                         toast.error('ตัดให้เหลือ 10 ข้อ (สูงสุดที่รองรับ)');
                       }
                     }}
-                    onBlur={() => { savePhaseIfChanged(activePhase) }}
-                    className="flex-grow h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all text-[14px]"
+                    onBlur={() => { if (!isLocked) savePhaseIfChanged(activePhase) }}
+                    className={isLocked
+                      ? "flex-grow h-[40px] px-3 bg-[#F3F4F6] border border-[#E5E7EB] rounded-[8px] outline-none text-[14px] text-muted-foreground cursor-not-allowed opacity-70"
+                      : "flex-grow h-[40px] px-3 bg-[#F8F9FB] border border-[#E5E7EB] rounded-[8px] outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all text-[14px]"
+                    }
                   />
                   {/* ปุ่มลบเกณฑ์ถังขยะ (แสดงเฉพาะเมื่อมีมากกว่า 1 ข้อ ไม่งั้นให้เหลือ 1 ไว้เสมอ) */}
-                  {currentData.criteria.length > 1 && (
+                  {currentData.criteria.length > 1 && !isLocked && (
                     <button
                       onClick={() => handleChange('criteria', currentData.criteria.filter((_, i) => i !== cIdx))}
                       className="p-2 text-muted-foreground hover:text-error transition-colors cursor-pointer"
@@ -530,14 +555,18 @@ const Step3Milestone = () => {
             {/* 5.1 ไฟล์ประกอบ — เพิ่มไฟล์จะล้าง video อัตโนมัติ (backend รองรับ type เดียวต่อ milestone) */}
             <div className="flex flex-col gap-[8px]">
               <label className="text-[14px] font-semibold text-foreground">ไฟล์ประกอบ (ไม่บังคับ)</label>
-              <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf,.xls,.xlsx" />
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
-              >
-                <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
-                <span className="text-[13px] text-muted-foreground">.jpg, .png, .gif, .webp, .pdf, .xls, .xlsx (สูงสุด 5MB ต่อไฟล์)</span>
-              </div>
+              {!isLocked && (
+                <>
+                  <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf,.xls,.xlsx" />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
+                  >
+                    <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
+                    <span className="text-[13px] text-muted-foreground">.jpg, .png, .gif, .webp, .pdf, .xls, .xlsx (สูงสุด 5MB ต่อไฟล์)</span>
+                  </div>
+                </>
+              )}
               <div className="flex flex-wrap gap-2">
                 {currentData.files?.map((f, i) => {
                   const uploading = f.url?.startsWith('blob:');
@@ -569,7 +598,7 @@ const Step3Milestone = () => {
                         )}
                       </div>
                       <span className={`max-w-[150px] truncate ${uploading ? 'text-muted-foreground' : ''}`}>{f.name}</span>
-                      {!uploading && (
+                      {!uploading && !isLocked && (
                         <button type="button" onClick={() => removeImage(i)} className="ml-2 hover:text-error cursor-pointer">
                           <X size={14} />
                         </button>
@@ -585,14 +614,18 @@ const Step3Milestone = () => {
               <label className="text-[14px] font-semibold text-foreground flex items-center">
                 <Video size={16} className="mr-2" /> ไฟล์วิดีโอ (ไม่บังคับ)
               </label>
-              <input type="file" accept="video/*" hidden ref={videoInputRef} onChange={handleVideoChange} />
-              <div
-                onClick={() => videoInputRef.current?.click()}
-                className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
-              >
-                <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
-                <span className="text-[13px] text-muted-foreground">.mp4, .webm, .mov, .avi, .mkv (สูงสุด 50MB)</span>
-              </div>
+              {!isLocked && (
+                <>
+                  <input type="file" accept="video/*" hidden ref={videoInputRef} onChange={handleVideoChange} />
+                  <div
+                    onClick={() => videoInputRef.current?.click()}
+                    className="border-[1.5px] border-dashed border-[#C084FC] rounded-[12px] p-[40px] flex flex-col items-center justify-center bg-[#F9F5FF] hover:bg-[#F3E8FF] transition-all cursor-pointer group"
+                  >
+                    <Upload className="text-muted-foreground mb-2 group-hover:-translate-y-1 transition-transform" size={24} />
+                    <span className="text-[13px] text-muted-foreground">.mp4, .webm, .mov, .avi, .mkv (สูงสุด 50MB)</span>
+                  </div>
+                </>
+              )}
               <div className="flex flex-wrap gap-2">
                 {(currentData.videos || []).map((vid, i) => {
                   const uploading = vid.url?.startsWith('blob:');
@@ -607,7 +640,7 @@ const Step3Milestone = () => {
                         )}
                       </div>
                       <span className={`max-w-[150px] truncate ${uploading ? 'text-muted-foreground' : ''}`}>{vid.name}</span>
-                      {!uploading && (
+                      {!uploading && !isLocked && (
                         <button type="button" onClick={() => removeVideo(i)} className="ml-2 hover:text-error cursor-pointer">
                           <X size={14} />
                         </button>

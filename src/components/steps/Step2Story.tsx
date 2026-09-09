@@ -70,6 +70,12 @@ const Step2Story = () => {
   // FAQ ให้แก้ไขได้เฉพาะโปรเจกต์ที่ผ่านการอนุมัติแล้ว (draft/funding/executing เท่านั้น)
   const showFaqSection = ['draft', 'funding', 'executing'].includes(currentProject.state ?? '')
 
+  // เรื่องราว/ความเสี่ยงแก้ไม่ได้แล้วเมื่อโปรเจกต์พ้นสถานะ draft/pending_review (backend ปฏิเสธด้วย
+  // "cannot edit stories unless project is in draft state") — ล็อกเป็น read-only แทนปล่อยให้กดแล้ว error
+  const isLocked = !!currentProject.state &&
+    currentProject.state !== 'draft' &&
+    currentProject.state !== 'pending_review'
+
   // แสดงสถานะ "บันทึกแล้ว" ชั่วคราวแล้วเปลี่ยนกลับเป็น idle หลังจาก 2.5 วิ
   const triggerSaved = () => {
     setSaveStatus('saved');
@@ -166,12 +172,18 @@ const Step2Story = () => {
       setMediaUrlInputOpen(false)
     },
     content: currentProject.story || '',
+    editable: !isLocked,
     editorProps: {
       attributes: {
         class: 'prose prose-slate max-w-none focus:outline-none min-h-[400px] p-4 [&_img.ProseMirror-selectednode]:outline [&_img.ProseMirror-selectednode]:outline-4 [&_img.ProseMirror-selectednode]:outline-blue-500 [&_img.ProseMirror-selectednode]:outline-offset-2',
       },
     },
   })
+
+  // sync editable state ทีหลังด้วย เพราะตอน editor ถูกสร้างครั้งแรก currentProject.state อาจยังโหลดไม่เสร็จ
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) editor.setEditable(!isLocked)
+  }, [editor, isLocked])
 
   // Sync risks และ editor content เมื่อ store โหลดข้อมูลจาก API เสร็จ
   useEffect(() => {
@@ -209,7 +221,7 @@ const Step2Story = () => {
     // ✅ อนุญาตให้โชว์เมนูต่อถ้า focus อยู่ใน editor หรือในเมนู (เช่นคลิกช่อง URL)
     const isFocusInside = view.hasFocus() || editorContainerRef.current?.contains(document.activeElement)
 
-    if (!isFocusInside || !empty || !isRootDepth) {
+    if (!isFocusInside || !empty || !isRootDepth || isLocked) {
       setShowFloatingMenu(false)
       return
     }
@@ -228,7 +240,7 @@ const Step2Story = () => {
     } catch {
       setShowFloatingMenu(false)
     }
-  }, [editor])
+  }, [editor, isLocked])
 
   // ✅ ลงทะเบียน listener สำหรับ update/selection/focus/blur
   useEffect(() => {
@@ -333,7 +345,14 @@ const Step2Story = () => {
   return (
     <div className="flex flex-col gap-[40px] p-[10px]">
       <div className='flex flex-col p-[30px] bg-white-foreground rounded-[12px] gap-[15px]'>
-        <h1 className="text-[24px] font-semibold text-foreground mb-[10px]">เรื่องราวของโปรเจกต์</h1>
+        <div className="flex items-center justify-between mb-[10px]">
+          <h1 className="text-[24px] font-semibold text-foreground">เรื่องราวของโปรเจกต์</h1>
+          {isLocked && (
+            <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-[10px] py-[4px] rounded-full">
+              🔒 ล็อกแล้ว — แก้ไขไม่ได้หลังเข้าสู่การระดมทุน
+            </span>
+          )}
+        </div>
 
         <div className="space-y-3">
           {/* ✅ Container หลักต้องเป็น overflow-visible เพื่อให้เมนูเด้งออกมาได้ */}
@@ -478,6 +497,7 @@ const Step2Story = () => {
                 pluginKey="imageBubbleMenu"
                 editor={editor}
                 shouldShow={({ state, editor }) => {
+                  if (isLocked) return false
                   const { selection } = state
                   const isImage = (selection instanceof NodeSelection && selection.node.type.name === 'image') || editor.isActive('image')
                   return isImage
@@ -588,12 +608,15 @@ const Step2Story = () => {
           <textarea
             ref={risksRef}
             value={risks}
+            readOnly={isLocked}
             onChange={(e) => {
+              if (isLocked) return
               setRisks(e.target.value)
               e.target.style.height = 'auto'
               e.target.style.height = e.target.scrollHeight + 'px'
             }}
             onBlur={async () => {
+              if (isLocked) return
               if (risks === (currentProject.risks || '')) return;
               setSaveStatus('saving');
               updateProjectInfo({ risks });
@@ -601,7 +624,7 @@ const Step2Story = () => {
               triggerSaved();
             }}
             rows={3}
-            className="w-full border border-border bg-background p-[12px] rounded-[8px] resize-none focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50 overflow-hidden"/>
+            className={`w-full border p-[12px] rounded-[8px] resize-none focus:outline-none transition-all duration-200 overflow-hidden ${isLocked ? 'border-border bg-[#F3F4F6] text-muted-foreground cursor-not-allowed opacity-70' : 'border-border bg-background focus:border-primary hover:border-primary/50'}`}/>
           <p className='text-[12px] text-muted-foreground'>*ระบุความเสี่ยงที่อาจเกิดขึ้น  เพื่อให้ผู้สนับสนุนได้รับทราบข้อมูลที่ครบถ้วน  *</p>
         </div>
       </div>

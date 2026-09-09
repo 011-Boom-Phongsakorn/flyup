@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { type LucideIcon, CircleCheckBig, Send, BookOpen } from 'lucide-react';
+import { type LucideIcon, CircleCheckBig, Send, BookOpen, ArrowLeft } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router'
 import { useProjectStore, type Project } from '../../store/useProjectStore';
 
@@ -75,6 +75,12 @@ const ProjectOverview = () => {
   return (
     <>
       <div className='w-full mx-auto max-w-[937px] py-[100px]'>
+        <button
+          onClick={() => navigate('/pioneer/dashboard/projects')}
+          className='flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-4 px-2.5 cursor-pointer'
+        >
+          <ArrowLeft size={16} /> กลับไปยังโปรเจกต์ของฉัน
+        </button>
         <div className='flex items-center justify-between p-2.5'>
           <h1 className='text-[24px] font-semibold text-foreground'>ภาพรวมของโปรเจกต์</h1>
           <Link

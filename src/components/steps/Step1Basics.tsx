@@ -5,6 +5,9 @@ import StepNavigation from "../StepNavigation";
 import { useProjectStore, type Project } from "../../store/useProjectStore";
 import toast from "react-hot-toast";
 
+// backend validator บังคับ description ไม่เกิน 40 ตัวอักษร (PATCH คืน 400 ถ้าเกิน)
+const DESCRIPTION_MAX_LENGTH = 40;
+
 const Step1Basics = () => {
   const { projectId } = useParams();
   const {
@@ -324,6 +327,7 @@ const Step1Basics = () => {
               data-testid="basics-description-input"
               ref={descriptionRef}
               value={localData.description}
+              maxLength={DESCRIPTION_MAX_LENGTH}
               onBlur={() => handleAutoSave('description', localData.description)}
               onChange={(e) => {
                 setLocalData({ ...localData, description: e.target.value });
@@ -333,6 +337,9 @@ const Step1Basics = () => {
               rows={3}
               className="border border-border bg-background p-[12px] rounded-[8px] focus:outline-none focus:border-primary resize-none transition-all duration-200 hover:border-primary/50 overflow-hidden"
             />
+            <p className={`text-[11px] text-right ${localData.description.length >= DESCRIPTION_MAX_LENGTH ? 'text-error' : 'text-muted-foreground'}`}>
+              {localData.description.length}/{DESCRIPTION_MAX_LENGTH}
+            </p>
           </div>
           <p className="text-[12px] text-muted-foreground">*ส่วนคำอธิบายคือพื้นที่สำหรับสรุปใจความสำคัญในประโยคเดียวว่าโปรเจกต์นี้ทำอะไร เพื่อให้ผู้ที่สนใจเข้าใจเป้าหมายหลักได้ทันทีโดยไม่ต้องอ่านยาว*</p>
           <div className="flex flex-col gap-[8px] relative">
@@ -541,19 +548,22 @@ const Step1Basics = () => {
             {currentProject.coverImage ? (
               <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border">
                 <img src={currentProject.coverImage} alt="cover" className="w-full h-full object-cover" />
-                <button
-                  data-testid="basics-cover-image-remove-btn"
-                  onClick={removeCoverImage}
-                  className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors cursor-pointer"
-                >
-                  <X size={14} />
-                </button>
+                {!isLocked && (
+                  <button
+                    data-testid="basics-cover-image-remove-btn"
+                    onClick={removeCoverImage}
+                    className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             ) : (
               <div
                 data-testid="basics-cover-image-dropzone"
-                onClick={() => coverImageRef.current?.click()}
-                className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer"
+                onClick={() => !isLocked && coverImageRef.current?.click()}
+                aria-disabled={isLocked}
+                className={`border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 transition-all ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-50 cursor-pointer'}`}
               >
                 <input
                   data-testid="basics-cover-image-input"
@@ -577,8 +587,9 @@ const Step1Basics = () => {
             <label className="text-foreground text-[14px] flex items-center gap-[10px]"><FileImage size={16} />รูปภาพประกอบ (สูงสุด 5 รูป) <span className="text-error">*</span></label>
             <div
               data-testid="basics-additional-images-dropzone"
-              onClick={() => additionalImagesRef.current?.click()}
-              className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer group"
+              onClick={() => !isLocked && additionalImagesRef.current?.click()}
+              aria-disabled={isLocked}
+              className={`border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 transition-all group ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-50 cursor-pointer'}`}
             >
               <input
                 data-testid="basics-additional-images-input"
@@ -611,7 +622,7 @@ const Step1Basics = () => {
                       )}
                     </div>
                     <span className={`max-w-[150px] truncate ${uploading ? 'text-muted-foreground' : ''}`}>{f.name}</span>
-                    {!uploading && (
+                    {!uploading && !isLocked && (
                       <button
                         data-testid={`basics-additional-image-remove-btn-${i}`}
                         onClick={(e) => { e.stopPropagation(); removeImage(i); }}
@@ -632,8 +643,9 @@ const Step1Basics = () => {
             </label>
             <div
               data-testid="basics-video-dropzone"
-              onClick={() => videoInputRef.current?.click()}
-              className="border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 hover:bg-purple-50 transition-all cursor-pointer group"
+              onClick={() => !isLocked && videoInputRef.current?.click()}
+              aria-disabled={isLocked}
+              className={`border-2 border-dashed border-purple-200 rounded-2xl p-10 flex flex-col items-center justify-center bg-primary/10 transition-all group ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-50 cursor-pointer'}`}
             >
               <input
                 data-testid="basics-video-input"
@@ -666,7 +678,7 @@ const Step1Basics = () => {
                     )}
                   </div>
                   <span className={videoUploading ? 'text-muted-foreground' : ''}>{currentProject.video!.name}</span>
-                  {!videoUploading && (
+                  {!videoUploading && !isLocked && (
                     <button
                       data-testid="basics-video-remove-btn"
                       type="button"

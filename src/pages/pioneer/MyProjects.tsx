@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Search, Plus, SlidersHorizontal, ChevronDown, Eye, Edit3, Trash2, Loader2, ChevronLeft, ChevronRight, XCircle, Ban } from "lucide-react";
 import { useProjectStore } from "../../store/useProjectStore";
@@ -48,11 +48,25 @@ const MyProjects = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<StateType | "all">("all");
   const [page, setPage] = useState(1);
+  const [isFilterOpen, setIsFilterOpen] = useState(false); // เปิด/ปิด dropdown filter สถานะ (กดเปิด แทนที่จะเป็น hover)
+  const filterRef = useRef<HTMLDivElement>(null);
   const PAGE_SIZE = 5;
 
   useEffect(() => {
     fetchMyProjects();
   }, [fetchMyProjects]);
+
+  // ปิด dropdown เมื่อคลิกนอกกล่อง
+  useEffect(() => {
+    if (!isFilterOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isFilterOpen]);
 
   const stateCounts = useMemo(() => {
     const counts: Record<StateType, number> = {
@@ -155,31 +169,36 @@ const MyProjects = () => {
             className="w-full pl-[44px] pr-[16px] py-[10px] bg-white border border-border rounded-[100px] text-[14px] outline-none focus:border-primary transition-colors h-[44px]"
           />
         </div>
-        <div className="relative group">
-          <button className="flex items-center justify-between gap-[16px] bg-white border border-border px-[16px] py-[10px] rounded-[100px] text-[14px] font-medium text-foreground hover:bg-gray-50 h-[44px] min-w-[160px]">
+        <div className="relative" ref={filterRef}>
+          <button
+            onClick={() => setIsFilterOpen(prev => !prev)}
+            className="flex items-center justify-between gap-[16px] bg-white border border-border px-[16px] py-[10px] rounded-[100px] text-[14px] font-medium text-foreground hover:bg-gray-50 h-[44px] min-w-[160px] cursor-pointer"
+          >
             <div className="flex items-center gap-[8px]">
               <SlidersHorizontal size={16} />
               <span>{activeFilter === "all" ? "ทั้งหมด" : stateLabels.find(s => s.type === activeFilter)?.label}</span>
             </div>
-            <ChevronDown size={16} />
+            <ChevronDown size={16} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
-          <div className="absolute top-[48px] right-0 bg-white border border-border rounded-[12px] shadow-lg z-50 min-w-[180px] py-[4px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-            <button
-              onClick={() => { setActiveFilter("all"); setPage(1); }}
-              className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors ${activeFilter === "all" ? "text-primary font-semibold" : "text-foreground"}`}
-            >
-              ทั้งหมด
-            </button>
-            {stateLabels.map(s => (
+          {isFilterOpen && (
+            <div className="absolute top-[48px] right-0 bg-white border border-border rounded-[12px] shadow-lg z-50 min-w-[180px] py-[4px]">
               <button
-                key={s.type}
-                onClick={() => { setActiveFilter(s.type as StateType); setPage(1); }}
-                className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors ${activeFilter === s.type ? "text-primary font-semibold" : "text-foreground"}`}
+                onClick={() => { setActiveFilter("all"); setPage(1); setIsFilterOpen(false); }}
+                className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors cursor-pointer ${activeFilter === "all" ? "text-primary font-semibold" : "text-foreground"}`}
               >
-                {s.label}
+                ทั้งหมด
               </button>
-            ))}
-          </div>
+              {stateLabels.map(s => (
+                <button
+                  key={s.type}
+                  onClick={() => { setActiveFilter(s.type as StateType); setPage(1); setIsFilterOpen(false); }}
+                  className={`w-full text-left px-[16px] py-[10px] text-[13px] hover:bg-[#F1F3F5] transition-colors cursor-pointer ${activeFilter === s.type ? "text-primary font-semibold" : "text-foreground"}`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
