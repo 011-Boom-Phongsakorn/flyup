@@ -414,6 +414,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
             await api.delete(`/pioneer/projects/${id}`);
             set((state) => ({ projects: state.projects.filter(p => p.id !== id) }));
+            toast.success('ลบโปรเจกต์สำเร็จ');
             return true;
         } catch (error) {
             console.error('deleteProject:', error);
