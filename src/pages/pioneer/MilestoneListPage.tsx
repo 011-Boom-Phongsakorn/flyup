@@ -31,14 +31,13 @@ const STATE_BADGE: Record<string, string> = {
 
 const MILESTONE_NAVIGABLE = ['funding', 'executing', 'closed', 'suspended', 'pending_review', 'pending_cancel']
 
+// ไม่ใส่ 'draft'/'cancelled' — โปรเจกต์สถานะนี้ยังไม่มี milestone ที่ดำเนินการได้จริง (ดู MILESTONE_NAVIGABLE)
 const TABS: { key: string; label: string }[] = [
   { key: 'all',           label: 'ทั้งหมด' },
   { key: 'executing',     label: 'กำลังดำเนินการ' },
   { key: 'funding',       label: 'กำลังระดมทุน' },
   { key: 'closed',        label: 'เสร็จสิ้น' },
   { key: 'pending_review',label: 'รอตรวจสอบ' },
-  { key: 'draft',         label: 'แบบร่าง' },
-  { key: 'cancelled',     label: 'ถูกยกเลิก' },
 ]
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -141,15 +140,21 @@ const MilestoneListPage = () => {
 
   useEffect(() => { fetchMyProjects() }, [fetchMyProjects])
 
-  const visibleTabs = useMemo(() =>
-    TABS.filter(t => t.key === 'all' || projects.some(p => p.state === t.key)),
+  // แสดงเฉพาะโปรเจกต์ที่มี milestone ให้จัดการได้จริง (ตัดแบบร่าง/ถูกยกเลิกออก — กดเข้าไปก็ไม่มีอะไรให้ทำ)
+  const manageableProjects = useMemo(() =>
+    projects.filter(p => MILESTONE_NAVIGABLE.includes(p.state)),
     [projects]
   )
 
+  const visibleTabs = useMemo(() =>
+    TABS.filter(t => t.key === 'all' || manageableProjects.some(p => p.state === t.key)),
+    [manageableProjects]
+  )
+
   const filtered = useMemo(() => {
-    if (activeTab === 'all') return projects
-    return projects.filter(p => p.state === activeTab)
-  }, [projects, activeTab])
+    if (activeTab === 'all') return manageableProjects
+    return manageableProjects.filter(p => p.state === activeTab)
+  }, [manageableProjects, activeTab])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -167,10 +172,10 @@ const MilestoneListPage = () => {
         <div className="flex items-center justify-center h-[40vh]">
           <Loader2 className="size-7 animate-spin text-primary" />
         </div>
-      ) : projects.length === 0 ? (
+      ) : manageableProjects.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16 border border-dashed border-border rounded-2xl bg-white text-muted-foreground">
           <Flag size={32} />
-          <span className="text-[14px]">ยังไม่มีโปรเจกต์</span>
+          <span className="text-[14px]">ยังไม่มีโปรเจกต์ที่ดำเนินการอยู่</span>
         </div>
       ) : (
         <>

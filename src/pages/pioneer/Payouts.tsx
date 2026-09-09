@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Banknote, Clock, CheckCircle2, Lock, Loader2, Building2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { usePioneerPayoutStore, type PioneerPayoutItem } from '../../store/usePioneerPayoutStore'
+import { useProjectStore } from '../../store/useProjectStore'
 
 function fmtBaht(v: number) {
   return `฿${v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -57,8 +58,8 @@ function PayoutRow({ item }: { item: PioneerPayoutItem }) {
 // ── Project summary card (list view) ─────────────────────────────────────────
 
 function ProjectCard({
-  title, items, onClick,
-}: { title: string; items: PioneerPayoutItem[]; onClick: () => void }) {
+  title, items, thumbnailUrl, onClick,
+}: { title: string; items: PioneerPayoutItem[]; thumbnailUrl?: string; onClick: () => void }) {
   const confirmed = items.filter(i => i.status === 'confirmed').reduce((s, i) => s + i.amount, 0)
   const pending   = items.filter(i => i.status === 'pending').reduce((s, i) => s + i.amount, 0)
   const allComplete = items[0]?.all_phases_complete ?? false
@@ -68,8 +69,11 @@ function ProjectCard({
       onClick={onClick}
       className="w-full text-left bg-white border border-border rounded-2xl p-5 flex items-center gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer"
     >
-      <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-        <Building2 size={18} className="text-primary" />
+      <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+        {thumbnailUrl
+          ? <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
+          : <Building2 size={18} className="text-primary" />
+        }
       </div>
 
       <div className="flex-1 min-w-0">
@@ -104,8 +108,8 @@ function ProjectCard({
 // ── Detail view ───────────────────────────────────────────────────────────────
 
 function ProjectDetail({
-  title, items, onBack,
-}: { title: string; items: PioneerPayoutItem[]; onBack: () => void }) {
+  title, items, thumbnailUrl, onBack,
+}: { title: string; items: PioneerPayoutItem[]; thumbnailUrl?: string; onBack: () => void }) {
   const confirmed = items.filter(i => i.status === 'confirmed').reduce((s, i) => s + i.amount, 0)
   const pending   = items.filter(i => i.status === 'pending').reduce((s, i) => s + i.amount, 0)
   const allComplete = items[0]?.all_phases_complete ?? false
@@ -123,8 +127,11 @@ function ProjectDetail({
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Building2 size={16} className="text-primary" />
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+            {thumbnailUrl
+              ? <img src={thumbnailUrl} alt={title} className="w-full h-full object-cover" />
+              : <Building2 size={16} className="text-primary" />
+            }
           </div>
           <div>
             <p className="font-bold text-[17px] text-foreground leading-tight">{title}</p>
@@ -185,9 +192,18 @@ function ProjectDetail({
 
 const Payouts = () => {
   const { payouts, isLoading, fetchPayouts } = usePioneerPayoutStore()
+  // /pioneer/payouts ไม่ส่ง thumbnail มาด้วย ต้องดึงจาก useProjectStore แล้ว match ด้วย project_id เอาเอง
+  const { projects, fetchMyProjects } = useProjectStore()
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
   useEffect(() => { fetchPayouts() }, [fetchPayouts])
+  useEffect(() => { fetchMyProjects() }, [fetchMyProjects])
+
+  const thumbnailByProjectId = useMemo(() => {
+    const map = new Map<number, string | undefined>()
+    for (const p of projects) map.set(p.id, p.thumbnail_url)
+    return map
+  }, [projects])
 
   const grouped = useMemo(() => {
     const map = new Map<number, { title: string; items: PioneerPayoutItem[] }>()
@@ -195,8 +211,8 @@ const Payouts = () => {
       if (!map.has(p.project_id)) map.set(p.project_id, { title: p.project_title, items: [] })
       map.get(p.project_id)!.items.push(p)
     }
-    return [...map.entries()].map(([id, v]) => ({ id, ...v }))
-  }, [payouts])
+    return [...map.entries()].map(([id, v]) => ({ id, ...v, thumbnailUrl: thumbnailByProjectId.get(id) }))
+  }, [payouts, thumbnailByProjectId])
 
   const totalConfirmed = payouts.filter(p => p.status === 'confirmed').reduce((s, p) => s + p.amount, 0)
   const totalPending   = payouts.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount, 0)
@@ -217,6 +233,7 @@ const Payouts = () => {
       <ProjectDetail
         title={selected.title}
         items={selected.items}
+        thumbnailUrl={selected.thumbnailUrl}
         onBack={() => setSelectedId(null)}
       />
     )
@@ -266,7 +283,7 @@ const Payouts = () => {
       ) : (
         <div className="flex flex-col gap-3">
           {grouped.map(g => (
-            <ProjectCard key={g.id} title={g.title} items={g.items} onClick={() => setSelectedId(g.id)} />
+            <ProjectCard key={g.id} title={g.title} items={g.items} thumbnailUrl={g.thumbnailUrl} onClick={() => setSelectedId(g.id)} />
           ))}
         </div>
       )}
