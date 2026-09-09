@@ -73,7 +73,7 @@ const VerificationApproval = () => {
 
     return (
         <div className="flex flex-col gap-[16px]">
-            <PageHeader title="ตรวจสอบใบสมัคร Pioneer" subtitle="อนุมัติหรือปฏิเสธการยืนยันตัวตนของ Pioneer" />
+            <PageHeader title="ตรวจสอบการยืนยันตัวตน" subtitle="อนุมัติหรือปฏิเสธการยืนยันตัวตนของผู้ใช้งาน (Pioneer และ Booster)" />
 
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <SearchBar

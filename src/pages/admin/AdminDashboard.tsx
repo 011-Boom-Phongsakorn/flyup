@@ -5,7 +5,6 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import {
-  TrendingUp, TrendingDown,
   FolderOpen, Milestone, MessageSquareWarning,
   RotateCcw, ShieldCheck, UserRoundCheck, ArrowRight,
   CheckCircle2, Clock, XCircle, Loader2, ChevronDown, ChevronUp,
@@ -14,47 +13,57 @@ import { useNavigate } from 'react-router'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useAdminBadgeStore } from '@/store/useAdminBadgeStore'
 import { useFinanceStore, type FinancialSummary, type ProjectFinancial } from '@/store/useFinanceStore'
+import api from '@/services/api'
+import type { AdminLogItem } from '@/store/useAdminLogStore'
 
-// ─── mock chart data ──────────────────────────────────────────────────────────
+// ─── กราฟรายเดือน: คำนวณจาก /admin/logs (audit log จริง) แทนข้อมูล mock ────────────
 
-const activityData = [
-  { month: 'ม.ค.', projects: 2, milestones: 1 },
-  { month: 'ก.พ.', projects: 3, milestones: 2 },
-  { month: 'มี.ค.', projects: 1, milestones: 4 },
-  { month: 'เม.ย.', projects: 5, milestones: 3 },
-  { month: 'พ.ค.', projects: 4, milestones: 6 },
-  { month: 'มิ.ย.', projects: 6, milestones: 5 },
-]
+const THAI_MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
-const approvalData = [
-  { month: 'ม.ค.', อนุมัติ: 2, ปฏิเสธ: 1 },
-  { month: 'ก.พ.', อนุมัติ: 3, ปฏิเสธ: 0 },
-  { month: 'มี.ค.', อนุมัติ: 1, ปฏิเสธ: 2 },
-  { month: 'เม.ย.', อนุมัติ: 5, ปฏิเสธ: 1 },
-  { month: 'พ.ค.', อนุมัติ: 4, ปฏิเสธ: 0 },
-  { month: 'มิ.ย.', อนุมัติ: 6, ปฏิเสธ: 1 },
-]
+const toDateParam = (d: Date) => d.toISOString().slice(0, 10) // YYYY-MM-DD
 
-const sparkData = [3, 5, 2, 8, 4, 7, 6]
-const sparkDataDown = [8, 6, 7, 3, 5, 2, 4]
+/** เอาทุก log ในช่วงวันที่ที่กำหนด — วน page จนกว่าจะครบ meta.total (กันลูปเกินจริงด้วย safety cap) */
+async function fetchAllAdminLogs(from: string, to: string): Promise<AdminLogItem[]> {
+  const pageSize = 200
+  let page = 1
+  const all: AdminLogItem[] = []
+  for (; page <= 50; page++) {
+    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize), from, to })
+    const res = await api.get(`/admin/logs?${params.toString()}`)
+    const data: AdminLogItem[] = res.data?.data ?? []
+    all.push(...data)
+    const total: number = res.data?.meta?.total ?? all.length
+    if (data.length === 0 || all.length >= total) break
+  }
+  return all
+}
 
-// ─── Sparkline ────────────────────────────────────────────────────────────────
+/** รวม log 6 เดือนล่าสุดเป็นข้อมูลกราฟ "กิจกรรมรายเดือน" และ "ผลการตรวจสอบ" */
+function buildMonthlyCharts(logs: AdminLogItem[]) {
+  const now = new Date()
+  const buckets = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    return { key: `${d.getFullYear()}-${d.getMonth()}`, label: THAI_MONTHS_SHORT[d.getMonth()] }
+  })
 
-function Sparkline({ data, color }: { data: number[]; color: string }) {
-  const d = data.map((v, i) => ({ v, i }))
-  return (
-    <ResponsiveContainer width={80} height={36}>
-      <AreaChart data={d} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-        <defs>
-          <linearGradient id={`sg-${color}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-            <stop offset="95%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill={`url(#sg-${color})`} dot={false} />
-      </AreaChart>
-    </ResponsiveContainer>
-  )
+  const counts = new Map<string, { projects: number; milestones: number; approved: number; rejected: number }>()
+  for (const b of buckets) counts.set(b.key, { projects: 0, milestones: 0, approved: 0, rejected: 0 })
+
+  for (const log of logs) {
+    const d = new Date(log.created_at)
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+    const bucket = counts.get(key)
+    if (!bucket) continue // นอกช่วง 6 เดือนที่สนใจ
+    if (log.action === 'approve_project') bucket.projects++
+    if (log.action === 'approve_milestone') bucket.milestones++
+    if (log.action.startsWith('approve_')) bucket.approved++
+    if (log.action.startsWith('reject_')) bucket.rejected++
+  }
+
+  return {
+    activityData: buckets.map(b => ({ month: b.label, projects: counts.get(b.key)!.projects, milestones: counts.get(b.key)!.milestones })),
+    approvalData: buckets.map(b => ({ month: b.label, อนุมัติ: counts.get(b.key)!.approved, ปฏิเสธ: counts.get(b.key)!.rejected })),
+  }
 }
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
@@ -63,16 +72,12 @@ interface StatCardProps {
   title: string
   value: string | number
   subtitle: string
-  trend: number
-  spark: number[]
   icon: React.ReactNode
   href?: string
 }
 
-function StatCard({ title, value, subtitle, trend, spark, icon, href }: StatCardProps) {
+function StatCard({ title, value, subtitle, icon, href }: StatCardProps) {
   const navigate = useNavigate()
-  const up = trend >= 0
-  const color = up ? '#22c55e' : '#ef4444'
   return (
     <Card
       className={`gap-3 py-5 ${href ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
@@ -84,16 +89,9 @@ function StatCard({ title, value, subtitle, trend, spark, icon, href }: StatCard
           <span className="text-muted-foreground">{icon}</span>
         </div>
       </CardHeader>
-      <CardContent className="flex items-end justify-between gap-2">
-        <div>
-          <p className="text-[28px] font-bold leading-none text-foreground">{value}</p>
-          <p className="text-[11px] text-muted-foreground mt-1">{subtitle}</p>
-          <div className={`flex items-center gap-1 mt-1.5 text-[12px] font-medium ${up ? 'text-green-500' : 'text-red-500'}`}>
-            {up ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-            <span>{Math.abs(trend)}% จากเดือนก่อน</span>
-          </div>
-        </div>
-        <Sparkline data={spark} color={color} />
+      <CardContent>
+        <p className="text-[28px] font-bold leading-none text-foreground">{value}</p>
+        <p className="text-[11px] text-muted-foreground mt-1">{subtitle}</p>
       </CardContent>
     </Card>
   )
@@ -110,6 +108,8 @@ const AdminDashboard = () => {
   const { counts, fetchBadges } = useAdminBadgeStore()
   const { summary, projects, isLoadingSummary, isLoadingProjects, fetchSummary, fetchProjects } = useFinanceStore()
   const [tab, setTab] = useState<Tab>('ภาพรวม')
+  const [charts, setCharts] = useState<{ activityData: { month: string; projects: number; milestones: number }[]; approvalData: { month: string; อนุมัติ: number; ปฏิเสธ: number }[] } | null>(null)
+  const [isLoadingCharts, setIsLoadingCharts] = useState(true)
 
   useEffect(() => { fetchBadges() }, [fetchBadges])
 
@@ -119,6 +119,17 @@ const AdminDashboard = () => {
       fetchProjects()
     }
   }, [tab, fetchSummary, fetchProjects])
+
+  // โหลด audit log 6 เดือนล่าสุดมาคำนวณกราฟ "กิจกรรมรายเดือน" / "ผลการตรวจสอบ" เอง (backend ไม่มี endpoint สรุปรายเดือนแยกไว้)
+  useEffect(() => {
+    const now = new Date()
+    const from = toDateParam(new Date(now.getFullYear(), now.getMonth() - 5, 1))
+    const to = toDateParam(now)
+    fetchAllAdminLogs(from, to)
+      .then(logs => setCharts(buildMonthlyCharts(logs)))
+      .catch(() => setCharts(buildMonthlyCharts([])))
+      .finally(() => setIsLoadingCharts(false))
+  }, [])
 
   return (
     <div className="flex flex-col gap-6 pb-10">
@@ -154,8 +165,6 @@ const AdminDashboard = () => {
               title="โปรเจกต์รอตรวจสอบ"
               value={counts.pending_projects}
               subtitle="รอการอนุมัติจาก Admin"
-              trend={12}
-              spark={sparkData}
               icon={<FolderOpen size={16} />}
               href="/admin/projects-approval"
             />
@@ -163,8 +172,6 @@ const AdminDashboard = () => {
               title="Milestone รอตรวจสอบ"
               value={counts.submitted_milestones}
               subtitle="หลักฐานรอการตรวจสอบ"
-              trend={-5}
-              spark={sparkDataDown}
               icon={<Milestone size={16} />}
               href="/admin/milestones"
             />
@@ -172,8 +179,6 @@ const AdminDashboard = () => {
               title="คำร้องเรียนเปิดอยู่"
               value={counts.open_complaints}
               subtitle="รอการจัดการ"
-              trend={8}
-              spark={[2, 4, 3, 6, 4, 7, 5]}
               icon={<MessageSquareWarning size={16} />}
               href="/admin/complaints"
             />
@@ -181,8 +186,6 @@ const AdminDashboard = () => {
               title="รอยืนยันตัวตน"
               value={counts.pending_verifications}
               subtitle="KYC รอการอนุมัติ"
-              trend={20}
-              spark={[1, 3, 2, 5, 4, 6, 8]}
               icon={<ShieldCheck size={16} />}
               href="/admin/verifications"
             />
@@ -198,26 +201,30 @@ const AdminDashboard = () => {
                 <CardDescription className="text-[12px]">โปรเจกต์และ Milestone ที่อนุมัติใน 6 เดือนที่ผ่านมา</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={activityData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="gradProj" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="gradMile" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    <Area type="monotone" dataKey="projects" name="โปรเจกต์" stroke="#7c3aed" strokeWidth={2} fill="url(#gradProj)" />
-                    <Area type="monotone" dataKey="milestones" name="Milestone" stroke="#06b6d4" strokeWidth={2} fill="url(#gradMile)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {isLoadingCharts ? (
+                  <div className="flex items-center justify-center h-[220px]"><Loader2 size={22} className="animate-spin text-muted-foreground" /></div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={charts?.activityData ?? []} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="gradProj" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="gradMile" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                      <Area type="monotone" dataKey="projects" name="โปรเจกต์" stroke="#7c3aed" strokeWidth={2} fill="url(#gradProj)" />
+                      <Area type="monotone" dataKey="milestones" name="Milestone" stroke="#06b6d4" strokeWidth={2} fill="url(#gradMile)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 
@@ -228,16 +235,20 @@ const AdminDashboard = () => {
                 <CardDescription className="text-[12px]">อนุมัติ vs ปฏิเสธ รายเดือน</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={approvalData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }} barSize={12}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    <Bar dataKey="อนุมัติ" fill="#7c3aed" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="ปฏิเสธ" fill="#f87171" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {isLoadingCharts ? (
+                  <div className="flex items-center justify-center h-[220px]"><Loader2 size={22} className="animate-spin text-muted-foreground" /></div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={charts?.approvalData ?? []} margin={{ top: 5, right: 10, left: -20, bottom: 0 }} barSize={12}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                      <Bar dataKey="อนุมัติ" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="ปฏิเสธ" fill="#f87171" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </div>
