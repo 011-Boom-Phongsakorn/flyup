@@ -33,11 +33,12 @@ const MilestonePage = () => {
 
   const handleSubmit = async (
     milestoneId: number,
+    summary: string,
     files: File[],
     links: EvidenceLink[],
     checkedCriteria: string[]
   ) => {
-    const ok = await submitEvidence(milestoneId, projectId!, files, links, checkedCriteria)
+    const ok = await submitEvidence(milestoneId, projectId!, summary, files, links, checkedCriteria)
     if (ok) setActivePhase(null)
   }
 

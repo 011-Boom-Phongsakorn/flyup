@@ -72,6 +72,7 @@ interface MilestoneStore {
   submitEvidence: (
     milestoneId: number,
     projectId: string,
+    summary: string,
     files: File[],
     links: EvidenceLink[],
     checkedCriteria: string[]
@@ -199,7 +200,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
     }
   },
 
-  submitEvidence: async (milestoneId, _projectId, files, links, checkedCriteria) => {
+  submitEvidence: async (milestoneId, _projectId, summary, files, links, checkedCriteria) => {
     set({ isSubmitting: true })
     try {
       const attachments: string[] = []
@@ -215,6 +216,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
       }
 
       const body = {
+        summary,
         criteria: checkedCriteria,
         attachments,
         links: links.map(l => l.url.trim()).filter(Boolean),
