@@ -151,6 +151,12 @@ const Step2Story = () => {
   const fileInputRef = useRef<HTMLInputElement>(null) // input file ที่ซ่อนไว้ สำหรับอัปโหลดรูปเข้า editor
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null) // เก็บ timer ไว้ clear เวลา debounce การ save เนื้อหา story
 
+  // ใช้ ref แทนตัวแปร isLocked ตรงๆ ใน onUpdate เพราะ debounce 500ms ด้านล่าง capture closure ไว้ตอน
+  // onUpdate ถูกเรียก — ถ้า currentProject.state ยังโหลดไม่เสร็จตอนนั้น (isLocked=false ชั่วคราว) แล้วมา
+  // true ทีหลัง save ที่ schedule ไว้แล้วจะยังยิงออกไปอยู่ดีถ้าไม่เช็คค่าล่าสุดจาก ref ตอน callback ทำงานจริง
+  const isLockedRef = useRef(isLocked)
+  useEffect(() => { isLockedRef.current = isLocked }, [isLocked])
+
   // สร้าง Tiptap editor instance พร้อม extension: StarterKit (พื้นฐาน), CustomImage (รูปที่ลิงก์/align ได้), Youtube, Placeholder
   const editor = useEditor({
     extensions: [
@@ -173,12 +179,14 @@ const Step2Story = () => {
     ],
     // ทุกครั้งที่เนื้อหาเปลี่ยน: ปิดเมนูค้างๆ แล้ว debounce บันทึกเนื้อหาขึ้น store + backend (รอ 500ms หลังพิมพ์หยุด)
     onUpdate: ({ editor }) => {
+      if (isLockedRef.current) return // กันไว้อีกชั้น เผื่อ update หลุดมาได้ตอน currentProject.state ยังโหลดไม่เสร็จ
       setIsMenuExpanded(false)
       setDropdownOpen(false)
       // debounce save story to store + backend
       setSaveStatus('saving')
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       saveTimerRef.current = setTimeout(async () => {
+        if (isLockedRef.current) return // เช็คค่าล่าสุดอีกครั้งตอน debounce ทำงานจริง (เผื่อ state เพิ่งโหลดเสร็จระหว่างรอ)
         const html = editor.getHTML()
         updateProjectInfo({ story: html })
         if (projectId) {
@@ -312,7 +320,7 @@ const Step2Story = () => {
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !editor) return
+    if (!file || !editor || isLockedRef.current) return
 
     e.target.value = ''
     setIsMenuExpanded(false)
