@@ -34,7 +34,7 @@ const sections: MenuSection[] = [
     {
         label: 'การอนุมัติ',
         items: [
-            { icon: <UserRoundCheck size={18} />, title: 'ใบสมัคร Pioneer', path: '/admin/verifications', badge: 'pending_verifications' },
+            { icon: <UserRoundCheck size={18} />, title: 'ยืนยันตัวตน', path: '/admin/verifications', badge: 'pending_verifications' },
             { icon: <MailSearch size={18} />, title: 'ตรวจสอบโปรเจกต์', path: '/admin/projects-approval', badge: 'pending_projects' },
             { icon: <Milestone size={18} />, title: 'ตรวจสอบ Milestone', path: '/admin/milestones', badge: 'submitted_milestones' },
         ],
