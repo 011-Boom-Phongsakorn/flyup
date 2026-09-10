@@ -27,10 +27,11 @@ const Step1Basics = () => {
   // เลือกค่าที่จะแสดงใน input: ถ้ากำลังพิมพ์ field นี้อยู่ให้โชว์ raw number, ถ้าไม่ได้ focus ให้โชว์แบบ format แล้ว
   const numVal = (field: string, n: number) => activeField === field ? (n > 0 ? String(n) : '') : formatNum(n);
 
-  // โปรเจกต์ถูกล็อกแก้ไขไม่ได้แล้ว เมื่อพ้นสถานะ draft/pending_review (เช่นเข้าสู่รอบระดมทุนแล้ว)
-  const isLocked = !!currentProject.state &&
-    currentProject.state !== 'draft' &&
-    currentProject.state !== 'pending_review';
+  // สถานะที่แก้ไขข้อมูลพื้นฐานไม่ได้เลย (backend ปฏิเสธ PATCH ตรงๆ)
+  // draft/funding/executing/pending_edit_review แก้ได้หมด — ตอน funding/executing จะเข้าคิวรอ Admin อนุมัติก่อนมีผลจริง
+  const NOT_EDITABLE_STATES = ['pending_review', 'closed', 'cancelled', 'suspended', 'pending_cancel'];
+  const isLocked = !!currentProject.state && NOT_EDITABLE_STATES.includes(currentProject.state);
+  const isPendingEditReview = currentProject.state === 'pending_edit_review';
   const lockedInputCls = 'border border-border bg-[#F3F4F6] h-[38px] px-[12px] rounded-[6px] text-muted-foreground cursor-not-allowed opacity-70';
 
   // รายการหมวดหมู่ทั้งหมดที่ดึงมาจาก API สำหรับ dropdown
@@ -305,6 +306,12 @@ const Step1Basics = () => {
 
   return (
     <div className="flex flex-col gap-[40px] p-[10px]">
+      {isPendingEditReview && (
+        <div className="flex items-center gap-[10px] px-[16px] py-[12px] rounded-[10px] bg-amber-50 border border-amber-200 text-[13px] text-amber-800">
+          <span className="text-[16px] leading-none">⏳</span>
+          การแก้ไขล่าสุดกำลังรอ Admin ตรวจสอบ — แก้ไขต่อได้เรื่อยๆ จนกว่า Admin จะอนุมัติหรือปฏิเสธ
+        </div>
+      )}
       <div className="flex flex-col p-[30px] bg-white-foreground rounded-[12px] gap-[13px]">
         <h1 className="text-foreground text-[24px] font-semibold">ข้อมูลโปรเจกต์</h1>
         <form className="flex flex-col gap-[13px]">
@@ -318,7 +325,7 @@ const Step1Basics = () => {
               type="text"
               disabled={isLocked}
               className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
-            {isLocked && <p className="text-[11px] text-amber-600">🔒 ชื่อโปรเจกต์ไม่สามารถแก้ไขได้หลังเข้าสู่การระดมทุน</p>}
+            {isLocked && <p className="text-[11px] text-amber-600">🔒 แก้ไขไม่ได้ในสถานะปัจจุบันของโปรเจกต์</p>}
           </div>
           <p className="text-[12px] text-muted-foreground">*การตั้งชื่อโปรเจกต์ควรเน้นความสั้นและจดจำง่ายในทันที่ เพื่อให้ชื่อโปรเจกต์ของคุณดูโดดเด่นและค้นหาได้รวดเร็ว*</p>
           <div className="flex flex-col gap-[4px]">
@@ -388,7 +395,7 @@ const Step1Basics = () => {
           <h1 className="text-foreground text-[24px] font-semibold">การระดมทุน</h1>
           {isLocked && (
             <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-[10px] py-[4px] rounded-full">
-              🔒 ล็อกแล้ว — แก้ไขไม่ได้หลังเข้าสู่การระดมทุน
+              🔒 ล็อกแล้ว — แก้ไขไม่ได้ในสถานะปัจจุบันของโปรเจกต์
             </span>
           )}
         </div>

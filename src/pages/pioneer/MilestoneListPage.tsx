@@ -8,28 +8,30 @@ import { useProjectStore, type ProjectSummary } from '../../store/useProjectStor
 const PAGE_SIZE = 5
 
 const STATE_LABEL: Record<string, string> = {
-  funding:        'กำลังระดมทุน',
-  executing:      'กำลังดำเนินการ',
-  closed:         'เสร็จสิ้น',
-  pending_review: 'รอตรวจสอบ',
-  draft:          'แบบร่าง',
-  cancelled:      'ถูกยกเลิก',
-  suspended:      'ถูกระงับ',
-  pending_cancel: 'รอยืนยันยกเลิก',
+  funding:             'กำลังระดมทุน',
+  executing:           'กำลังดำเนินการ',
+  closed:              'เสร็จสิ้น',
+  pending_review:      'รอตรวจสอบ',
+  draft:               'แบบร่าง',
+  cancelled:           'ถูกยกเลิก',
+  suspended:           'ถูกระงับ',
+  pending_cancel:      'รอยืนยันยกเลิก',
+  pending_edit_review: 'รอตรวจสอบการแก้ไข',
 }
 
 const STATE_BADGE: Record<string, string> = {
-  funding:        'bg-[#8B5CF6] text-white',
-  executing:      'bg-[#3B82F6] text-white',
-  closed:         'bg-[#2BA88E] text-white',
-  pending_review: 'bg-[#F5A623] text-white',
-  draft:          'bg-slate-100 text-slate-500',
-  cancelled:      'bg-[#EF4444] text-white',
-  suspended:      'bg-orange-100 text-orange-700',
-  pending_cancel: 'bg-[#F5A623] text-white',
+  funding:             'bg-[#8B5CF6] text-white',
+  executing:           'bg-[#3B82F6] text-white',
+  closed:              'bg-[#2BA88E] text-white',
+  pending_review:      'bg-[#F5A623] text-white',
+  draft:               'bg-slate-100 text-slate-500',
+  cancelled:           'bg-[#EF4444] text-white',
+  suspended:           'bg-orange-100 text-orange-700',
+  pending_cancel:      'bg-[#F5A623] text-white',
+  pending_edit_review: 'bg-[#F5A623] text-white',
 }
 
-const MILESTONE_NAVIGABLE = ['funding', 'executing', 'closed', 'suspended', 'pending_review', 'pending_cancel']
+const MILESTONE_NAVIGABLE = ['funding', 'executing', 'closed', 'suspended', 'pending_review', 'pending_cancel', 'pending_edit_review']
 
 // ไม่ใส่ 'draft'/'cancelled' — โปรเจกต์สถานะนี้ยังไม่มี milestone ที่ดำเนินการได้จริง (ดู MILESTONE_NAVIGABLE)
 const TABS: { key: string; label: string }[] = [
