@@ -63,18 +63,25 @@ const CustomImage = Image.extend({
 const Step2Story = () => {
   const { projectId } = useParams()
   const {
-    currentProject, updateProjectInfo, updateProject, saveStory, setSaveStatus,
+    currentProject, updateProjectInfo, updateProject, saveStory, setSaveStatus, loadCurrentProject,
     faqs, isSavingFaq, fetchFaqs, addFaq, editFaq, deleteFaq, uploadFile,
   } = useProjectStore()
 
   // FAQ ให้แก้ไขได้เฉพาะโปรเจกต์ที่ผ่านการอนุมัติแล้ว (draft/funding/executing เท่านั้น)
   const showFaqSection = ['draft', 'funding', 'executing'].includes(currentProject.state ?? '')
 
-  // เรื่องราว/ความเสี่ยงแก้ไม่ได้แล้วเมื่อโปรเจกต์พ้นสถานะ draft/pending_review (backend ปฏิเสธด้วย
-  // "cannot edit stories unless project is in draft state") — ล็อกเป็น read-only แทนปล่อยให้กดแล้ว error
-  const isLocked = !!currentProject.state &&
-    currentProject.state !== 'draft' &&
-    currentProject.state !== 'pending_review'
+  // เรื่องราว (story content) แก้ไขได้เฉพาะตอน state เป็น 'draft' เป๊ะๆ เท่านั้น (backend เช็คตรงๆ ไม่มีข้อยกเว้น
+  // ปฏิเสธด้วย "cannot edit stories unless project is in draft state") — ล็อกเป็น read-only แทนปล่อยให้กดแล้ว error
+  const isLocked = !!currentProject.state && currentProject.state !== 'draft'
+
+  // "ความเสี่ยง" (risks) ไม่ใช่ story — เป็นฟิลด์ของ project เอง ส่งผ่าน endpoint เดียวกับ Step1Basics
+  // (PATCH /pioneer/projects/:id) เลยแก้ไขได้ระหว่าง funding/executing/pending_edit_review ได้เหมือนกัน
+  // (ต้องผ่าน Admin อนุมัติก่อนมีผลจริง) ล็อกเฉพาะสถานะที่ backend ปฏิเสธ PATCH ตรงๆ เท่านั้น
+  const RISKS_NOT_EDITABLE_STATES = ['pending_review', 'closed', 'cancelled', 'suspended', 'pending_cancel'];
+  const isRisksLocked = !!currentProject.state && RISKS_NOT_EDITABLE_STATES.includes(currentProject.state);
+  const isRisksReviewFlow = currentProject.state === 'funding' || currentProject.state === 'executing' || currentProject.state === 'pending_edit_review';
+  const [risksSaved, setRisksSaved] = useState(currentProject.risks || '') // baseline ที่ "ส่งแล้ว" ไว้เทียบว่ามีแก้ที่ยังไม่ได้ส่งไหม
+  const [isSendingRisks, setIsSendingRisks] = useState(false)
 
   // แสดงสถานะ "บันทึกแล้ว" ชั่วคราวแล้วเปลี่ยนกลับเป็น idle หลังจาก 2.5 วิ
   const triggerSaved = () => {
@@ -88,6 +95,20 @@ const Step2Story = () => {
   const [risks, setRisks] = useState(currentProject.risks || '') // ข้อความ "ความเสี่ยงของโปรเจกต์" ผูกกับ textarea ด้านล่าง editor
   const risksRef = useRef<HTMLTextAreaElement>(null) // ใช้ปรับความสูง textarea ความเสี่ยงอัตโนมัติตามเนื้อหา
   const hasInitializedRef = useRef(false) // กันไม่ให้ sync risks/editor content จาก store ซ้ำมากกว่า 1 ครั้ง
+
+  // ส่งค่า risks ที่แก้ไว้ให้ Admin ตรวจสอบ (ตอน isRisksReviewFlow จะไม่ auto-save ตอน blur แล้ว รอกดปุ่มนี้แทน)
+  const handleSendRisks = async () => {
+    if (!projectId || risks === risksSaved) return
+    setIsSendingRisks(true)
+    updateProjectInfo({ risks })
+    const ok = await updateProject(Number(projectId), { risks })
+    if (ok) {
+      await loadCurrentProject(Number(projectId))
+      setRisksSaved(risks)
+      toast.success('ส่งการแก้ไขให้ Admin ตรวจสอบแล้ว')
+    }
+    setIsSendingRisks(false)
+  }
 
   // FAQ state
   const [faqForm, setFaqForm] = useState({ question: '', answer: '' }) // ฟอร์มเพิ่ม FAQ ใหม่
@@ -189,7 +210,7 @@ const Step2Story = () => {
   useEffect(() => {
     if (!hasInitializedRef.current && (currentProject.risks || currentProject.story)) {
       hasInitializedRef.current = true
-      if (currentProject.risks) setTimeout(() => setRisks(currentProject.risks), 0)
+      if (currentProject.risks) setTimeout(() => { setRisks(currentProject.risks); setRisksSaved(currentProject.risks) }, 0)
       if (currentProject.story && editor) {
         editor.commands.setContent(currentProject.story, { emitUpdate: false })
       }
@@ -349,7 +370,7 @@ const Step2Story = () => {
           <h1 className="text-[24px] font-semibold text-foreground">เรื่องราวของโปรเจกต์</h1>
           {isLocked && (
             <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-[10px] py-[4px] rounded-full">
-              🔒 ล็อกแล้ว — แก้ไขไม่ได้หลังเข้าสู่การระดมทุน
+              🔒 ล็อกแล้ว — แก้ไขเรื่องราวได้เฉพาะตอนโปรเจกต์ยังเป็นแบบร่างเท่านั้น
             </span>
           )}
         </div>
@@ -608,24 +629,37 @@ const Step2Story = () => {
           <textarea
             ref={risksRef}
             value={risks}
-            readOnly={isLocked}
+            readOnly={isRisksLocked}
             onChange={(e) => {
-              if (isLocked) return
+              if (isRisksLocked) return
               setRisks(e.target.value)
               e.target.style.height = 'auto'
               e.target.style.height = e.target.scrollHeight + 'px'
             }}
             onBlur={async () => {
-              if (isLocked) return
+              if (isRisksLocked) return
               if (risks === (currentProject.risks || '')) return;
-              setSaveStatus('saving');
               updateProjectInfo({ risks });
+              if (isRisksReviewFlow) return; // ไม่ auto-save ทันที — รอกดปุ่ม "ส่งการแก้ไข" แทน
+              setSaveStatus('saving');
               if (projectId) await updateProject(Number(projectId), { risks });
               triggerSaved();
             }}
             rows={3}
-            className={`w-full border p-[12px] rounded-[8px] resize-none focus:outline-none transition-all duration-200 overflow-hidden ${isLocked ? 'border-border bg-[#F3F4F6] text-muted-foreground cursor-not-allowed opacity-70' : 'border-border bg-background focus:border-primary hover:border-primary/50'}`}/>
+            className={`w-full border p-[12px] rounded-[8px] resize-none focus:outline-none transition-all duration-200 overflow-hidden ${isRisksLocked ? 'border-border bg-[#F3F4F6] text-muted-foreground cursor-not-allowed opacity-70' : 'border-border bg-background focus:border-primary hover:border-primary/50'}`}/>
           <p className='text-[12px] text-muted-foreground'>*ระบุความเสี่ยงที่อาจเกิดขึ้น  เพื่อให้ผู้สนับสนุนได้รับทราบข้อมูลที่ครบถ้วน  *</p>
+          {isRisksReviewFlow && risks !== risksSaved && (
+            <div className="flex items-center justify-between gap-[12px] px-[16px] py-[12px] rounded-[10px] bg-amber-50 border border-amber-200">
+              <p className="text-[12px] text-amber-800">✏️ แก้ไขความเสี่ยงยังไม่ได้ส่ง — ต้องกดส่งให้ Admin ตรวจสอบก่อนมีผลจริง</p>
+              <button
+                onClick={handleSendRisks}
+                disabled={isSendingRisks}
+                className="shrink-0 px-[14px] h-[32px] rounded-[8px] bg-primary hover:bg-primary-hover text-white text-[12px] font-medium transition-colors disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {isSendingRisks ? 'กำลังส่ง...' : 'ส่งการแก้ไข'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
