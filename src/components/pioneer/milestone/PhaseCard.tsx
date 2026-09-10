@@ -12,7 +12,7 @@ interface PhaseCardProps {
   isActive: boolean
   projectSuspended: boolean
   onToggle: () => void
-  onSubmit: (milestoneId: number, files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
+  onSubmit: (milestoneId: number, summary: string, files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
   onRecall: (milestoneId: number) => Promise<void>
   onOpenVoting: (milestoneId: number) => Promise<void | boolean>
   isSubmitting: boolean
@@ -76,12 +76,13 @@ const PhaseCard = ({ milestone, isActive, projectSuspended, onToggle, onSubmit, 
   const displayPct = milestone.voting_open && totalVoters > 0 ? votePct : milestone.progress_pct
 
   const handleEvidenceSubmit = async (
+    summary: string,
     files: File[],
     links: EvidenceLink[],
     checkedCriteria: string[]
   ) => {
     if (!milestone.id) return
-    await onSubmit(milestone.id, files, links, checkedCriteria)
+    await onSubmit(milestone.id, summary, files, links, checkedCriteria)
   }
 
   return (

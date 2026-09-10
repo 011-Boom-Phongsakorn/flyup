@@ -7,15 +7,17 @@ interface EvidenceFormProps {
   criteria: MilestoneData['criteria']
   isSubmitting: boolean
   onCancel: () => void
-  onSubmit: (files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
+  onSubmit: (summary: string, files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
 }
 
 const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFormProps) => {
+  const [summary, setSummary] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [links, setLinks] = useState<EvidenceLink[]>([{ name: '', url: '' }])
   const [checkedCriteria, setCheckedCriteria] = useState<boolean[]>(criteria.map(() => false))
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [summaryError, setSummaryError] = useState(false)
   const [criteriaError, setCriteriaError] = useState(false)
   const [filesError, setFilesError] = useState(false)
   const [linksError, setLinksError] = useState(false)
@@ -45,6 +47,7 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
     const validLinks = links.filter(l => l.url.trim())
     let hasError = false
 
+    if (!summary.trim()) { setSummaryError(true); hasError = true }
     if (!allCriteriaChecked) { setCriteriaError(true); hasError = true }
     if (files.length === 0) { setFilesError(true); hasError = true }
     if (validLinks.length === 0) { setLinksError(true); hasError = true }
@@ -65,11 +68,29 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
     if (!result.isConfirmed) return
 
     const checkedTexts = criteria.filter((_, i) => checkedCriteria[i])
-    await onSubmit(files, validLinks, checkedTexts)
+    await onSubmit(summary.trim(), files, validLinks, checkedTexts)
   }
 
   return (
     <div className="border-t border-border px-[20px] py-[20px] flex flex-col gap-[20px]">
+
+      {/* Summary */}
+      <div>
+        <p className="text-[13px] font-semibold text-foreground mb-[4px]">
+          สรุปผลงาน <span className="text-[#EF4444]">*</span>
+        </p>
+        <p className="text-[12px] text-muted-foreground mb-[10px]">อธิบายสิ่งที่ทำสำเร็จใน Phase นี้โดยย่อ</p>
+        <textarea
+          value={summary}
+          onChange={e => { setSummary(e.target.value); setSummaryError(false) }}
+          rows={3}
+          placeholder="เช่น พัฒนาระบบคลังข้อมูลเสร็จสมบูรณ์ พร้อมคู่มือแนะนำการใช้งาน..."
+          className={`w-full px-[12px] py-[10px] rounded-[10px] border text-[13px] outline-none resize-none transition-colors ${summaryError ? 'border-[#EF4444]' : 'border-border focus:border-primary'}`}
+        />
+        {summaryError && (
+          <p className="text-[12px] text-[#EF4444] mt-[4px]">กรุณาสรุปผลงานก่อนส่งหลักฐาน</p>
+        )}
+      </div>
 
       {/* Criteria */}
       {criteria.length > 0 && (
