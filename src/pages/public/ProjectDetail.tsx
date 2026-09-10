@@ -138,12 +138,15 @@ function ProjectDetail() {
     : (project?.category as unknown as { name?: string } | null)?.name ?? null;
 
   const isAdmin = authUser?.role === 'admin';
+  const isPioneer = authUser?.role === 'pioneer';
   const isIdVerified = authUser?.id_card_verification?.status === 'approved';
   const hasBank = (authUser?.bank_accounts?.length ?? 0) > 0;
   const cannotInvestReason = isAdmin
     ? 'ผู้ดูแลระบบไม่สามารถลงทุนได้'
     : isOwner
     ? 'เจ้าของโปรเจกต์ไม่สามารถลงทุนในโปรเจกต์ของตัวเองได้'
+    : isPioneer
+    ? 'บัญชี Pioneer ไม่สามารถลงทุนได้'
     : '';
 
   const handleInvest = async () => {
@@ -163,7 +166,7 @@ function ProjectDetail() {
       });
       return;
     }
-    if (isAdmin || isOwner) {
+    if (isAdmin || isOwner || isPioneer) {
       toast.error(cannotInvestReason, { id: "cannot-invest", position: "top-right", duration: 3000 });
       return;
     }
@@ -566,7 +569,7 @@ function ProjectDetail() {
               <div className="flex gap-[12px]">
                 <button
                   onClick={handleInvest}
-                  disabled={isAdmin || isOwner || project?.state !== 'funding'}
+                  disabled={isAdmin || isOwner || isPioneer || project?.state !== 'funding'}
                   title={cannotInvestReason || undefined}
                   className="flex-1 bg-primary hover:bg-primary/90 text-white-foreground h-[44px] rounded-[10px] flex justify-center items-center gap-[8px] font-medium transition-colors cursor-pointer duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -574,6 +577,7 @@ function ProjectDetail() {
                   <span>
                     {isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้'
                       : isOwner ? 'โปรเจกต์ของคุณ'
+                      : isPioneer ? 'บัญชี Pioneer ลงทุนไม่ได้'
                       : project?.state !== 'funding' ? 'ปิดรับการลงทุนแล้ว'
                       : 'ลงทุนโปรเจกต์นี้'}
                   </span>
