@@ -303,17 +303,6 @@ const PhaseCard = ({ milestone, isActive, projectSuspended, payoutStatus, blocke
         </div>
       )}
 
-      {/* ── รอ Admin ยืนยันโอนเงิน Phase ก่อนหน้า ── */}
-      {!isLocked && paymentBlocked && (milestone.status === 'in_progress' || milestone.status === 'rejected') && (
-        <div className="mx-[20px] mb-[12px] p-[14px] rounded-[10px] bg-amber-50 border border-amber-200 text-[13px] text-amber-800 flex items-start gap-[10px]">
-          <span className="text-[18px] leading-none">⏳</span>
-          <div>
-            <p className="font-semibold">ยังเริ่ม Phase นี้ไม่ได้</p>
-            <p className="mt-[2px] text-[12px]">Admin ยังไม่ยืนยันการโอนเงิน Phase ก่อนหน้า ต้องรอโอนเงินให้เสร็จก่อน จึงจะส่งหลักฐาน Phase นี้ได้</p>
-          </div>
-        </div>
-      )}
-
       {/* ── Suspended / Failed banner ── */}
       {isLocked && (
         <div className="mx-[20px] mb-[12px] p-[14px] rounded-[10px] bg-gray-100 border border-gray-300 text-[13px] text-gray-700 flex items-start gap-[10px]">
