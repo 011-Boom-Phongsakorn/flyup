@@ -35,6 +35,9 @@ const Step1Basics = () => {
   // ตอน funding/executing (รวมถึงตอนมีคำขอแก้ไขค้างอยู่แล้ว) ทุกการแก้ไขต้องผ่าน Admin อนุมัติก่อนมีผลจริง
   // เลยไม่ auto-save ทันทีเหมือน draft — เก็บไว้ในฟอร์มก่อน แล้วให้กดปุ่ม "ส่งการแก้ไข" เองทีเดียว
   const isReviewFlow = currentProject.state === 'funding' || currentProject.state === 'executing' || isPendingEditReview;
+  // เงื่อนไขการระดมทุน (เป้าหมายเงินทุน, ระยะเวลา, Soft Cap, ส่วนแบ่งกำไร) เป็นข้อตกลงที่ Booster ใช้ตัดสินใจลงทุน
+  // ล็อกถาวรทันทีที่พ้น draft ไปแล้ว ไม่ให้แก้ไขอีกเลยแม้จะผ่านระบบขอแก้ไข (ต่างจาก field อื่นในหน้านี้)
+  const isFundingLocked = !!currentProject.state && currentProject.state !== 'draft';
   const lockedInputCls = 'border border-border bg-[#F3F4F6] h-[38px] px-[12px] rounded-[6px] text-muted-foreground cursor-not-allowed opacity-70';
 
   // รายการหมวดหมู่ทั้งหมดที่ดึงมาจาก API สำหรับ dropdown
@@ -88,7 +91,8 @@ const Step1Basics = () => {
   }, [currentProject]);
 
   // fields ที่ต้องรอ Admin อนุมัติก่อนมีผลจริง (ตรงกับ payload ที่ updateProject ส่งจริง)
-  const REVIEW_DIFF_FIELDS = ['title', 'description', 'categoryId', 'fundingGoal', 'softCap', 'projectDuration', 'campaignDuration', 'revenueShare'] as const;
+  // ไม่รวมกลุ่ม "การระดมทุน" (fundingGoal/softCap/projectDuration/campaignDuration/revenueShare) เพราะล็อกถาวร ไม่ให้แก้เลยหลัง draft
+  const REVIEW_DIFF_FIELDS = ['title', 'description', 'categoryId'] as const;
   const hasPendingChanges = isReviewFlow && (
     REVIEW_DIFF_FIELDS.some(f => localData[f] !== savedSnapshotRef.current[f]) ||
     pendingCoverImage !== undefined
@@ -441,9 +445,9 @@ const Step1Basics = () => {
       <div className="flex flex-col bg-white-foreground rounded-[12px] p-[30px] gap-[13px]">
         <div className="flex items-center justify-between">
           <h1 className="text-foreground text-[24px] font-semibold">การระดมทุน</h1>
-          {isLocked && (
+          {isFundingLocked && (
             <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-[10px] py-[4px] rounded-full">
-              🔒 ล็อกแล้ว — แก้ไขไม่ได้ในสถานะปัจจุบันของโปรเจกต์
+              🔒 ล็อกแล้ว — แก้ไขเงื่อนไขการระดมทุนไม่ได้หลังพ้นสถานะแบบร่าง
             </span>
           )}
         </div>
@@ -456,6 +460,7 @@ const Step1Basics = () => {
               value={numVal('fundingGoal', localData.fundingGoal)}
               onFocus={() => setActiveField('fundingGoal')}
               onChange={(e) => {
+                if (isFundingLocked) return;
                 const newGoal = parseNum(e.target.value);
                 const autoSoftCap = Math.ceil(newGoal * 0.7);
                 const autoMinInvest = Math.ceil(newGoal * 0.01);
@@ -463,19 +468,19 @@ const Step1Basics = () => {
               }}
               onBlur={async () => {
                 setActiveField(null);
+                if (isFundingLocked) return;
                 const goalChanged = localData.fundingGoal !== currentProject.fundingGoal;
                 const capChanged = localData.softCap !== currentProject.softCap;
                 if (!goalChanged && !capChanged) return;
                 updateProjectInfo({ fundingGoal: localData.fundingGoal, softCap: localData.softCap });
-                if (isReviewFlow) return;
                 setSaveStatus('saving');
                 if (projectId) {
                   await updateProject(Number(projectId), { fundingGoal: localData.fundingGoal, softCap: localData.softCap });
                 }
                 triggerSaved();
               }}
-              disabled={isLocked}
-              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
+              disabled={isFundingLocked}
+              className={isFundingLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
           </div>
           <div className="flex flex-col gap-[4px]">
             <label className="text-foreground text-[14px]">ระยะเวลาโปรเจกต์ (เดือน) <span className="text-error">*</span></label>
@@ -484,9 +489,10 @@ const Step1Basics = () => {
               type="text"
               value={numVal('projectDuration', localData.projectDuration)}
               onFocus={() => setActiveField('projectDuration')}
-              onChange={(e) => setLocalData({ ...localData, projectDuration: parseNum(e.target.value) })}
+              onChange={(e) => !isFundingLocked && setLocalData({ ...localData, projectDuration: parseNum(e.target.value) })}
               onBlur={() => {
                 setActiveField(null);
+                if (isFundingLocked) return;
                 const val = localData.projectDuration;
                 if (val > 48) {
                   toast.error('ระยะเวลาโปรเจกต์ต้องไม่เกิน 48 เดือน (4 ปี)');
@@ -496,8 +502,8 @@ const Step1Basics = () => {
                 }
                 handleAutoSave('projectDuration', val);
               }}
-              disabled={isLocked}
-              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
+              disabled={isFundingLocked}
+              className={isFundingLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
           </div>
           <div className="grid grid-cols-1 gap-[20px] md:grid-cols-3 md:gap-[20px]">
             <div className="flex flex-col gap-[4px]">
@@ -507,9 +513,10 @@ const Step1Basics = () => {
                 type="text"
                 value={numVal('softCap', localData.softCap)}
                 onFocus={() => setActiveField('softCap')}
-                onChange={(e) => setLocalData({ ...localData, softCap: parseNum(e.target.value) })}
+                onChange={(e) => !isFundingLocked && setLocalData({ ...localData, softCap: parseNum(e.target.value) })}
                 onBlur={() => {
                   setActiveField(null);
+                  if (isFundingLocked) return;
                   const minSoftCap = Math.ceil(localData.fundingGoal * 0.7);
                   const maxSoftCap = localData.fundingGoal;
                   if (localData.softCap > 0 && localData.softCap < minSoftCap) {
@@ -526,8 +533,8 @@ const Step1Basics = () => {
                   }
                   handleAutoSave('softCap', localData.softCap);
                 }}
-                disabled={isLocked}
-              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
+                disabled={isFundingLocked}
+              className={isFundingLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
             </div>
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">ระยะเวลาระดมทุน (1-60 วัน) <span className="text-error">*</span></label>
@@ -536,9 +543,10 @@ const Step1Basics = () => {
                 type="text"
                 value={numVal('campaignDuration', localData.campaignDuration)}
                 onFocus={() => setActiveField('campaignDuration')}
-                onChange={(e) => setLocalData({ ...localData, campaignDuration: parseNum(e.target.value) })}
+                onChange={(e) => !isFundingLocked && setLocalData({ ...localData, campaignDuration: parseNum(e.target.value) })}
                 onBlur={() => {
                   setActiveField(null);
+                  if (isFundingLocked) return;
                   const val = localData.campaignDuration;
                   if (val > 0 && (val < 1 || val > 60)) {
                     toast.error('ระยะเวลาระดมทุนต้องอยู่ระหว่าง 1-60 วัน');
@@ -549,8 +557,8 @@ const Step1Basics = () => {
                   }
                   handleAutoSave('campaignDuration', val);
                 }}
-                disabled={isLocked}
-              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
+                disabled={isFundingLocked}
+              className={isFundingLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
             </div>
             <div className="flex flex-col gap-[4px]">
               <label className="text-foreground text-[14px]">ส่วนแบ่งกำไร (%) <span className="text-error">*</span></label>
@@ -559,9 +567,10 @@ const Step1Basics = () => {
                 type="text"
                 value={numVal('revenueShare', localData.revenueShare)}
                 onFocus={() => setActiveField('revenueShare')}
-                onChange={(e) => setLocalData({ ...localData, revenueShare: parseNum(e.target.value) })}
+                onChange={(e) => !isFundingLocked && setLocalData({ ...localData, revenueShare: parseNum(e.target.value) })}
                 onBlur={() => {
                   setActiveField(null);
+                  if (isFundingLocked) return;
                   const val = localData.revenueShare;
                   if (val > 50) {
                     toast.error('ส่วนแบ่งกำไรต้องไม่เกิน 50%');
@@ -577,8 +586,8 @@ const Step1Basics = () => {
                   }
                   handleAutoSave('revenueShare', val);
                 }}
-                disabled={isLocked}
-              className={isLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
+                disabled={isFundingLocked}
+              className={isFundingLocked ? lockedInputCls : "border border-border bg-background h-[38px] px-[12px] rounded-[6px] focus:outline-none focus:border-primary transition-all duration-200 hover:border-primary/50"} />
             </div>
           </div>
           <div className="flex flex-col gap-[4px]">
