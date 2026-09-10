@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { Upload, X, Plus, CheckCircle2, Circle, ExternalLink, Loader2, Send } from 'lucide-react'
 import Swal from 'sweetalert2'
 import type { EvidenceLink, MilestoneData } from './types'
+import { useMilestoneStore } from '../../../store/useMilestoneStore'
 
 interface EvidenceFormProps {
   criteria: MilestoneData['criteria']
@@ -11,6 +12,7 @@ interface EvidenceFormProps {
 }
 
 const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFormProps) => {
+  const uploadProgress = useMilestoneStore(s => s.uploadProgress) // บอกความคืบหน้าอัปโหลดไฟล์ทีละไฟล์ ระหว่างกำลังส่งหลักฐาน
   const [summary, setSummary] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [links, setLinks] = useState<EvidenceLink[]>([{ name: '', url: '' }])
@@ -128,8 +130,9 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
         <p className="text-[12px] text-muted-foreground mb-[10px]">รูปภาพ (≤10MB) หรือ PDF (≤50MB)</p>
         <button
           type="button"
+          disabled={isSubmitting}
           onClick={() => fileInputRef.current?.click()}
-          className={`w-full flex items-center justify-center gap-[8px] p-[20px] border-2 border-dashed rounded-[12px] cursor-pointer hover:bg-[#F8F9FA] transition-colors ${filesError ? 'border-[#EF4444]' : 'border-border hover:border-primary/50'}`}
+          className={`w-full flex items-center justify-center gap-[8px] p-[20px] border-2 border-dashed rounded-[12px] cursor-pointer hover:bg-[#F8F9FA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${filesError ? 'border-[#EF4444]' : 'border-border hover:border-primary/50'}`}
         >
           <Upload size={16} className="text-muted-foreground" />
           <span className="text-[13px] text-muted-foreground">อัปโหลดไฟล์</span>
@@ -140,14 +143,28 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
         )}
         {files.length > 0 && (
           <div className="flex flex-col gap-[6px] mt-[10px]">
-            {files.map((f, i) => (
-              <div key={i} className="flex items-center justify-between px-[12px] py-[8px] rounded-[8px] bg-[#F8F9FA] border border-border">
-                <span className="text-[12px] text-foreground truncate max-w-[80%]">{f.name}</span>
-                <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-[#EF4444] transition-colors cursor-pointer">
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
+            {files.map((f, i) => {
+              // สถานะการอัปโหลดของไฟล์นี้ตาม uploadProgress ที่ store รายงานมา (อัปโหลดทีละไฟล์ตามลำดับ)
+              const fileStatus = !isSubmitting || !uploadProgress
+                ? 'idle'
+                : i < uploadProgress.current ? 'done'
+                : i === uploadProgress.current ? 'uploading'
+                : 'waiting'
+              return (
+                <div key={i} className="flex items-center justify-between px-[12px] py-[8px] rounded-[8px] bg-[#F8F9FA] border border-border">
+                  <div className="flex items-center gap-[8px] min-w-0">
+                    {fileStatus === 'uploading' && <Loader2 size={13} className="animate-spin text-primary shrink-0" />}
+                    {fileStatus === 'done' && <CheckCircle2 size={13} className="text-[#2BA88E] shrink-0" />}
+                    <span className={`text-[12px] truncate max-w-[220px] ${fileStatus === 'waiting' ? 'text-muted-foreground' : 'text-foreground'}`}>{f.name}</span>
+                  </div>
+                  {!isSubmitting && (
+                    <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-[#EF4444] transition-colors cursor-pointer">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -197,11 +214,24 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
         </div>
       </div>
 
+      {/* Upload progress banner */}
+      {isSubmitting && (
+        <div className="flex items-center gap-[10px] px-[14px] py-[10px] rounded-[10px] bg-primary/5 border border-primary/20">
+          <Loader2 size={16} className="animate-spin text-primary shrink-0" />
+          <span className="text-[13px] text-primary font-medium">
+            {uploadProgress
+              ? `กำลังอัปโหลดไฟล์ ${uploadProgress.current}/${uploadProgress.total}...`
+              : 'กำลังส่งหลักฐาน...'}
+          </span>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex justify-end gap-[10px] pt-[4px]">
         <button
           onClick={onCancel}
-          className="px-[20px] py-[9px] rounded-[10px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F8F9FA] transition-colors cursor-pointer"
+          disabled={isSubmitting}
+          className="px-[20px] py-[9px] rounded-[10px] border border-border text-[13px] font-medium text-foreground hover:bg-[#F8F9FA] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           ยกเลิก
         </button>
@@ -211,7 +241,9 @@ const EvidenceForm = ({ criteria, isSubmitting, onCancel, onSubmit }: EvidenceFo
           className="flex items-center gap-[6px] px-[20px] py-[9px] rounded-[10px] bg-primary text-white text-[13px] font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
         >
           {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-          ส่งหลักฐาน
+          {isSubmitting
+            ? (uploadProgress ? `กำลังอัปโหลด ${uploadProgress.current}/${uploadProgress.total}...` : 'กำลังส่ง...')
+            : 'ส่งหลักฐาน'}
         </button>
       </div>
     </div>

@@ -11,6 +11,8 @@ interface PhaseCardProps {
   milestone: MilestoneData
   isActive: boolean
   projectSuspended: boolean
+  payoutStatus?: 'pending' | 'confirmed' // สถานะโอนเงินจริงของ Phase นี้ (ต่างจาก milestone.status='completed' ที่แปลว่าแค่อนุมัติแล้ว)
+  blockedByPrevPayment?: boolean // true = เริ่ม Phase นี้ไม่ได้ เพราะ Phase ก่อนหน้ายังไม่ได้รับการยืนยันโอนเงิน
   onToggle: () => void
   onSubmit: (milestoneId: number, summary: string, files: File[], links: EvidenceLink[], checkedCriteria: string[]) => Promise<void>
   onRecall: (milestoneId: number) => Promise<void>
@@ -19,13 +21,15 @@ interface PhaseCardProps {
   isOpeningVoting: boolean
 }
 
-const PhaseCard = ({ milestone, isActive, projectSuspended, onToggle, onSubmit, onRecall, onOpenVoting, isSubmitting, isOpeningVoting }: PhaseCardProps) => {
+const PhaseCard = ({ milestone, isActive, projectSuspended, payoutStatus, blockedByPrevPayment, onToggle, onSubmit, onRecall, onOpenVoting, isSubmitting, isOpeningVoting }: PhaseCardProps) => {
   const navigate = useNavigate()
   const fetchMilestoneVoters = useMilestoneStore((s) => s.fetchMilestoneVoters)
   const cfg = STATUS_CONFIG[milestone.status] ?? STATUS_CONFIG['pending']
   const isFailed    = milestone.status === 'failed'
   const isLocked    = projectSuspended || isFailed
-  const canSubmit   = !isLocked && (milestone.status === 'in_progress' || milestone.status === 'rejected')
+  // ยังกดเริ่มไม่ได้ถ้า Phase ก่อนหน้ายังไม่ได้รับเงินจริง แม้สถานะ Phase นี้จะพร้อมแล้วก็ตาม (backend บังคับไว้)
+  const paymentBlocked = !!blockedByPrevPayment
+  const canSubmit   = !isLocked && !paymentBlocked && (milestone.status === 'in_progress' || milestone.status === 'rejected')
   const isCompleted = milestone.status === 'completed'
   const isApproved  = milestone.status === 'approved' && !isLocked
 
@@ -135,6 +139,11 @@ const PhaseCard = ({ milestone, isActive, projectSuspended, onToggle, onSubmit, 
             <div className="flex items-center gap-[5px] text-[#2BA88E] text-[13px] font-medium">
               <CheckCircle2 size={16} />
               <span>อนุมัติแล้ว</span>
+              {payoutStatus === 'pending' && (
+                <span className="ml-[4px] flex items-center gap-[4px] text-amber-600 text-[12px] font-medium">
+                  <Loader2 size={12} className="animate-spin" /> รอ Admin ยืนยันโอนเงิน
+                </span>
+              )}
             </div>
           )}
           {isApproved && (
@@ -223,6 +232,19 @@ const PhaseCard = ({ milestone, isActive, projectSuspended, onToggle, onSubmit, 
               {isActive ? <ChevronUp size={16} /> : 'จัดการ'}
             </button>
           )}
+          {!isLocked && paymentBlocked && (milestone.status === 'in_progress' || milestone.status === 'rejected') && (
+            <div className="relative group">
+              <button
+                disabled
+                className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border border-border text-muted-foreground bg-[#F8F9FA] text-[13px] font-medium cursor-not-allowed opacity-60"
+              >
+                จัดการ
+              </button>
+              <div className="absolute bottom-full mb-2 right-0 hidden group-hover:block z-10 whitespace-nowrap bg-gray-800 text-white text-[11px] px-2 py-1 rounded-[6px] pointer-events-none">
+                รอ Admin ยืนยันการโอนเงิน Phase ก่อนหน้าก่อน จึงจะเริ่ม Phase นี้ได้
+              </div>
+            </div>
+          )}
           {milestone.status === 'pending' && (
             <span className="text-[12px] text-muted-foreground">รอดำเนินการ</span>
           )}
@@ -278,6 +300,17 @@ const PhaseCard = ({ milestone, isActive, projectSuspended, onToggle, onSubmit, 
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {/* ── รอ Admin ยืนยันโอนเงิน Phase ก่อนหน้า ── */}
+      {!isLocked && paymentBlocked && (milestone.status === 'in_progress' || milestone.status === 'rejected') && (
+        <div className="mx-[20px] mb-[12px] p-[14px] rounded-[10px] bg-amber-50 border border-amber-200 text-[13px] text-amber-800 flex items-start gap-[10px]">
+          <span className="text-[18px] leading-none">⏳</span>
+          <div>
+            <p className="font-semibold">ยังเริ่ม Phase นี้ไม่ได้</p>
+            <p className="mt-[2px] text-[12px]">Admin ยังไม่ยืนยันการโอนเงิน Phase ก่อนหน้า ต้องรอโอนเงินให้เสร็จก่อน จึงจะส่งหลักฐาน Phase นี้ได้</p>
+          </div>
         </div>
       )}
 
