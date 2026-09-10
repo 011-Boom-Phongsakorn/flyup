@@ -114,7 +114,9 @@ const MyProjects = () => {
   const pagedProjects = filteredProjects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleView = (id: number, state: StateType, slug?: string) => {
-    const useDetail = state === 'funding' || state === 'executing' || state === 'closed' || state === 'pending_edit_review';
+    // pending_edit_review ไม่ใช่ public state (backend GetPublicProjectByID ไม่รองรับ → 404)
+    // เจ้าของโปรเจกต์เลยต้องดูผ่านหน้า preview ของตัวเองแทน จนกว่า Admin จะอนุมัติ/ปฏิเสธการแก้ไข
+    const useDetail = state === 'funding' || state === 'executing' || state === 'closed';
     if (useDetail) navigate(`/projects/${slug || id}`);
     else navigate(`/preview/${id}`, { state: { from: '/pioneer/dashboard/projects' } });
   };

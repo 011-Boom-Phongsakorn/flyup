@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router";
-import { ChevronDown, X, ImageIcon, Upload, FileImage, Video, Loader2 } from "lucide-react";
+import { ChevronDown, X, ImageIcon, Upload, FileImage, Video, Loader2, Send } from "lucide-react";
 import StepNavigation from "../StepNavigation";
 import { useProjectStore, type Project } from "../../store/useProjectStore";
 import toast from "react-hot-toast";
@@ -11,7 +11,7 @@ const DESCRIPTION_MAX_LENGTH = 40;
 const Step1Basics = () => {
   const { projectId } = useParams();
   const {
-    currentProject, updateProjectInfo, updateProject, setSaveStatus,
+    currentProject, updateProjectInfo, updateProject, setSaveStatus, loadCurrentProject,
     fetchCategories, uploadFile, attachProjectMedia, fetchProjectMedia, deleteProjectMedia,
   } = useProjectStore()
 
@@ -32,6 +32,9 @@ const Step1Basics = () => {
   const NOT_EDITABLE_STATES = ['pending_review', 'closed', 'cancelled', 'suspended', 'pending_cancel'];
   const isLocked = !!currentProject.state && NOT_EDITABLE_STATES.includes(currentProject.state);
   const isPendingEditReview = currentProject.state === 'pending_edit_review';
+  // ตอน funding/executing (รวมถึงตอนมีคำขอแก้ไขค้างอยู่แล้ว) ทุกการแก้ไขต้องผ่าน Admin อนุมัติก่อนมีผลจริง
+  // เลยไม่ auto-save ทันทีเหมือน draft — เก็บไว้ในฟอร์มก่อน แล้วให้กดปุ่ม "ส่งการแก้ไข" เองทีเดียว
+  const isReviewFlow = currentProject.state === 'funding' || currentProject.state === 'executing' || isPendingEditReview;
   const lockedInputCls = 'border border-border bg-[#F3F4F6] h-[38px] px-[12px] rounded-[6px] text-muted-foreground cursor-not-allowed opacity-70';
 
   // รายการหมวดหมู่ทั้งหมดที่ดึงมาจาก API สำหรับ dropdown
@@ -53,13 +56,19 @@ const Step1Basics = () => {
     maxInvestAmount: currentProject.maxInvestAmount || 0,
   }));
 
+  // baseline ของ localData ที่ "ยืนยันส่งแล้ว" — ใช้เทียบว่ามีอะไรแก้ไว้แล้วยังไม่ได้กดส่งบ้าง (โหมด isReviewFlow)
+  const savedSnapshotRef = useRef(localData);
+  // รูปปกใหม่ที่เลือกไว้แต่ยังไม่ได้ส่ง (โหมด isReviewFlow เท่านั้น): undefined = ไม่มีการแก้ไข, string = รูปใหม่, null = ลบรูป
+  const [pendingCoverImage, setPendingCoverImage] = useState<string | null | undefined>(undefined);
+  const [isSendingReview, setIsSendingReview] = useState(false);
+
   // Sync localData เมื่อ store โหลดข้อมูลจาก API เสร็จ (เช่น เปิดหน้าใหม่หลัง refresh)
   const hasInitializedRef = useRef(false);
   useEffect(() => {
     if (!hasInitializedRef.current && currentProject.title) {
       hasInitializedRef.current = true;
       setTimeout(() => {
-        setLocalData({
+        const loaded = {
           title: currentProject.title,
           description: currentProject.description || '',
           category: currentProject.category || '',
@@ -71,10 +80,41 @@ const Step1Basics = () => {
           revenueShare: currentProject.revenueShare || 0,
           minInvestAmount: currentProject.minInvestAmount || 0,
           maxInvestAmount: currentProject.maxInvestAmount || 0,
-        });
+        };
+        setLocalData(loaded);
+        savedSnapshotRef.current = loaded;
       }, 0);
     }
   }, [currentProject]);
+
+  // fields ที่ต้องรอ Admin อนุมัติก่อนมีผลจริง (ตรงกับ payload ที่ updateProject ส่งจริง)
+  const REVIEW_DIFF_FIELDS = ['title', 'description', 'categoryId', 'fundingGoal', 'softCap', 'projectDuration', 'campaignDuration', 'revenueShare'] as const;
+  const hasPendingChanges = isReviewFlow && (
+    REVIEW_DIFF_FIELDS.some(f => localData[f] !== savedSnapshotRef.current[f]) ||
+    pendingCoverImage !== undefined
+  );
+
+  // ส่งข้อมูลที่แก้ไว้ทั้งหมดไปให้ Admin ตรวจสอบทีเดียว (ตอน isReviewFlow จะไม่ auto-save ทีละฟิลด์แล้ว)
+  const handleSendForReview = async () => {
+    if (!projectId || !hasPendingChanges) return;
+    const payload: Partial<Project> = {};
+    for (const f of REVIEW_DIFF_FIELDS) {
+      if (localData[f] !== savedSnapshotRef.current[f]) (payload as Record<string, unknown>)[f] = localData[f];
+    }
+    if (pendingCoverImage !== undefined) payload.coverImage = pendingCoverImage ?? '';
+
+    setIsSendingReview(true);
+    // updateProject จัดการ toast.error ให้เองอยู่แล้วถ้าพัง (ดู useProjectStore.ts) แค่เช็ค boolean กลับมาว่าจะเคลียร์ draft ไหม
+    const ok = await updateProject(Number(projectId), payload);
+    if (ok) {
+      await loadCurrentProject(Number(projectId)); // ดึง state ใหม่ (เช่น เปลี่ยนเป็น pending_edit_review) มาอัปเดตหน้าจอ
+      savedSnapshotRef.current = { ...localData };
+      setPendingCoverImage(undefined);
+      toast.success('ส่งการแก้ไขให้ Admin ตรวจสอบแล้ว');
+    }
+    // ถ้าไม่สำเร็จ: เก็บ draft ไว้เหมือนเดิม ให้กดส่งใหม่ได้
+    setIsSendingReview(false);
+  };
 
   // resize description textarea เมื่อ localData.description เปลี่ยน (รวมถึงตอน load จาก API)
   useEffect(() => {
@@ -102,6 +142,7 @@ const Step1Basics = () => {
 
   // auto-save field เดี่ยวๆ ตอน blur: เทียบค่าเก่า-ใหม่ก่อน ถ้าไม่เปลี่ยนก็ไม่ยิง request
   // อัปเดต store ทันที (optimistic) แล้วค่อยยิง API ถ้ามี projectId แล้ว (โปรเจกต์ถูกสร้างแล้ว)
+  // ตอน isReviewFlow จะไม่ยิง API ทันที — เก็บไว้ในฟอร์มก่อน รอกดปุ่ม "ส่งการแก้ไข" ทีเดียว
   const handleAutoSave = async (field: keyof Project, newValue: string | number) => {
     const oldValue = currentProject?.[field as keyof typeof currentProject];
     const isSame = typeof newValue === 'string'
@@ -110,9 +151,10 @@ const Step1Basics = () => {
 
     if (isSame) return;
 
-    setSaveStatus('saving');
     updateProjectInfo({ [field]: newValue });
+    if (isReviewFlow) return;
 
+    setSaveStatus('saving');
     if (projectId) {
       await updateProject(Number(projectId), { [field]: newValue });
     }
@@ -163,9 +205,14 @@ const Step1Basics = () => {
       if (!url) throw new Error('no url');
       URL.revokeObjectURL(blobUrl);
       updateProjectInfo({ coverImage: url });
-      if (projectId) await updateProject(Number(projectId), { coverImage: url });
-      toast.success('อัปโหลดรูปปกสำเร็จ', { id: 'upload-cover', duration: 2000 });
-      triggerSaved();
+      if (isReviewFlow) {
+        setPendingCoverImage(url);
+        toast.success('อัปโหลดรูปปกสำเร็จ — กด "ส่งการแก้ไข" เพื่อยืนยัน', { id: 'upload-cover', duration: 3000 });
+      } else {
+        if (projectId) await updateProject(Number(projectId), { coverImage: url });
+        toast.success('อัปโหลดรูปปกสำเร็จ', { id: 'upload-cover', duration: 2000 });
+        triggerSaved();
+      }
     } catch {
       URL.revokeObjectURL(blobUrl);
       updateProjectInfo({ coverImage: null });
@@ -175,9 +222,10 @@ const Step1Basics = () => {
     }
   };
 
-  // ลบรูปปก ทั้งใน state และยิงอัปเดตขึ้น server (ส่งค่าว่างไปเคลียร์)
+  // ลบรูปปก ทั้งใน state และยิงอัปเดตขึ้น server (ส่งค่าว่างไปเคลียร์) — ตอน isReviewFlow เก็บไว้ก่อน รอกดส่ง
   const removeCoverImage = async () => {
     updateProjectInfo({ coverImage: null });
+    if (isReviewFlow) { setPendingCoverImage(null); return; }
     if (projectId) await updateProject(Number(projectId), { coverImage: '' });
     triggerSaved();
   };
@@ -373,7 +421,7 @@ const Step1Basics = () => {
                       onClick={() => {
                         setLocalData({ ...localData, category: cat.name, categoryId: cat.id });
                         updateProjectInfo({ category: cat.name, categoryId: cat.id });
-                        if (projectId) {
+                        if (!isReviewFlow && projectId) {
                           updateProject(Number(projectId), { categoryId: cat.id });
                         }
                         setIsOpen(false);
@@ -418,8 +466,9 @@ const Step1Basics = () => {
                 const goalChanged = localData.fundingGoal !== currentProject.fundingGoal;
                 const capChanged = localData.softCap !== currentProject.softCap;
                 if (!goalChanged && !capChanged) return;
-                setSaveStatus('saving');
                 updateProjectInfo({ fundingGoal: localData.fundingGoal, softCap: localData.softCap });
+                if (isReviewFlow) return;
+                setSaveStatus('saving');
                 if (projectId) {
                   await updateProject(Number(projectId), { fundingGoal: localData.fundingGoal, softCap: localData.softCap });
                 }
@@ -700,6 +749,26 @@ const Step1Basics = () => {
           </div>
         </div>
       </div>
+
+      {hasPendingChanges && (
+        <div className="sticky bottom-[16px] z-20 flex items-center justify-between gap-[16px] bg-white border-2 border-primary/30 shadow-lg rounded-[14px] px-[20px] py-[14px]">
+          <div className="flex items-center gap-[10px]">
+            <span className="text-[16px] leading-none">✏️</span>
+            <div>
+              <p className="text-[13px] font-semibold text-foreground">มีการแก้ไขที่ยังไม่ได้ส่ง</p>
+              <p className="text-[11px] text-muted-foreground">กด "ส่งการแก้ไข" เพื่อส่งให้ Admin ตรวจสอบก่อนมีผลจริง</p>
+            </div>
+          </div>
+          <button
+            onClick={handleSendForReview}
+            disabled={isSendingReview}
+            className="flex items-center gap-[8px] px-[20px] h-[38px] rounded-[12px] bg-primary hover:bg-primary-hover text-white text-[14px] font-medium transition-all duration-200 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed shrink-0"
+          >
+            {isSendingReview ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            {isSendingReview ? 'กำลังส่ง...' : 'ส่งการแก้ไขให้ Admin ตรวจสอบ'}
+          </button>
+        </div>
+      )}
 
       <StepNavigation disableNext={
         currentProject?.files?.some(f => f.url.startsWith('blob:')) ||

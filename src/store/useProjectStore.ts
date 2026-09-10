@@ -93,7 +93,7 @@ interface ProjectState {
     createProject: () => Promise<number | null>;
     loadCurrentProject: (id: number) => Promise<void>;
     fetchMyProjects: () => Promise<void>;
-    updateProject: (id: number, data: Partial<Project>) => Promise<void>;
+    updateProject: (id: number, data: Partial<Project>) => Promise<boolean>;
     deleteProject: (id: number) => Promise<boolean>;
     saveStory: (projectId: number, html?: string) => Promise<void>;
     saveMilestonePhase: (projectId: number, phaseIndex: number) => Promise<void>;
@@ -336,7 +336,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         if (data.maxInvestAmount !== undefined) payload.max_invest_amount = data.maxInvestAmount;
         if (data.coverImage !== undefined) payload.cover_image = data.coverImage;
 
-        if (Object.keys(payload).length === 0) return;
+        if (Object.keys(payload).length === 0) return true;
 
         try {
             const res = await api.patch(`/pioneer/projects/${id}`, payload);
@@ -349,9 +349,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     },
                 }));
             }
+            return true;
         } catch (error) {
             console.error('updateProject:', error);
             toast.error('บันทึกไม่สำเร็จ');
+            return false;
         }
     },
 
