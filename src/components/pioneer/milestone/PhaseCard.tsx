@@ -238,7 +238,6 @@ const PhaseCard = ({ milestone, isActive, projectSuspended, payoutStatus, blocke
                 disabled
                 className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[10px] border border-border text-muted-foreground bg-[#F8F9FA] text-[13px] font-medium cursor-not-allowed opacity-60"
               >
-                <Loader2 size={14} className="animate-spin" />
                 จัดการ
               </button>
               <div className="absolute bottom-full mb-2 right-0 hidden group-hover:block z-10 whitespace-nowrap bg-gray-800 text-white text-[11px] px-2 py-1 rounded-[6px] pointer-events-none">
