@@ -65,6 +65,7 @@ interface MilestoneStore {
   projectSuspended: boolean
   isLoading: boolean
   isSubmitting: boolean
+  uploadProgress: { current: number; total: number } | null // บอกความคืบหน้าอัปโหลดไฟล์ทีละไฟล์ตอนส่งหลักฐาน
   fetchMilestones: (projectId: string) => Promise<number | null> // returns index of first active phase
   fetchProjectMilestones: (projectId: number | string) => Promise<ProjectMilestoneRaw[]>
   fetchProjectMeetings: (projectId: number | string) => Promise<MeetingBrief[]>
@@ -88,6 +89,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
   projectSuspended: false,
   isLoading: false,
   isSubmitting: false,
+  uploadProgress: null,
   isOpeningVoting: false,
 
   fetchMilestones: async (projectId) => {
@@ -201,10 +203,10 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
   },
 
   submitEvidence: async (milestoneId, _projectId, summary, files, links, checkedCriteria) => {
-    set({ isSubmitting: true })
+    set({ isSubmitting: true, uploadProgress: files.length > 0 ? { current: 0, total: files.length } : null })
     try {
       const attachments: string[] = []
-      for (const file of files) {
+      for (const [i, file] of files.entries()) {
         const fd = new FormData()
         fd.append('file', file)
         const res = await api.post('/upload', fd, {
@@ -213,6 +215,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
         })
         const url: string | undefined = res.data?.data?.url
         if (url) attachments.push(url)
+        set({ uploadProgress: { current: i + 1, total: files.length } })
       }
 
       const body = {
@@ -245,7 +248,7 @@ export const useMilestoneStore = create<MilestoneStore>((set) => ({
       }
       return false
     } finally {
-      set({ isSubmitting: false })
+      set({ isSubmitting: false, uploadProgress: null })
     }
   },
 
