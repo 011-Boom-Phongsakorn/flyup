@@ -82,6 +82,7 @@ const AdminUniversities = lazy(() => import('@/pages/admin/AdminUniversities'));
 const AdminUniversityDetail = lazy(() => import('@/pages/admin/AdminUniversityDetail'));
 const AdminCategories = lazy(() => import('@/pages/admin/AdminCategories'));
 const AdminCancelRequests = lazy(() => import('@/pages/admin/AdminCancelRequests'));
+const AdminProjectEditRequests = lazy(() => import('@/pages/admin/AdminProjectEditRequests'));
 
 // Booster Pages
 const BoosterDashboard = lazy(() => import('../pages/booster/Dashboard'));
@@ -251,6 +252,7 @@ const Router = () => {
                             <Route path='/admin/universities/:id' element={<AdminUniversityDetail />} />
                             <Route path='/admin/categories' element={<AdminCategories />} />
                             <Route path='/admin/cancel-requests' element={<AdminCancelRequests />} />
+                            <Route path='/admin/project-edit-requests' element={<AdminProjectEditRequests />} />
                             <Route path='/admin/profile' element={<AdminProfile />} />
                         </Route>
                     </Route>

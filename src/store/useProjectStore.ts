@@ -65,7 +65,7 @@ export interface ProjectSummary {
     id: number;
     slug: string;
     title: string;
-    state: 'draft' | 'pending_review' | 'funding' | 'executing' | 'closed' | 'cancelled' | 'pending_cancel' | 'suspended';
+    state: 'draft' | 'pending_review' | 'funding' | 'executing' | 'closed' | 'cancelled' | 'pending_cancel' | 'suspended' | 'pending_edit_review';
     status: 'active' | 'funded' | 'failed' | 'rejected' | 'completed' | 'cancelled';
     category: { id: number; name: string } | null;
     description: string | null;

@@ -557,6 +557,7 @@ function ProjectDetail() {
                   cancelled:      { text: 'ยกเลิกแล้ว',           color: 'text-red-500' },
                   pending_cancel: { text: 'รอยืนยันการยกเลิก',   color: 'text-orange-500' },
                   suspended:      { text: 'ถูกระงับ',              color: 'text-gray-500' },
+                  pending_edit_review: { text: 'กำลังปรับปรุงข้อมูล', color: 'text-amber-500' },
                 };
                 const s = stateLabel[project?.state ?? ''] ?? { text: project?.state ?? '', color: 'text-muted-foreground' };
                 return (
@@ -578,6 +579,7 @@ function ProjectDetail() {
                     {isAdmin ? 'ผู้ดูแลระบบลงทุนไม่ได้'
                       : isOwner ? 'โปรเจกต์ของคุณ'
                       : isPioneer ? 'บัญชี Pioneer ลงทุนไม่ได้'
+                      : project?.state === 'pending_edit_review' ? 'กำลังปรับปรุงข้อมูล ลงทุนชั่วคราวไม่ได้'
                       : project?.state !== 'funding' ? 'ปิดรับการลงทุนแล้ว'
                       : 'ลงทุนโปรเจกต์นี้'}
                   </span>

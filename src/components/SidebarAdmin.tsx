@@ -4,7 +4,7 @@ import { useAdminBadgeStore } from '@/store/useAdminBadgeStore'
 import {
     House, Search, LayoutDashboard, UserRoundCheck, MailSearch, Milestone,
     Wallet, TrendingUp, MessageSquareWarning, ShieldBan, RotateCcw, FileText,
-    Users, LogOut, UserRound, GraduationCap, Tag, FolderX,
+    Users, LogOut, UserRound, GraduationCap, Tag, FolderX, FileEdit,
 } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 
@@ -52,6 +52,7 @@ const sections: MenuSection[] = [
         items: [
             { icon: <MessageSquareWarning size={18} />, title: 'คำร้องเรียน', path: '/admin/complaints', badge: 'open_complaints' },
             { icon: <FolderX size={18} />, title: 'ยกเลิกโปรเจกต์', path: '/admin/cancel-requests', badge: 'pending_cancel_requests' },
+            { icon: <FileEdit size={18} />, title: 'คำขอแก้ไขโปรเจกต์', path: '/admin/project-edit-requests' },
             { icon: <ShieldBan size={18} />, title: 'ระงับโปรเจกต์', path: '/admin/projects-suspension' },
         ],
     },

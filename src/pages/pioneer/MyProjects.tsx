@@ -5,11 +5,12 @@ import { useProjectStore } from "../../store/useProjectStore";
 import useCreateProjectGuard from "../../hooks/useCreateProjectGuard";
 import Swal from "sweetalert2";
 
-type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled" | "executing" | "pending_cancel" | "suspended";
+type StateType = "funding" | "pending_review" | "draft" | "closed" | "cancelled" | "executing" | "pending_cancel" | "suspended" | "pending_edit_review";
 
 const stateLabels: { type: StateType | "all"; label: string }[] = [
   { type: "funding", label: "กำลังระดมทุน" },
   { type: "executing", label: "กำลังดำเนินการ" },
+  { type: "pending_edit_review", label: "รอตรวจสอบการแก้ไข" },
   { type: "pending_review", label: "รอการตรวจสอบ" },
   { type: "draft", label: "แบบร่าง" },
   { type: "pending_cancel", label: "รอยืนยันยกเลิก" },
@@ -27,6 +28,7 @@ const stateTextMap: Record<StateType, string> = {
   executing: "กำลังดำเนินการ",
   pending_cancel: "รอยืนยันการยกเลิก",
   suspended: "ถูกระงับ",
+  pending_edit_review: "รอตรวจสอบการแก้ไข",
 };
 
 // ลำดับความสำคัญตอนแสดงลิสต์: โปรเจกต์ที่ "ดำเนินการอยู่" (ระดมทุน/ดำเนินการ) ขึ้นก่อนเสมอ
@@ -34,6 +36,7 @@ const stateTextMap: Record<StateType, string> = {
 const statePriority: Record<StateType, number> = {
   funding: 0,
   executing: 0,
+  pending_edit_review: 0,
   pending_review: 1,
   pending_cancel: 1,
   draft: 2,
@@ -51,6 +54,7 @@ const stateBadgeClass: Record<StateType, string> = {
   executing: "bg-[#3B82F6] text-white",
   pending_cancel: "bg-[#F59E0B] text-white",
   suspended: "bg-orange-100 text-orange-700",
+  pending_edit_review: "bg-[#F59E0B] text-white",
 };
 
 const MyProjects = () => {
@@ -83,7 +87,7 @@ const MyProjects = () => {
 
   const stateCounts = useMemo(() => {
     const counts: Record<StateType, number> = {
-      funding: 0, pending_review: 0, draft: 0, closed: 0, cancelled: 0, executing: 0, pending_cancel: 0, suspended: 0
+      funding: 0, pending_review: 0, draft: 0, closed: 0, cancelled: 0, executing: 0, pending_cancel: 0, suspended: 0, pending_edit_review: 0
     };
     projects.forEach(p => {
       if (p.state in counts) counts[p.state]++;
@@ -110,7 +114,7 @@ const MyProjects = () => {
   const pagedProjects = filteredProjects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleView = (id: number, state: StateType, slug?: string) => {
-    const useDetail = state === 'funding' || state === 'executing' || state === 'closed';
+    const useDetail = state === 'funding' || state === 'executing' || state === 'closed' || state === 'pending_edit_review';
     if (useDetail) navigate(`/projects/${slug || id}`);
     else navigate(`/preview/${id}`, { state: { from: '/pioneer/dashboard/projects' } });
   };
@@ -253,11 +257,11 @@ const MyProjects = () => {
       ) : (
         <div className="flex flex-col gap-[16px]">
           {pagedProjects.map((project) => {
-            const hasEdit = project.state === 'draft' || project.state === 'funding' || project.state === 'executing';
-            const hasMilestone = project.state === 'funding' || project.state === 'executing';
+            const hasEdit = project.state === 'draft' || project.state === 'funding' || project.state === 'executing' || project.state === 'pending_edit_review';
+            const hasMilestone = project.state === 'funding' || project.state === 'executing' || project.state === 'pending_edit_review';
             const hasDelete = project.state === 'draft';
             const hasCancel = project.state === 'pending_review';
-            const hasCancelRequest = project.state === 'funding' || project.state === 'closed' || project.state === 'executing';
+            const hasCancelRequest = project.state === 'funding' || project.state === 'closed' || project.state === 'executing' || project.state === 'pending_edit_review';
             const progress = project.funding_goal > 0
               ? Math.min(Math.round((project.current_funding / project.funding_goal) * 100), 100)
               : 0;
@@ -309,6 +313,14 @@ const MyProjects = () => {
                           <div className="h-[6px] w-full bg-[#E9D5FF] rounded-full overflow-hidden">
                             <div className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full" style={{ width: `${progress}%` }} />
                           </div>
+                        </div>
+                      )}
+
+                      {/* Pending edit review info */}
+                      {project.state === 'pending_edit_review' && (
+                        <div className="flex items-center gap-[6px] mt-[4px]">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          <span className="text-[12px] text-[#F59E0B] font-medium">การแก้ไขล่าสุดกำลังรอ Admin ตรวจสอบ</span>
                         </div>
                       )}
 

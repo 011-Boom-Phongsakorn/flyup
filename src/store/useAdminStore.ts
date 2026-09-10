@@ -128,6 +128,46 @@ export interface CancelProjectRequest {
     UpdatedAt: string
 }
 
+// snapshot ของค่าเดิมก่อนแก้ไข (backend เก็บเป็น JSON string ใน edit_snapshot) — ใช้เทียบ เดิม vs ใหม่ ในหน้า review
+export interface ProjectEditSnapshot {
+    title?: string
+    description?: string
+    category_id?: number
+    risk?: string
+    funding_goal?: number
+    softcap?: number
+    duration_days?: number
+    duration_months?: number
+    profit_share_pct?: number
+    min_invest_amount?: number
+    max_invest_amount?: number
+    platform_fee?: number
+    slug?: string
+}
+
+export interface PendingEditProject {
+    id: number
+    title: string
+    description?: string
+    risk?: string
+    state: string
+    previous_state?: string
+    owner_user_id: number
+    owner?: { first_name: string; last_name: string }
+    category?: { id: number; name: string } | null
+    funding_goal: number
+    softcap: number
+    duration_days: number
+    duration_months: number
+    profit_share_pct: number
+    min_invest_amount: number
+    max_invest_amount: number
+    platform_fee: number
+    slug: string
+    edit_snapshot?: string
+    UpdatedAt: string
+}
+
 export interface CancelPreviewMilestone {
     phase_no: number
     title: string
@@ -220,6 +260,12 @@ interface AdminStore {
     fetchCancelRequests: () => Promise<void>
     fetchCancelPreview: (projectId: number) => Promise<CancelPreview | null>
     resolveCancelRequest: (id: number, action: 'approve-cancel' | 'reject-cancel', note: string) => Promise<void>
+
+    // Project edit requests (pioneer แก้ไขโปรเจกต์ตอน funding/executing ต้องรอ admin อนุมัติ)
+    pendingEditProjects: PendingEditProject[]
+    isPendingEditLoading: boolean
+    fetchPendingEditProjects: () => Promise<void>
+    resolveProjectEdit: (id: number, action: 'approve-edit' | 'reject-edit') => Promise<void>
 
     // Project suspension management
     allProjects: AdminProjectRow[]
@@ -388,6 +434,24 @@ export const useAdminStore = create<AdminStore>((set) => ({
 
     resolveCancelRequest: async (id, action, note) => {
         await api.patch(`/admin/projects/${id}/${action}`, { admin_note: note })
+    },
+
+    // Project edit requests
+    pendingEditProjects: [],
+    isPendingEditLoading: false,
+
+    fetchPendingEditProjects: async () => {
+        set({ isPendingEditLoading: true })
+        try {
+            const res = await api.get('/admin/projects/pending-edit-review')
+            set({ pendingEditProjects: res.data?.data ?? [] })
+        } finally {
+            set({ isPendingEditLoading: false })
+        }
+    },
+
+    resolveProjectEdit: async (id, action) => {
+        await api.patch(`/admin/projects/${id}/${action}`)
     },
 
     // Project suspension management
